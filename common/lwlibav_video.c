@@ -1040,7 +1040,8 @@ static inline int copy_frame
 (
     lw_log_handler_t *lhp,
     AVFrame          *dst,
-    AVFrame          *src
+    AVFrame          *src,
+    int               top_field_first
 )
 {
     av_frame_unref( dst );
@@ -1051,6 +1052,7 @@ static inline int copy_frame
     }
     /* Treat this frame as interlaced. */
     dst->interlaced_frame = 1;
+    dst->top_field_first  = top_field_first;
     return 0;
 }
 
@@ -1059,7 +1061,8 @@ static inline int copy_field
     lw_log_handler_t *lhp,
     AVFrame          *dst,
     AVFrame          *src,
-    int               line_offset
+    int               line_offset,
+    int               top_field_first
 )
 {
     /* Check if the destination is writable. */
@@ -1100,7 +1103,27 @@ static inline int copy_field
     }
     /* Treat this frame as interlaced. */
     dst->interlaced_frame = 1;
+    dst->top_field_first  = top_field_first;
     return 0;
+}
+
+static inline int get_tff_of_copied_frame
+(
+    lwlibav_video_decode_handler_t *vdhp,
+    lwlibav_video_output_handler_t *vohp,
+    uint32_t                        frame_number,
+    uint32_t                        field_number
+)
+{
+    int top_field_first = vdhp->frame_list[field_number].field_info == LW_FIELD_INFO_TOP;
+    if( frame_number <= 2 )
+        return vohp->repeat_correction_ts ? !top_field_first : top_field_first;
+    uint32_t prev_t = vohp->frame_order_list[frame_number - 1].top;
+    uint32_t prev_b = vohp->frame_order_list[frame_number - 1].bottom;
+    if( prev_t != prev_b && (field_number == prev_t || field_number == prev_b) )
+        return !top_field_first;
+    else
+        return top_field_first;
 }
 
 static int lwlibav_repeat_control
@@ -1125,13 +1148,17 @@ static int lwlibav_repeat_control
         REPEAT_CONTROL_DECODE_ONE_FRAME    = 0x04
     };
     int repeat_control;
+    int top_field_first = -1;
     if( first_field_number == second_field_number )
     {
         repeat_control = REPEAT_CONTROL_DECODE_ONE_FRAME;
+        if( first_field_number == vohp->frame_cache_numbers[0]
+         || first_field_number == vohp->frame_cache_numbers[1] )
+            top_field_first = get_tff_of_copied_frame( vdhp, vohp, frame_number, first_field_number );
         if( first_field_number == vohp->frame_cache_numbers[0] )
-            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[0] );
+            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[0], top_field_first );
         if( first_field_number == vohp->frame_cache_numbers[1] )
-            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[1] );
+            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[1], top_field_first );
         if( first_field_number != vohp->frame_order_list[frame_number - 1].top
          && first_field_number != vohp->frame_order_list[frame_number - 1].bottom
          && first_field_number != vohp->frame_order_list[frame_number + 1].top
@@ -1147,17 +1174,18 @@ static int lwlibav_repeat_control
     else
     {
         repeat_control = REPEAT_CONTROL_DECODE_BOTH_FIELDS;
+        top_field_first = t < b;
         for( int i = 0; i < REPEAT_CONTROL_CACHE_NUM; i++ )
         {
             if( t == vohp->frame_cache_numbers[i] )
             {
-                if( copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[i], 0 ) < 0 )
+                if( copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[i], 0, top_field_first ) < 0 )
                     return -1;
                 repeat_control &= ~REPEAT_CONTROL_DECODE_TOP_FIELD;
             }
             if( b == vohp->frame_cache_numbers[i] )
             {
-                if( copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[i], 1 ) < 0 )
+                if( copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[i], 1, top_field_first ) < 0 )
                     return -1;
                 repeat_control &= ~REPEAT_CONTROL_DECODE_BOTTOM_FIELD;
             }
@@ -1176,9 +1204,9 @@ static int lwlibav_repeat_control
             return -1;
         vohp->frame_cache_numbers[1] = second_field_number;
         if( check_frame_buffer_identical( vohp->frame_cache_buffers[0], vohp->frame_cache_buffers[1] ) )
-            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[0] );
-        if( copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[0], t > b ? 1 : 0 ) < 0
-         || copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[1], t < b ? 1 : 0 ) < 0 )
+            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[0], top_field_first );
+        if( copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[0], t > b ? 1 : 0, top_field_first ) < 0
+         || copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[1], t < b ? 1 : 0, top_field_first ) < 0 )
             return -1;
         return 0;
     }
@@ -1192,10 +1220,13 @@ static int lwlibav_repeat_control
             return -1;
         vohp->frame_cache_numbers[idx] = decode_number;
         if( repeat_control == REPEAT_CONTROL_DECODE_ONE_FRAME )
-            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[idx] );
+        {
+            top_field_first = get_tff_of_copied_frame( vdhp, vohp, frame_number, first_field_number );
+            return copy_frame( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[idx], top_field_first );
+        }
         else
             return copy_field( &vdhp->lh, vdhp->frame_buffer, vohp->frame_cache_buffers[idx],
-                               repeat_control == REPEAT_CONTROL_DECODE_TOP_FIELD ? 0 : 1 );
+                               repeat_control == REPEAT_CONTROL_DECODE_TOP_FIELD ? 0 : 1, top_field_first );
     }
 }
 
