@@ -444,8 +444,7 @@ INPUT_HANDLE func_open( LPSTR file )
             if( hp->video_reader == reader.type )
                 break;
             if( hp->audio_reader == reader.type )
-                while( lsmash_reader_table[i + 1].attribute != AU_DUMMY_READER )
-                    i++;
+                i = DUMMY_READER - 2;
         }
     }
     if( hp->video_reader == hp->audio_reader )
