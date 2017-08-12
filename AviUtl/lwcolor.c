@@ -85,11 +85,12 @@ BOOL func_pixel2yc( COLOR_PROC_INFO *cpip )
     BYTE *ycp    = (BYTE *)cpip->ycp;
     BYTE *pixelp = (BYTE *)cpip->pixelp;
     int linesize = LW48_SIZE * cpip->w;
+    int stridesize = (linesize + 3) & ~3;
     for( int y = 0; y < cpip->h; y++ )
     {
         memcpy( ycp, pixelp, linesize );
         ycp    += cpip->line_size;
-        pixelp += linesize;
+        pixelp += stridesize;
     }
     return TRUE;
 }

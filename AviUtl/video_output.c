@@ -219,7 +219,7 @@ int au_setup_video_rendering
         for( int i = 0; i < output_height; i++ )
         {
             PIXEL_LW48 *pix = (PIXEL_LW48 *)pic;
-            for( int j = 0; j < au_vohp->output_linesize; j += LW48_SIZE )
+            for( int j = 0; j < output_width; j++ )
                 *(pix++) = black_pix;
             pic += au_vohp->output_linesize;
         }
