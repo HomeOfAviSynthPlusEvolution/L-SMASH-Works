@@ -539,7 +539,7 @@ static int queue_extradata
 {
     if( extradata && extradata_size > 0 )
     {
-        uint8_t *temp = (uint8_t *)av_mallocz( extradata_size + FF_INPUT_BUFFER_PADDING_SIZE );
+        uint8_t *temp = (uint8_t *)av_mallocz( extradata_size + AV_INPUT_BUFFER_PADDING_SIZE );
         if( !temp )
         {
             config->error = 1;
@@ -760,10 +760,10 @@ int get_sample
     pkt->pts   = sample->cts;               /* Set composition timestamp to presentation timestamp field. */
     pkt->dts   = sample->dts;
     /* Copy sample data from L-SMASH.
-     * Set 0 to the end of the additional FF_INPUT_BUFFER_PADDING_SIZE bytes.
+     * Set 0 to the end of the additional AV_INPUT_BUFFER_PADDING_SIZE bytes.
      * Without this, some decoders could cause wrong results. */
     memcpy( pkt->data, sample->data, sample->length );
-    memset( pkt->data + sample->length, 0, FF_INPUT_BUFFER_PADDING_SIZE );
+    memset( pkt->data + sample->length, 0, AV_INPUT_BUFFER_PADDING_SIZE );
     /* TODO: add handling invalid indexes. */
     if( sample->index != config->index )
     {
@@ -1020,11 +1020,11 @@ int initialize_decoder_configuration
     codec_configuration_t *config
 )
 {
-    /* Note: the input buffer for libavcodec's decoders must be FF_INPUT_BUFFER_PADDING_SIZE larger than the actual read bytes. */
+    /* Note: the input buffer for libavcodec's decoders must be AV_INPUT_BUFFER_PADDING_SIZE larger than the actual read bytes. */
     uint32_t input_buffer_size = lsmash_get_max_sample_size_in_media_timeline( root, track_ID );
     if( input_buffer_size == 0 )
         return -1;
-    config->input_buffer = (uint8_t *)av_mallocz( input_buffer_size + FF_INPUT_BUFFER_PADDING_SIZE );
+    config->input_buffer = (uint8_t *)av_mallocz( input_buffer_size + AV_INPUT_BUFFER_PADDING_SIZE );
     if( !config->input_buffer )
         return -1;
     config->get_buffer = avcodec_default_get_buffer2;

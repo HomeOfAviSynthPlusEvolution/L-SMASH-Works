@@ -1266,7 +1266,7 @@ static int make_vc1_ebdu
             data[ (*size)++ ] = (pos++)[0];
         }
     }
-    memset( data + *size, 0, FF_INPUT_BUFFER_PADDING_SIZE );
+    memset( data + *size, 0, AV_INPUT_BUFFER_PADDING_SIZE );
     return av_packet_ref( out_pkt, &helper->pkt );
 }
 
@@ -1621,11 +1621,11 @@ static int append_extradata_if_new
         if( current.extradata && current.extradata_size > 0 )
         {
             entry->extradata_size = current.extradata_size;
-            entry->extradata      = (uint8_t *)av_malloc( current.extradata_size + FF_INPUT_BUFFER_PADDING_SIZE );
+            entry->extradata      = (uint8_t *)av_malloc( current.extradata_size + AV_INPUT_BUFFER_PADDING_SIZE );
             if( !entry->extradata )
                 return -1;
             memcpy( entry->extradata, current.extradata, entry->extradata_size );
-            memset( entry->extradata + entry->extradata_size, 0, FF_INPUT_BUFFER_PADDING_SIZE );
+            memset( entry->extradata + entry->extradata_size, 0, AV_INPUT_BUFFER_PADDING_SIZE );
         }
     }
     else
@@ -1655,11 +1655,11 @@ static int append_extradata_if_new
             if( current.extradata && current.extradata_size > 0 )
             {
                 entry->extradata_size = current.extradata_size;
-                entry->extradata      = (uint8_t *)av_malloc( current.extradata_size + FF_INPUT_BUFFER_PADDING_SIZE );
+                entry->extradata      = (uint8_t *)av_malloc( current.extradata_size + AV_INPUT_BUFFER_PADDING_SIZE );
                 if( !entry->extradata )
                     return -1;
                 memcpy( entry->extradata, current.extradata, entry->extradata_size );
-                memset( entry->extradata + entry->extradata_size, 0, FF_INPUT_BUFFER_PADDING_SIZE );
+                memset( entry->extradata + entry->extradata_size, 0, AV_INPUT_BUFFER_PADDING_SIZE );
             }
             list->current_index = list->entry_count - 1;
         }
@@ -3080,7 +3080,7 @@ static int parse_index
                     /* Get extradata. */
                     if( entry->extradata_size > 0 )
                     {
-                        entry->extradata = (uint8_t *)av_malloc( entry->extradata_size + FF_INPUT_BUFFER_PADDING_SIZE );
+                        entry->extradata = (uint8_t *)av_malloc( entry->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE );
                         if( !entry->extradata )
                             goto fail_parsing;
                         if( fread( entry->extradata, 1, entry->extradata_size, index ) != entry->extradata_size )
@@ -3088,7 +3088,7 @@ static int parse_index
                             av_free( entry->extradata );
                             goto fail_parsing;
                         }
-                        memset( entry->extradata + entry->extradata_size, 0, FF_INPUT_BUFFER_PADDING_SIZE );
+                        memset( entry->extradata + entry->extradata_size, 0, AV_INPUT_BUFFER_PADDING_SIZE );
                     }
                     if( !fgets( buf, sizeof(buf), index )   /* new line ('\n') */
                      || !fgets( buf, sizeof(buf), index ) ) /* the first line of the next entry */

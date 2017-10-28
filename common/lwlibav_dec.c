@@ -109,7 +109,7 @@ void lwlibav_update_configuration
     codecpar->extradata_size = 0;
     if( entry->extradata_size > 0 )
     {
-        codecpar->extradata = (uint8_t *)av_malloc( entry->extradata_size + FF_INPUT_BUFFER_PADDING_SIZE );
+        codecpar->extradata = (uint8_t *)av_malloc( entry->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE );
         if( !codecpar->extradata )
         {
             strcpy( error_string, "Failed to allocate extradata.\n" );
@@ -117,7 +117,7 @@ void lwlibav_update_configuration
         }
         codecpar->extradata_size = entry->extradata_size;
         memcpy( codecpar->extradata, entry->extradata, codecpar->extradata_size );
-        memset( codecpar->extradata + codecpar->extradata_size, 0, FF_INPUT_BUFFER_PADDING_SIZE );
+        memset( codecpar->extradata + codecpar->extradata_size, 0, AV_INPUT_BUFFER_PADDING_SIZE );
     }
     /* This is needed by some CODECs such as UtVideo and raw video. */
     codecpar->codec_tag = entry->codec_tag;
