@@ -1522,13 +1522,19 @@ static BOOL CALLBACK dialog_proc( HWND hwnd, UINT message, WPARAM wparam, LPARAM
                     }
                     option_t *opt = (option_t *)fp->ex_data_ptr;
                     opt->optimize_pd = (BST_CHECKED == SendMessage( GetDlgItem( hwnd, IDC_CHECK_OPTIMIZE_PD ), BM_GETCHECK, 0, 0 ));
-                    char file_name[MAX_PATH];
-                    if( !fp->exfunc->dlg_get_save_name( (LPSTR)file_name, MPEG4_FILE_EXT, NULL ) )
+                    char file_name_ansi[MAX_PATH * 4];
+                    char file_name_utf8[MAX_PATH * 4];
+                    if( !fp->exfunc->dlg_get_save_name( (LPSTR)file_name_ansi, MPEG4_FILE_EXT, NULL ) )
                     {
                         EndDialog( hwnd, IDOK );
                         return FALSE;
                     }
                     ShowWindow( hwnd, SW_HIDE );
+                    if( lsmash_convert_ansi_to_utf8( file_name_ansi, file_name_utf8, sizeof(file_name_utf8) ) == 0 )
+                    {
+                        MessageBox( HWND_DESKTOP, "Failed to convert the output file name to UTF-8.", "lwmuxer", MB_ICONERROR  | MB_OK );
+                        return FALSE;
+                    }
                     int frame_s;
                     int frame_e;
                     if( !fp->exfunc->get_select_frame( editp, &frame_s, &frame_e ) )
@@ -1543,7 +1549,7 @@ static BOOL CALLBACK dialog_proc( HWND hwnd, UINT message, WPARAM wparam, LPARAM
                         MessageBox( HWND_DESKTOP, "Failed to open the input files.", "lwmuxer", MB_ICONERROR | MB_OK );
                         return exporter_error( &h );
                     }
-                    if( open_output_file( &h, fp, file_name ) )
+                    if( open_output_file( &h, fp, file_name_utf8 ) )
                     {
                         MessageBox( HWND_DESKTOP, "Failed to open the output file.", "lwmuxer", MB_ICONERROR  | MB_OK );
                         return exporter_error( &h );
