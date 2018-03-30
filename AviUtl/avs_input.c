@@ -219,6 +219,9 @@ static enum AVPixelFormat as_to_av_input_pixel_format
             { AVS_CS_YUV422P16, AV_PIX_FMT_YUV422P16LE, 16 },
             { AVS_CS_YUV444P10, AV_PIX_FMT_YUV444P10LE, 10 },
             { AVS_CS_YUV444P16, AV_PIX_FMT_YUV444P16LE, 16 },
+            { AVS_CS_Y12,       AV_PIX_FMT_GRAY12LE,    12 },
+            { AVS_CS_Y16,       AV_PIX_FMT_GRAY16LE,    16 },
+            { AVS_CS_BGR48,     AV_PIX_FMT_BGR48LE,     16 },
 #if FFMPEG_HIGH_DEPTH_SUPPORT
             { AVS_CS_YUV420P12, AV_PIX_FMT_YUV420P12LE, 12 },
             { AVS_CS_YUV420P14, AV_PIX_FMT_YUV420P14LE, 14 },
@@ -226,6 +229,7 @@ static enum AVPixelFormat as_to_av_input_pixel_format
             { AVS_CS_YUV422P14, AV_PIX_FMT_YUV422P14LE, 14 },
             { AVS_CS_YUV444P12, AV_PIX_FMT_YUV444P12LE, 12 },
             { AVS_CS_YUV444P14, AV_PIX_FMT_YUV444P14LE, 14 },
+            { AVS_CS_Y10,       AV_PIX_FMT_GRAY10LE,    10 },
 #endif
             { AVS_CS_UNKNOWN,   AV_PIX_FMT_NONE,         0 }
         };
