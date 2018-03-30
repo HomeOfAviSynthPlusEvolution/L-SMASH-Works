@@ -232,6 +232,9 @@ static void VS_CC vs_filter_free( void *instance_data, VSCore *core, const VSAPI
 
 void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
 {
+#ifndef VSDEBUG
+    av_log_set_level( AV_LOG_QUIET );
+#endif
     const char *file_path = vsapi->propGetData( in, "source", 0, NULL );
     /* Allocate the handler of this filter function. */
     lwlibav_handler_t *hp = alloc_handler();
