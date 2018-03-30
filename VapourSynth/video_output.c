@@ -405,6 +405,7 @@ static const component_reorder_t *get_component_reorder( enum AVPixelFormat av_o
             { AV_PIX_FMT_GBRP9LE,     {  1,  2,  0, -1 } },
             { AV_PIX_FMT_GBRP10LE,    {  1,  2,  0, -1 } },
             { AV_PIX_FMT_GBRP16LE,    {  1,  2,  0, -1 } },
+            { AV_PIX_FMT_BGR24,       {  2,  1,  0, -1 } },
             { AV_PIX_FMT_RGB24,       {  0,  1,  2, -1 } },
             { AV_PIX_FMT_ARGB,        {  1,  2,  3,  0 } },
             { AV_PIX_FMT_RGBA,        {  0,  1,  2,  3 } },
