@@ -31,6 +31,12 @@
 #include "lsmashsource.h"
 #include "video_output.h"
 
+#if (LIBAVUTIL_VERSION_MICRO >= 100) && (LIBSWSCALE_VERSION_MICRO >= 100)
+#define FFMPEG_HIGH_DEPTH_SUPPORT 1
+#else
+#define FFMPEG_HIGH_DEPTH_SUPPORT 0
+#endif
+
 typedef struct
 {
     uint8_t *data    [4];
@@ -250,6 +256,14 @@ VSPresetFormat get_vs_output_pixel_format( const char *format_name )
             { "YUV420P10", pfYUV420P10 },
             { "YUV422P10", pfYUV422P10 },
             { "YUV444P10", pfYUV444P10 },
+#if FFMPEG_HIGH_DEPTH_SUPPORT
+            { "YUV420P12", pfYUV420P12 },
+            { "YUV422P12", pfYUV422P12 },
+            { "YUV444P12", pfYUV444P12 },
+            { "YUV420P14", pfYUV420P14 },
+            { "YUV422P14", pfYUV422P14 },
+            { "YUV444P14", pfYUV444P14 },
+#endif
             { "YUV420P16", pfYUV420P16 },
             { "YUV422P16", pfYUV422P16 },
             { "YUV444P16", pfYUV444P16 },
@@ -285,6 +299,14 @@ static enum AVPixelFormat vs_to_av_output_pixel_format( VSPresetFormat vs_output
             { pfYUV420P10, AV_PIX_FMT_YUV420P10LE },
             { pfYUV422P10, AV_PIX_FMT_YUV422P10LE },
             { pfYUV444P10, AV_PIX_FMT_YUV444P10LE },
+#if FFMPEG_HIGH_DEPTH_SUPPORT
+            { pfYUV420P12, AV_PIX_FMT_YUV420P12LE },
+            { pfYUV422P12, AV_PIX_FMT_YUV422P12LE },
+            { pfYUV444P12, AV_PIX_FMT_YUV444P12LE },
+            { pfYUV420P14, AV_PIX_FMT_YUV420P14LE },
+            { pfYUV422P14, AV_PIX_FMT_YUV422P14LE },
+            { pfYUV444P14, AV_PIX_FMT_YUV444P14LE },
+#endif
             { pfYUV420P16, AV_PIX_FMT_YUV420P16LE },
             { pfYUV422P16, AV_PIX_FMT_YUV422P16LE },
             { pfYUV444P16, AV_PIX_FMT_YUV444P16LE },
@@ -321,6 +343,14 @@ static const component_reorder_t *get_component_reorder( enum AVPixelFormat av_o
             { AV_PIX_FMT_YUV420P10LE, {  0,  1,  2, -1 } },
             { AV_PIX_FMT_YUV422P10LE, {  0,  1,  2, -1 } },
             { AV_PIX_FMT_YUV444P10LE, {  0,  1,  2, -1 } },
+#if FFMPEG_HIGH_DEPTH_SUPPORT
+            { AV_PIX_FMT_YUV420P12LE, {  0,  1,  2, -1 } },
+            { AV_PIX_FMT_YUV422P12LE, {  0,  1,  2, -1 } },
+            { AV_PIX_FMT_YUV444P12LE, {  0,  1,  2, -1 } },
+            { AV_PIX_FMT_YUV420P14LE, {  0,  1,  2, -1 } },
+            { AV_PIX_FMT_YUV422P14LE, {  0,  1,  2, -1 } },
+            { AV_PIX_FMT_YUV444P14LE, {  0,  1,  2, -1 } },
+#endif
             { AV_PIX_FMT_YUV420P16LE, {  0,  1,  2, -1 } },
             { AV_PIX_FMT_YUV422P16LE, {  0,  1,  2, -1 } },
             { AV_PIX_FMT_YUV444P16LE, {  0,  1,  2, -1 } },
@@ -373,6 +403,14 @@ static inline int set_frame_maker
             { pfYUV420P10, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
             { pfYUV422P10, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
             { pfYUV444P10, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
+#if FFMPEG_HIGH_DEPTH_SUPPORT
+            { pfYUV420P12, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
+            { pfYUV422P12, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
+            { pfYUV444P12, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
+            { pfYUV420P14, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
+            { pfYUV422P14, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
+            { pfYUV444P14, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
+#endif
             { pfYUV420P16, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
             { pfYUV422P16, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
             { pfYUV444P16, 0, make_black_background_planar_yuv16, make_frame_planar_yuv   },
@@ -436,6 +474,20 @@ static int determine_colorspace_conversion
             { AV_PIX_FMT_YUV422P10BE, pfYUV422P10, 1 },
             { AV_PIX_FMT_YUV444P10LE, pfYUV444P10, 0 },
             { AV_PIX_FMT_YUV444P10BE, pfYUV444P10, 1 },
+#if FFMPEG_HIGH_DEPTH_SUPPORT
+            { AV_PIX_FMT_YUV420P12LE, pfYUV420P12, 0 },
+            { AV_PIX_FMT_YUV420P12BE, pfYUV420P12, 1 },
+            { AV_PIX_FMT_YUV422P12LE, pfYUV422P12, 0 },
+            { AV_PIX_FMT_YUV422P12BE, pfYUV422P12, 1 },
+            { AV_PIX_FMT_YUV444P12LE, pfYUV444P12, 0 },
+            { AV_PIX_FMT_YUV444P12BE, pfYUV444P12, 1 },
+            { AV_PIX_FMT_YUV420P14LE, pfYUV420P14, 0 },
+            { AV_PIX_FMT_YUV420P14BE, pfYUV420P14, 1 },
+            { AV_PIX_FMT_YUV422P14LE, pfYUV422P14, 0 },
+            { AV_PIX_FMT_YUV422P14BE, pfYUV422P14, 1 },
+            { AV_PIX_FMT_YUV444P14LE, pfYUV444P14, 0 },
+            { AV_PIX_FMT_YUV444P14BE, pfYUV444P14, 1 },
+#endif
             { AV_PIX_FMT_YUV420P16LE, pfYUV420P16, 0 },
             { AV_PIX_FMT_YUV420P16BE, pfYUV420P16, 1 },
             { AV_PIX_FMT_YUV422P16LE, pfYUV422P16, 0 },
@@ -584,6 +636,14 @@ static int vs_check_dr_available
             AV_PIX_FMT_YUV420P10LE,
             AV_PIX_FMT_YUV422P10LE,
             AV_PIX_FMT_YUV444P10LE,
+#if FFMPEG_HIGH_DEPTH_SUPPORT
+            AV_PIX_FMT_YUV420P12LE,
+            AV_PIX_FMT_YUV422P12LE,
+            AV_PIX_FMT_YUV444P12LE,
+            AV_PIX_FMT_YUV420P14LE,
+            AV_PIX_FMT_YUV422P14LE,
+            AV_PIX_FMT_YUV444P14LE,
+#endif
             AV_PIX_FMT_YUV420P16LE,
             AV_PIX_FMT_YUV422P16LE,
             AV_PIX_FMT_YUV444P16LE,
