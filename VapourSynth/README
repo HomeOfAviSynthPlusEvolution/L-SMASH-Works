@@ -69,9 +69,17 @@
                         "YUV420P10"
                         "YUV422P10"
                         "YUV444P10"
+                        "YUV420P12" (ffmpeg only)
+                        "YUV422P12" (ffmpeg only)
+                        "YUV444P12" (ffmpeg only)
+                        "YUV420P14" (ffmpeg only)
+                        "YUV422P14" (ffmpeg only)
+                        "YUV444P14" (ffmpeg only)
                         "YUV420P16"
                         "YUV422P16"
                         "YUV444P16"
+                        "Y8"
+                        "Y16"
                         "RGB24"
                         "RGB27"
                         "RGB30"
