@@ -42,6 +42,12 @@
 
 #include "video_output.h"
 
+#if (LIBAVUTIL_VERSION_MICRO >= 100) && (LIBSWSCALE_VERSION_MICRO >= 100)
+#define FFMPEG_HIGH_DEPTH_SUPPORT 1
+#else
+#define FFMPEG_HIGH_DEPTH_SUPPORT 0
+#endif
+
 typedef struct {
     AVS_Clip              *clip;
     AVS_ScriptEnvironment *env;
@@ -154,11 +160,11 @@ static void close_avisynth_dll( avs_handler_t *hp )
 static enum AVPixelFormat as_to_av_input_pixel_format
 (
     int  as_input_pixel_format,
-    int  as_input_bit_depth,
+    int *as_input_bit_depth,
     int *input_width
 )
 {
-    if( as_input_bit_depth > 8 && (*input_width & 1) )
+    if( *as_input_bit_depth > 8 && (*input_width & 1) )
     {
         UINT uType = MB_ICONERROR | MB_OK;
         lw_log_handler_t lh = { 0 };
@@ -166,49 +172,80 @@ static enum AVPixelFormat as_to_av_input_pixel_format
         lh.priv  = &uType;
         au_message_box_desktop( &lh, LW_LOG_WARNING, "Width of interleaved fake high bit-depth format must be mod2." );
         /* Treat as 8-bit depth. */
-        as_input_bit_depth = 8;
+        *as_input_bit_depth = 8;
     }
-    static const struct
+
+    typedef struct
     {
         int                as_input_pixel_format;
         enum AVPixelFormat av_input_pixel_format;
         int                as_input_bit_depth;
-    } format_table[] =
+    } format_table_t;
+
+    const format_table_t std_format_table[] =
         {
-            { AVS_CS_I420,    AV_PIX_FMT_YUV420P,     8 },
-            { AVS_CS_I420,    AV_PIX_FMT_YUV420P9LE,  9 },
-            { AVS_CS_I420,    AV_PIX_FMT_YUV420P10LE,10 },
-            { AVS_CS_I420,    AV_PIX_FMT_YUV420P16LE,16 },
-            { AVS_CS_YV12,    AV_PIX_FMT_YUV420P,     8 },
-            { AVS_CS_YV12,    AV_PIX_FMT_YUV420P9LE,  9 },
-            { AVS_CS_YV12,    AV_PIX_FMT_YUV420P10LE,10 },
-            { AVS_CS_YV12,    AV_PIX_FMT_YUV420P16LE,16 },
-            { AVS_CS_YV16,    AV_PIX_FMT_YUV422P,     8 },
-            { AVS_CS_YV16,    AV_PIX_FMT_YUV422P9LE,  9 },
-            { AVS_CS_YV16,    AV_PIX_FMT_YUV422P10LE,10 },
-            { AVS_CS_YV16,    AV_PIX_FMT_YUV422P16LE,16 },
-            { AVS_CS_YV24,    AV_PIX_FMT_YUV444P,     8 },
-            { AVS_CS_YV24,    AV_PIX_FMT_YUV444P9LE,  9 },
-            { AVS_CS_YV24,    AV_PIX_FMT_YUV444P10LE,10 },
-            { AVS_CS_YV24,    AV_PIX_FMT_YUV444P16LE,16 },
-            { AVS_CS_YUV9,    AV_PIX_FMT_YUV410P,     8 },
-            { AVS_CS_YV411,   AV_PIX_FMT_YUV411P,     8 },
-            { AVS_CS_BGR24,   AV_PIX_FMT_BGR24,       8 },
-            { AVS_CS_BGR24,   AV_PIX_FMT_BGR48LE,    16 },
-            { AVS_CS_BGR32,   AV_PIX_FMT_BGRA,        8 },
-            { AVS_CS_YUY2,    AV_PIX_FMT_YUYV422,     8 },
-            { AVS_CS_Y8,      AV_PIX_FMT_GRAY8,       8 },
-            { AVS_CS_Y8,      AV_PIX_FMT_GRAY16LE,   16 },
-            { AVS_CS_UNKNOWN, AV_PIX_FMT_NONE,        0 }
+            { AVS_CS_I420,      AV_PIX_FMT_YUV420P,      8 },
+            { AVS_CS_I420,      AV_PIX_FMT_YUV420P9LE,   9 },
+            { AVS_CS_I420,      AV_PIX_FMT_YUV420P10LE, 10 },
+            { AVS_CS_I420,      AV_PIX_FMT_YUV420P16LE, 16 },
+            { AVS_CS_YV12,      AV_PIX_FMT_YUV420P,      8 },
+            { AVS_CS_YV12,      AV_PIX_FMT_YUV420P9LE,   9 },
+            { AVS_CS_YV12,      AV_PIX_FMT_YUV420P10LE, 10 },
+            { AVS_CS_YV12,      AV_PIX_FMT_YUV420P16LE, 16 },
+            { AVS_CS_YV16,      AV_PIX_FMT_YUV422P,      8 },
+            { AVS_CS_YV16,      AV_PIX_FMT_YUV422P9LE,   9 },
+            { AVS_CS_YV16,      AV_PIX_FMT_YUV422P10LE, 10 },
+            { AVS_CS_YV16,      AV_PIX_FMT_YUV422P16LE, 16 },
+            { AVS_CS_YV24,      AV_PIX_FMT_YUV444P,      8 },
+            { AVS_CS_YV24,      AV_PIX_FMT_YUV444P9LE,   9 },
+            { AVS_CS_YV24,      AV_PIX_FMT_YUV444P10LE, 10 },
+            { AVS_CS_YV24,      AV_PIX_FMT_YUV444P16LE, 16 },
+            { AVS_CS_YUV9,      AV_PIX_FMT_YUV410P,      8 },
+            { AVS_CS_YV411,     AV_PIX_FMT_YUV411P,      8 },
+            { AVS_CS_BGR24,     AV_PIX_FMT_BGR24,        8 },
+            { AVS_CS_BGR24,     AV_PIX_FMT_BGR48LE,     16 },
+            { AVS_CS_BGR32,     AV_PIX_FMT_BGRA,         8 },
+            { AVS_CS_YUY2,      AV_PIX_FMT_YUYV422,      8 },
+            { AVS_CS_Y8,        AV_PIX_FMT_GRAY8,        8 },
+            { AVS_CS_Y8,        AV_PIX_FMT_GRAY16LE,    16 },
+            { AVS_CS_UNKNOWN,   AV_PIX_FMT_NONE,         0 }
         };
-    for( int i = 0; format_table[i].as_input_pixel_format != AVS_CS_UNKNOWN; i++ )
-        if( as_input_pixel_format == format_table[i].as_input_pixel_format
-         && as_input_bit_depth    == format_table[i].as_input_bit_depth )
+
+    const format_table_t ext_format_table[] =
         {
-            if( as_input_bit_depth > 8 )
+            { AVS_CS_YUV420P10, AV_PIX_FMT_YUV420P10LE, 10 },
+            { AVS_CS_YUV420P16, AV_PIX_FMT_YUV420P16LE, 16 },
+            { AVS_CS_YUV422P10, AV_PIX_FMT_YUV422P10LE, 10 },
+            { AVS_CS_YUV422P16, AV_PIX_FMT_YUV422P16LE, 16 },
+            { AVS_CS_YUV444P10, AV_PIX_FMT_YUV444P10LE, 10 },
+            { AVS_CS_YUV444P16, AV_PIX_FMT_YUV444P16LE, 16 },
+#if FFMPEG_HIGH_DEPTH_SUPPORT
+            { AVS_CS_YUV420P12, AV_PIX_FMT_YUV420P12LE, 12 },
+            { AVS_CS_YUV420P14, AV_PIX_FMT_YUV420P14LE, 14 },
+            { AVS_CS_YUV422P12, AV_PIX_FMT_YUV422P12LE, 12 },
+            { AVS_CS_YUV422P14, AV_PIX_FMT_YUV422P14LE, 14 },
+            { AVS_CS_YUV444P12, AV_PIX_FMT_YUV444P12LE, 12 },
+            { AVS_CS_YUV444P14, AV_PIX_FMT_YUV444P14LE, 14 },
+#endif
+            { AVS_CS_UNKNOWN,   AV_PIX_FMT_NONE,         0 }
+        };
+
+    for( int i = 0; std_format_table[i].as_input_pixel_format != AVS_CS_UNKNOWN; i++ )
+        if( as_input_pixel_format == std_format_table[i].as_input_pixel_format
+         && *as_input_bit_depth   == std_format_table[i].as_input_bit_depth )
+        {
+            if( *as_input_bit_depth > 8 )
                 *input_width >>= 1;
-            return format_table[i].av_input_pixel_format;
+            return std_format_table[i].av_input_pixel_format;
         }
+
+    for( int i = 0; ext_format_table[i].as_input_pixel_format != AVS_CS_UNKNOWN; i++ )
+        if( as_input_pixel_format == ext_format_table[i].as_input_pixel_format )
+        {
+            *as_input_bit_depth = ext_format_table[i].as_input_bit_depth;
+            return ext_format_table[i].av_input_pixel_format;
+        }
+
     return AV_PIX_FMT_NONE;
 }
 
@@ -220,7 +257,7 @@ static int prepare_video_decoding( lsmash_handler_t *h, video_option_t *opt )
     h->framerate_den      = hp->vi->fps_denominator;
     /* Set up video rendering. */
     int input_width = hp->vi->width;
-    enum AVPixelFormat input_pixel_format = as_to_av_input_pixel_format( hp->vi->pixel_type, opt->avs.bit_depth, &input_width );
+    enum AVPixelFormat input_pixel_format = as_to_av_input_pixel_format( hp->vi->pixel_type, &opt->avs.bit_depth, &input_width );
     return au_setup_video_rendering( &hp->voh, opt, &h->video_format, input_width, hp->vi->height, input_pixel_format );
 }
 
@@ -311,7 +348,7 @@ static int read_video( lsmash_handler_t *h, int sample_number, void *buf )
         }
     hp->av_frame->width       = hp->vi->width;
     hp->av_frame->height      = hp->vi->height;
-    hp->av_frame->format      = as_to_av_input_pixel_format( hp->vi->pixel_type, hp->bit_depth, &hp->av_frame->width );
+    hp->av_frame->format      = as_to_av_input_pixel_format( hp->vi->pixel_type, &hp->bit_depth, &hp->av_frame->width );
     hp->av_frame->color_range = AVCOL_RANGE_UNSPECIFIED;
     hp->av_frame->colorspace  = AVCOL_SPC_UNSPECIFIED;
     /* Here, update_scaler_configuration_if_needed() is required to activate the scaler. */
