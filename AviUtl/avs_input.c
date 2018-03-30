@@ -33,7 +33,7 @@
 
 #define AVSC_NO_DECLSPEC
 #undef EXTERN_C
-#include "avisynth_c.h"
+#include <avisynth_c.h>
 
 #define AVS_INTERFACE_25 2
 
@@ -62,6 +62,8 @@ typedef struct {
         AVSC_DECLARE_FUNC( avs_release_value );
         AVSC_DECLARE_FUNC( avs_release_video_frame );
         AVSC_DECLARE_FUNC( avs_take_clip );
+        AVSC_DECLARE_FUNC( avs_get_pitch_p );
+        AVSC_DECLARE_FUNC( avs_get_read_ptr_p );
 #undef AVSC_DECLARE_FUNC
     } func;
     /* Video stuff */
@@ -94,6 +96,8 @@ static int load_avisynth_dll( avs_handler_t *hp )
     LOAD_AVS_FUNC( avs_release_value,             0 );
     LOAD_AVS_FUNC( avs_release_video_frame,       0 );
     LOAD_AVS_FUNC( avs_take_clip,                 0 );
+    LOAD_AVS_FUNC( avs_get_pitch_p,               0 );
+    LOAD_AVS_FUNC( avs_get_read_ptr_p,            0 );
     return 0;
 fail:
     FreeLibrary( hp->library );
@@ -283,10 +287,10 @@ static int read_video( lsmash_handler_t *h, int sample_number, void *buf )
     AVS_VideoFrame *as_frame = hp->func.avs_get_frame( hp->clip, sample_number );
     if( hp->func.avs_clip_get_error( hp->clip ) )
         return 0;
-    if( avs_is_interleaved( hp->vi ) )
+    if( hp->vi->pixel_type & AVS_CS_INTERLEAVED )
     {
-        uint8_t *read_ptr = (uint8_t *)avs_get_read_ptr( as_frame );
-        int      pitch    = avs_get_pitch( as_frame );
+        uint8_t *read_ptr = (uint8_t *)hp->func.avs_get_read_ptr_p( as_frame, 0 );
+        int      pitch    = hp->func.avs_get_pitch_p( as_frame, 0 );
         if( avs_is_rgb( hp->vi ) )
         {
             hp->av_frame->data    [0] = read_ptr + pitch * (hp->vi->height - 1);
@@ -302,8 +306,8 @@ static int read_video( lsmash_handler_t *h, int sample_number, void *buf )
         for( int i = 0; i < 3; i++ )
         {
             static const int as_plane[3] = { AVS_PLANAR_Y, AVS_PLANAR_U, AVS_PLANAR_V };
-            hp->av_frame->data    [i] = (uint8_t *)avs_get_read_ptr_p( as_frame, as_plane[i] );
-            hp->av_frame->linesize[i] = avs_get_pitch_p( as_frame, as_plane[i] );
+            hp->av_frame->data    [i] = (uint8_t *)hp->func.avs_get_read_ptr_p( as_frame, as_plane[i] );
+            hp->av_frame->linesize[i] = hp->func.avs_get_pitch_p( as_frame, as_plane[i] );
         }
     hp->av_frame->width       = hp->vi->width;
     hp->av_frame->height      = hp->vi->height;
