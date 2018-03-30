@@ -154,87 +154,6 @@ static int make_frame_planar_yuv
     return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
 }
 
-static int make_frame_planar_yuv_stacked
-(
-    lw_video_output_handler_t *vohp,
-    int                        height,
-    AVFrame                   *av_frame,
-    PVideoFrame               &as_frame
-)
-{
-    as_picture_t dst_picture = { { { NULL } } };
-    as_picture_t src_picture = { { { NULL } } };
-    as_assign_planar_yuv( as_frame, &dst_picture );
-    lw_video_scaler_handler_t *vshp = &vohp->scaler;
-    as_video_output_handler_t *as_vohp = (as_video_output_handler_t *)vohp->private_handler;
-    if( vshp->input_pixel_format == vshp->output_pixel_format )
-        for( int i = 0; i < 3; i++ )
-        {
-            src_picture.data    [i] = av_frame->data    [i];
-            src_picture.linesize[i] = av_frame->linesize[i];
-        }
-    else
-    {
-        if( convert_av_pixel_format( vshp->sws_ctx, height, av_frame, &as_vohp->scaled ) < 0 )
-            return -1;
-        src_picture = as_vohp->scaled;
-    }
-    for( int i = 0; i < 3; i++ )
-    {
-        const int src_height = height >> (i ? as_vohp->sub_height : 0);
-        const int width      = vshp->input_width >> (i ? as_vohp->sub_width : 0);
-        const int width16    = sse2_available > 0 ? (width & ~15) : 0;
-        const int width32    = avx2_available > 0 ? (width & ~31) : 0;
-        const int lsb_offset = src_height * dst_picture.linesize[i];
-        for( int j = 0; j < src_height; j++ )
-        {
-            /* Here, if available, use SIMD instructions.
-             * Note: There is assumption that the address of a given data can be divided by 32 or 16.
-             *       The destination is always 32 byte alignment unless AviSynth legacy alignment is used.
-             *       The source is not always 32 or 16 byte alignment if the frame buffer is from libavcodec directly. */
-            static const uint8_t LW_ALIGN(32) sp16[32] =
-                {
-                    /* saturation protector
-                     * For setting all upper 8 bits to zero so that saturation won't make sense. */
-                    0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00 ,0xFF, 0x00, 0xFF, 0x00,
-                    0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00 ,0xFF, 0x00, 0xFF, 0x00
-                };
-                  uint8_t *dst     = dst_picture.data[i] + j * dst_picture.linesize[i];     /* MSB: dst +     k,     LSB: dst +     k + lsb_offset */
-            const uint8_t *src     = src_picture.data[i] + j * src_picture.linesize[i];     /* MSB: src + 2 * k + 1, LSB: src + 2 * k */
-            const int     _width16 = ((intptr_t)src & 15) == 0 ? width16 : 0;               /* Don't use SSE2 instructions if set to 0. */
-            const int     _width32 = ((intptr_t)src & 31) == 0 ? width32 : 0;               /* Don't use AVX(2) instructions if set to 0. */
-#if VC_HAS_AVX2
-            /* AVX, AVX2 */
-            for( int k = 0; k < _width32; k += 32 )
-            {
-                __m256i ymm0 = _mm256_load_si256( (__m256i *)(src + 2 * k     ) );
-                __m256i ymm1 = _mm256_load_si256( (__m256i *)(src + 2 * k + 32) );
-                __m256i mask = _mm256_load_si256( (__m256i *)sp16 );
-                __m256i ymm2 = _mm256_packus_epi16( _mm256_and_si256 ( ymm0, mask ), _mm256_and_si256 ( ymm1, mask ) );
-                __m256i ymm3 = _mm256_packus_epi16( _mm256_srli_epi16( ymm0,    8 ), _mm256_srli_epi16( ymm1,    8 ) );
-                _mm256_store_si256( (__m256i *)(dst + k + lsb_offset), _mm256_permute4x64_epi64( ymm2, _MM_SHUFFLE( 3, 1, 2, 0 ) ) );
-                _mm256_store_si256( (__m256i *)(dst + k             ), _mm256_permute4x64_epi64( ymm3, _MM_SHUFFLE( 3, 1, 2, 0 ) ) );
-            }
-#endif
-            /* SSE2 */
-            for( int k = _width32; k < _width16; k += 16 )
-            {
-                __m128i xmm0 = _mm_load_si128( (__m128i *)(src + 2 * k     ) );
-                __m128i xmm1 = _mm_load_si128( (__m128i *)(src + 2 * k + 16) );
-                __m128i mask = _mm_load_si128( (__m128i *)sp16 );
-                _mm_store_si128( (__m128i *)(dst + k + lsb_offset), _mm_packus_epi16( _mm_and_si128 ( xmm0, mask ), _mm_and_si128 ( xmm1, mask ) ) );
-                _mm_store_si128( (__m128i *)(dst + k             ), _mm_packus_epi16( _mm_srli_epi16( xmm0,    8 ), _mm_srli_epi16( xmm1,    8 ) ) );
-            }
-            for( int k = _width16; k < width; k++ )
-            {
-                *(dst + k + lsb_offset) = *(src + 2 * k    );
-                *(dst + k             ) = *(src + 2 * k + 1);
-            }
-        }
-    }
-    return 0;
-}
-
 static int make_frame_packed_yuv
 (
     lw_video_output_handler_t *vohp,
@@ -418,16 +337,8 @@ static int determine_colorspace_conversion
         case AV_PIX_FMT_YUV444P12LE :
         case AV_PIX_FMT_YUV444P14LE :
 #endif
-            if( as_vohp->stacked_format )
-            {
-                as_vohp->make_black_background = make_black_background_planar_yuv;
-                as_vohp->make_frame            = make_frame_planar_yuv_stacked;
-            }
-            else
-            {
-                as_vohp->make_black_background = make_black_background_planar_yuv_interleaved;
-                as_vohp->make_frame            = make_frame_planar_yuv;
-            }
+            as_vohp->make_black_background = make_black_background_planar_yuv_interleaved;
+            as_vohp->make_frame            = make_frame_planar_yuv;
             return 0;
         case AV_PIX_FMT_GRAY8 :     /* Y, 8bpp */
             as_vohp->make_black_background = make_black_background_packed_all_zero;
@@ -464,8 +375,7 @@ int make_frame
      * We don't change the presentation resolution. */
     as_video_output_handler_t *as_vohp = (as_video_output_handler_t *)vohp->private_handler;
     as_frame = env->NewVideoFrame( *as_vohp->vi, 32 );
-    if( vohp->output_width  != (av_frame->width  << (as_vohp->bitdepth_minus_8 && !as_vohp->stacked_format ? 1 : 0))
-     || vohp->output_height != (av_frame->height << (as_vohp->bitdepth_minus_8 &&  as_vohp->stacked_format ? 1 : 0)) )
+    if( vohp->output_width  != av_frame->width || vohp->output_height != av_frame->height )
         as_vohp->make_black_background( as_frame, as_vohp->bitdepth_minus_8 );
     return as_vohp->make_frame( vohp, av_frame->height, av_frame, as_frame );
 }
@@ -473,49 +383,44 @@ int make_frame
 static int as_check_dr_available
 (
     AVCodecContext    *ctx,
-    enum AVPixelFormat pixel_format,
-    int                stacked_format
-)
+    enum AVPixelFormat pixel_format
+ )
 {
     if( !(ctx->codec->capabilities & AV_CODEC_CAP_DR1) )
         return 0;
-    static const struct
+    static enum AVPixelFormat dr_support_pix_fmt[] =
     {
-        enum AVPixelFormat pixel_format;
-        int                stacked_support;
-    } dr_support_table[] =
-        {
-            { AV_PIX_FMT_YUV420P,     0 },
-            { AV_PIX_FMT_YUV420P9LE,  1 },
-            { AV_PIX_FMT_YUV420P10LE, 1 },
-            { AV_PIX_FMT_YUV420P16LE, 1 },
-            { AV_PIX_FMT_YUV422P,     0 },
-            { AV_PIX_FMT_YUV422P9LE,  1 },
-            { AV_PIX_FMT_YUV422P10LE, 1 },
-            { AV_PIX_FMT_YUV422P16LE, 1 },
-            { AV_PIX_FMT_YUV444P,     0 },
-            { AV_PIX_FMT_YUV444P9LE,  1 },
-            { AV_PIX_FMT_YUV444P10LE, 1 },
-            { AV_PIX_FMT_YUV444P16LE, 1 },
-            { AV_PIX_FMT_YUV410P,     0 },
-            { AV_PIX_FMT_YUV411P,     0 },
-            { AV_PIX_FMT_YUYV422,     0 },
-            { AV_PIX_FMT_GRAY8,       0 },
-            { AV_PIX_FMT_BGR24,       0 },
-            { AV_PIX_FMT_BGRA,        0 },
+        AV_PIX_FMT_YUV420P,
+        AV_PIX_FMT_YUV420P9LE,
+        AV_PIX_FMT_YUV420P10LE,
+        AV_PIX_FMT_YUV420P16LE,
+        AV_PIX_FMT_YUV422P,
+        AV_PIX_FMT_YUV422P9LE,
+        AV_PIX_FMT_YUV422P10LE,
+        AV_PIX_FMT_YUV422P16LE,
+        AV_PIX_FMT_YUV444P,
+        AV_PIX_FMT_YUV444P9LE,
+        AV_PIX_FMT_YUV444P10LE,
+        AV_PIX_FMT_YUV444P16LE,
+        AV_PIX_FMT_YUV410P,
+        AV_PIX_FMT_YUV411P,
+        AV_PIX_FMT_YUYV422,
+        AV_PIX_FMT_GRAY8,
+        AV_PIX_FMT_BGR24,
+        AV_PIX_FMT_BGRA,
 #if FFMPEG_HIGH_DEPTH_SUPPORT
-            { AV_PIX_FMT_YUV420P12LE, 1 },
-            { AV_PIX_FMT_YUV420P14LE, 1 },
-            { AV_PIX_FMT_YUV422P12LE, 1 },
-            { AV_PIX_FMT_YUV422P14LE, 1 },
-            { AV_PIX_FMT_YUV444P12LE, 1 },
-            { AV_PIX_FMT_YUV444P14LE, 1 },
+        AV_PIX_FMT_YUV420P12LE,
+        AV_PIX_FMT_YUV420P14LE,
+        AV_PIX_FMT_YUV422P12LE,
+        AV_PIX_FMT_YUV422P14LE,
+        AV_PIX_FMT_YUV444P12LE,
+        AV_PIX_FMT_YUV444P14LE,
 #endif
-            { AV_PIX_FMT_NONE,        0 }
-        };
-    for( int i = 0; dr_support_table[i].pixel_format != AV_PIX_FMT_NONE; i++ )
-        if( dr_support_table[i].pixel_format == pixel_format )
-            return !(dr_support_table[i].stacked_support && stacked_format);
+        AV_PIX_FMT_NONE
+    };
+    for( int i = 0; dr_support_pix_fmt[i] != AV_PIX_FMT_NONE; i++ )
+        if( dr_support_pix_fmt[i] == pixel_format )
+            return 1;
     return 0;
 }
 
@@ -555,7 +460,7 @@ static int as_video_get_buffer
     avoid_yuv_scale_conversion( &pix_fmt );
     av_frame->format = pix_fmt; /* Don't use AV_PIX_FMT_YUVJ*. */
     if( vshp->output_pixel_format != pix_fmt
-     || !as_check_dr_available( ctx, pix_fmt, as_vohp->stacked_format ) )
+     || !as_check_dr_available( ctx, pix_fmt ) )
         return avcodec_default_get_buffer2( ctx, av_frame, 0 );
     /* New AviSynth video frame buffer. */
     as_video_buffer_handler_t *as_vbhp = new as_video_buffer_handler_t;
@@ -643,7 +548,6 @@ void as_setup_video_rendering
     AVCodecContext            *ctx,
     const char                *filter_name,
     int                        direct_rendering,
-    int                        stacked_format,
     enum AVPixelFormat         output_pixel_format,
     int                        output_width,
     int                        output_height
@@ -652,23 +556,15 @@ void as_setup_video_rendering
     as_video_output_handler_t *as_vohp = (as_video_output_handler_t *)vohp->private_handler;
     IScriptEnvironment        *env     = as_vohp->env;
     VideoInfo                 *vi      = as_vohp->vi;
-    as_vohp->stacked_format = stacked_format;
     if( determine_colorspace_conversion( as_vohp, ctx->pix_fmt, &output_pixel_format, &vi->pixel_type ) < 0 )
         env->ThrowError( "%s: %s is not supported", filter_name, av_get_pix_fmt_name( ctx->pix_fmt ) );
     vohp->scaler.output_pixel_format = output_pixel_format;
-    int width  = output_width  << (as_vohp->bitdepth_minus_8 && !as_vohp->stacked_format ? 1 : 0);
-    int height = output_height << (as_vohp->bitdepth_minus_8 &&  as_vohp->stacked_format ? 1 : 0);
-    /* Allocate temporally scaled image if stacked format could be required.*/
-    if( as_vohp->stacked_format
-     && av_image_alloc( as_vohp->scaled.data, as_vohp->scaled.linesize,
-                        width, height, output_pixel_format, 32 ) < 0 )
-        env->ThrowError( "%s: failed to allocate temporally scaled image.", filter_name );
     enum AVPixelFormat input_pixel_format = ctx->pix_fmt;
     avoid_yuv_scale_conversion( &input_pixel_format );
-    direct_rendering &= as_check_dr_available( ctx, input_pixel_format, as_vohp->stacked_format );
+    direct_rendering &= as_check_dr_available( ctx, input_pixel_format );
     int (*dr_get_buffer)( struct AVCodecContext *, AVFrame *, int ) = direct_rendering ? as_video_get_buffer : NULL;
     setup_video_rendering( vohp, SWS_FAST_BILINEAR,
-                           width, height, output_pixel_format,
+                           output_width, output_height, output_pixel_format,
                            ctx, dr_get_buffer );
     /* Set the dimensions of AviSynth frame buffer. */
     vi->width  = vohp->output_width;

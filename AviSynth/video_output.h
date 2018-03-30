@@ -50,8 +50,6 @@ typedef struct
     IScriptEnvironment         *env;
     VideoInfo                  *vi;
     int                         bitdepth_minus_8;
-    /* for stacked format */
-    int                         stacked_format;
     int                         sub_width;
     int                         sub_height;
     as_picture_t                scaled;
@@ -86,7 +84,6 @@ void as_setup_video_rendering
     AVCodecContext            *ctx,
     const char                *filter_name,
     int                        direct_rendering,
-    int                        stacked_format,
     enum AVPixelFormat         output_pixel_format,
     int                        output_width,
     int                        output_height

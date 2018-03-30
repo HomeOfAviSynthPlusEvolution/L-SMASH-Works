@@ -88,7 +88,6 @@ static void prepare_video_decoding
     AVFormatContext                   *format_ctx,
     int                                threads,
     int                                direct_rendering,
-    int                                stacked_format,
     enum AVPixelFormat                 pixel_format,
     VideoInfo                         &vi,
     IScriptEnvironment                *env
@@ -102,7 +101,7 @@ static void prepare_video_decoding
     int max_width  = libavsmash_video_get_max_width ( vdhp );
     int max_height = libavsmash_video_get_max_height( vdhp );
     as_setup_video_rendering( vohp, ctx, "LSMASHVideoSource",
-                              direct_rendering, stacked_format, pixel_format,
+                              direct_rendering, pixel_format,
                               max_width, max_height );
     libavsmash_video_set_get_buffer_func( vdhp );
     /* Calculate average framerate. */
@@ -137,7 +136,6 @@ LSMASHVideoSource::LSMASHVideoSource
     int                 direct_rendering,
     int                 fps_num,
     int                 fps_den,
-    int                 stacked_format,
     enum AVPixelFormat  pixel_format,
     const char         *preferred_decoder_names,
     IScriptEnvironment *env
@@ -161,7 +159,7 @@ LSMASHVideoSource::LSMASHVideoSource
     vohp->private_handler      = as_vohp;
     vohp->free_private_handler = as_free_video_output_handler;
     get_video_track( source, track_number, env );
-    prepare_video_decoding( vdhp, vohp, format_ctx.get(), threads, direct_rendering, stacked_format, pixel_format, vi, env );
+    prepare_video_decoding( vdhp, vohp, format_ctx.get(), threads, direct_rendering, pixel_format, vi, env );
     lsmash_discard_boxes( libavsmash_video_get_root( vdhp ) );
 }
 
@@ -399,15 +397,14 @@ AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScrip
     int         direct_rendering        = args[5].AsBool( false ) ? 1 : 0;
     int         fps_num                 = args[6].AsInt( 0 );
     int         fps_den                 = args[7].AsInt( 1 );
-    int         stacked_format          = args[8].AsBool( false ) ? 1 : 0;
-    enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[9].AsString( nullptr ) );
-    const char *preferred_decoder_names = args[10].AsString( nullptr );
+    enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[8].AsString( nullptr ) );
+    const char *preferred_decoder_names = args[9].AsString( nullptr );
     threads                = threads >= 0 ? threads : 0;
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
     return new LSMASHVideoSource( source, track_number, threads, seek_mode, forward_seek_threshold,
-                                  direct_rendering, fps_num, fps_den, stacked_format, pixel_format, preferred_decoder_names, env );
+                                  direct_rendering, fps_num, fps_den, pixel_format, preferred_decoder_names, env );
 }
 
 AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )

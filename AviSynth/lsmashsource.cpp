@@ -51,7 +51,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LSMASHVideoSource",
-        "[source]s[track]i[threads]i[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[stacked]b[format]s[decoder]s",
+        "[source]s[track]i[threads]i[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[format]s[decoder]s",
         CreateLSMASHVideoSource,
         0
     );
@@ -67,7 +67,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LWLibavVideoSource",
-        "[source]s[stream_index]i[threads]i[cache]b[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[stacked]b[format]s[decoder]s",
+        "[source]s[stream_index]i[threads]i[cache]b[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[format]s[decoder]s",
         CreateLWLibavVideoSource,
         0
     );
