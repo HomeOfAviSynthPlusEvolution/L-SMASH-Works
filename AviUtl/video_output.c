@@ -31,6 +31,12 @@
 
 #include "video_output.h"
 
+#if (LIBAVUTIL_VERSION_MICRO >= 100) && (LIBSWSCALE_VERSION_MICRO >= 100)
+#define FFMPEG_HIGH_DEPTH_SUPPORT 1
+#else
+#define FFMPEG_HIGH_DEPTH_SUPPORT 0
+#endif
+
 static output_colorspace_index determine_colorspace_conversion
 (
     enum AVPixelFormat  input_pixel_format,
@@ -71,6 +77,20 @@ static output_colorspace_index determine_colorspace_conversion
         case AV_PIX_FMT_GBRP10BE :
         case AV_PIX_FMT_GBRP16LE :
         case AV_PIX_FMT_GBRP16BE :
+#ifdef FFMPEG_HIGH_DEPTH_SUPPORT
+        case AV_PIX_FMT_YUV420P12LE :
+        case AV_PIX_FMT_YUV420P12BE :
+        case AV_PIX_FMT_YUV422P12LE :
+        case AV_PIX_FMT_YUV422P12BE :
+        case AV_PIX_FMT_YUV444P12LE :
+        case AV_PIX_FMT_YUV444P12BE :
+        case AV_PIX_FMT_YUV420P14LE :
+        case AV_PIX_FMT_YUV420P14BE :
+        case AV_PIX_FMT_YUV422P14LE :
+        case AV_PIX_FMT_YUV422P14BE :
+        case AV_PIX_FMT_YUV444P14LE :
+        case AV_PIX_FMT_YUV444P14BE :
+#endif
             *output_pixel_format = AV_PIX_FMT_YUV444P16LE;  /* planar YUV 4:4:4, 48bpp little-endian -> YC48 */
             return OUTPUT_YC48;
         case AV_PIX_FMT_ARGB :
