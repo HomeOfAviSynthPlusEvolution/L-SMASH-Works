@@ -41,8 +41,12 @@ extern AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data,
 extern AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScriptEnvironment *env );
 extern AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env );
 
-extern "C" __declspec(dllexport) const char * __stdcall AvisynthPluginInit2( IScriptEnvironment *env )
+const AVS_Linkage* AVS_linkage = 0;
+
+extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScriptEnvironment* env, const AVS_Linkage* const vectors )
 {
+    AVS_linkage = vectors;
+
     /* LSMASHVideoSource */
     env->AddFunction
     (
