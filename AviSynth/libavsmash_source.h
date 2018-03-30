@@ -70,7 +70,6 @@ public:
         int                 direct_rendering,
         int                 fps_num,
         int                 fps_den,
-        int                 stacked_format,
         enum AVPixelFormat  pixel_format,
         const char         *preferred_decoder_names,
         IScriptEnvironment *env
