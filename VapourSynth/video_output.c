@@ -595,6 +595,8 @@ static int determine_colorspace_conversion
     *output_pixel_format = fmt_conv_required
                          ? vs_to_av_output_pixel_format( vs_vohp->vs_output_pixel_format )
                          : input_pixel_format;
+    if( *output_pixel_format == AV_PIX_FMT_NONE )
+        return -1;
     vs_vohp->component_reorder = get_component_reorder( *output_pixel_format );
     int av_output_flags = av_pix_fmt_desc_get( *output_pixel_format )->flags;
     return set_frame_maker( vs_vohp, (av_output_flags & AV_PIX_FMT_FLAG_PLANAR) && (av_output_flags & AV_PIX_FMT_FLAG_RGB) );
