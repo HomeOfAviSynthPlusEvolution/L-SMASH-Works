@@ -86,7 +86,7 @@
     <ClInclude Include="..\common\audio_output.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="avisynth.h">
+    <ClInclude Include="..\include\avisynth.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\common\cpp_compat.h">
