@@ -24,7 +24,7 @@
 
 #include "lwinput.h"
 
-#include "VSHelper.h"
+#include <VSHelper.h>
 
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
