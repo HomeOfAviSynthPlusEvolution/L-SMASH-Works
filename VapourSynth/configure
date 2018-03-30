@@ -18,6 +18,7 @@ options:
   --libdir=DIR             install libs in DIR [EPREFIX/lib]
   --vs-plugindir=DIR       location of VapourSynth plugin directory,
                               default is [libdir]/vapoursynth
+  --enable-libav-debug     enable log info from ffmpeg or libav (-DVSDEBUG)
 
   --extra-cflags=XCFLAGS   add XCFLAGS to CFLAGS
   --extra-ldflags=XLDFLAGS add XLDFLAGS to LDFLAGS
@@ -123,6 +124,9 @@ for opt; do
             ;;
         --destdir=*)
             DESTDIR="$optarg"
+            ;;
+        --enable-libav-debug)
+            CFLAGS="$CFLAGS -DVSDEBUG"
             ;;
         --extra-cflags=*)
             XCFLAGS="$optarg"

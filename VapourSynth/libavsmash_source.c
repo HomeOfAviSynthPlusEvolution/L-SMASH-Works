@@ -284,6 +284,9 @@ static uint32_t open_file
 
 void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
 {
+#ifndef VSDEBUG
+    av_log_set_level( AV_LOG_QUIET );
+#endif
     const char *file_name = vsapi->propGetData( in, "source", 0, NULL );
     /* Allocate the handler of this plugin. */
     lsmas_handler_t *hp = alloc_handler();
