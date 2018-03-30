@@ -91,7 +91,7 @@ libdir=""
 vsplugindir=""
 DESTDIR=""
 
-CFLAGS="-Wall -std=c99 -pedantic -I. -I$SRCDIR"
+CFLAGS="-Wall -std=c99 -pedantic -I. -I$SRCDIR -I../include"
 LDFLAGS="-L."
 DEPLIBS="liblsmash libavformat libavcodec libswscale libavutil"
 
