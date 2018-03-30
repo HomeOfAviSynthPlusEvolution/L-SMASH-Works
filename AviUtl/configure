@@ -78,7 +78,7 @@ prefix=""
 includedir=""
 libdir=""
 
-CFLAGS="-Wall -std=c99 -pedantic -D__USE_MINGW_ANSI_STDIO=1 -I. -I$SRCDIR"
+CFLAGS="-Wall -std=c99 -pedantic -D__USE_MINGW_ANSI_STDIO=1 -I. -I$SRCDIR -I../include"
 AU_LDFLAGS="-shared -Wl,--dll,--add-stdcall-alias"
 LDFLAGS="-L."
 DEPLIBS="liblsmash libavformat libavcodec libswscale libavresample libavutil"
