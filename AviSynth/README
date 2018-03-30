@@ -1,5 +1,5 @@
 [File]
-    LSMASHSource.dll    : A source plugin for AviSynth
+    LSMASHSource.dll    : A source plugin for AviSynth+
 
 [LSMASHSource.dll: LSMASHSource]
     [Functions]
@@ -52,10 +52,6 @@
                 + fpsden (default : 1)
                     Output frame rate denominator for VFR->CFR (Variable Frame Rate to Constant Frame Rate) conversion.
                     See 'fpsnum' in details.
-                + stacked (default : false)
-                    Use the stacked format for a hack of AviSynth high bit-depth support if set to true.
-                    The stacked format splits MSB and LSB into vertically, and MSB comes on top of output image.
-                    Note: direct rendering is not available at all if stacked format is used.
                 + format (default : "")
                     Force specified output pixel format if 'format' is specified.
                     The following formats are available currently.
@@ -81,8 +77,12 @@
                         "YUV444P16"
                         "YUY2"
                         "Y8"
+                        "Y10"       (ffmpeg only)
+                        "Y12"
+                        "Y16"
                         "RGB24"
                         "RGB32"
+                        "RGB48"
                     Note: direct rendering is not available at all if pixel format is forced.
                 + decoder (defalut : "")
                     Names of preferred decoder candidates separated by comma.
