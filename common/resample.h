@@ -50,9 +50,9 @@ static inline int get_linesize( int channel_count, int sample_count, enum AVSamp
 }
 
 int resample_s32_to_s24( uint8_t **out_data, uint8_t *in_data, int data_size );
-int flush_resampler_buffers( AVAudioResampleContext *avr );
-int update_resampler_configuration( AVAudioResampleContext *avr,
+int flush_resampler_buffers( SwrContext *swr );
+int update_resampler_configuration( SwrContext *swr,
                                     uint64_t out_channel_layout, int out_sample_rate, enum AVSampleFormat out_sample_fmt,
                                     uint64_t  in_channel_layout, int  in_sample_rate, enum AVSampleFormat  in_sample_fmt,
                                     int *input_planes, int *input_block_align );
-int resample_audio( AVAudioResampleContext *avr, audio_samples_t *out, audio_samples_t *in );
+int resample_audio( SwrContext *swr, audio_samples_t *out, audio_samples_t *in );
