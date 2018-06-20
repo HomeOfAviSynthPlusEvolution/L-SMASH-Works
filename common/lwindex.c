@@ -28,7 +28,7 @@ extern "C"
 #endif  /* __cplusplus */
 #include <libavformat/avformat.h>       /* Demuxer */
 #include <libavcodec/avcodec.h>         /* Decoder */
-#include <libavresample/avresample.h>   /* Resampler/Buffer */
+#include <libswresample/swresample.h>   /* Resampler/Buffer */
 #include <libavutil/mathematics.h>      /* Timebase rescaler */
 #include <libavutil/pixdesc.h>
 #ifdef __cplusplus

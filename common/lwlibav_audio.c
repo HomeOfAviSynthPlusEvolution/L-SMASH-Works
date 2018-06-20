@@ -28,7 +28,7 @@ extern "C"
 #endif  /* __cplusplus */
 #include <libavformat/avformat.h>       /* Demuxer */
 #include <libavcodec/avcodec.h>         /* Decoder */
-#include <libavresample/avresample.h>   /* Resampler/Buffer */
+#include <libswresample/swresample.h>   /* Resampler/Buffer */
 #include <libavutil/mem.h>
 #include <libavutil/opt.h>
 #ifdef __cplusplus
@@ -546,7 +546,7 @@ uint64_t lwlibav_audio_get_pcm_samples
 retry_seek:
         av_packet_unref( pkt );
         /* Flush audio resampler buffers. */
-        if( flush_resampler_buffers( aohp->avr_ctx ) < 0 )
+        if( flush_resampler_buffers( aohp->swr_ctx ) < 0 )
         {
             adhp->error = 1;
             lw_log_show( &adhp->lh, LW_LOG_FATAL,

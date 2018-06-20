@@ -21,13 +21,13 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
-#pragma comment( lib, "libmingwex.a" )
-#pragma comment( lib, "libgcc.a" )
+//#pragma comment( lib, "libmingwex.a" )
+//#pragma comment( lib, "libgcc.a" )
 #pragma comment( lib, "lsmash.lib" )
-#pragma comment( lib, "avutil.lib" )
-#pragma comment( lib, "avcodec.lib" )
-#pragma comment( lib, "avformat.lib" )
-#pragma comment( lib, "swscale.lib" )
-#pragma comment( lib, "avresample.lib" )
+#pragma comment( lib, "libavutil.a" )
+#pragma comment( lib, "libavcodec.a" )
+#pragma comment( lib, "libavformat.a" )
+#pragma comment( lib, "libswscale.a" )
+#pragma comment( lib, "libswresample.a" )
 
 /* Add more external libraries user-self if needed. */

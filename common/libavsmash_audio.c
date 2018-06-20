@@ -29,7 +29,7 @@ extern "C"
 #include <lsmash.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
-#include <libavresample/avresample.h>
+#include <libswresample/swresample.h>
 #include <libavutil/mem.h>
 #include <libavutil/opt.h>
 #ifdef __cplusplus
@@ -655,7 +655,7 @@ uint64_t libavsmash_audio_get_pcm_samples
     else
     {
         /* Seek audio stream. */
-        if( flush_resampler_buffers( aohp->avr_ctx ) < 0 )
+        if( flush_resampler_buffers( aohp->swr_ctx ) < 0 )
         {
             config->error = 1;
             lw_log_show( &config->lh, LW_LOG_FATAL,
