@@ -27,7 +27,7 @@ extern "C"
 {
 #endif  /* __cplusplus */
 #include <libavcodec/avcodec.h>
-#include <libavresample/avresample.h>
+#include <libswresample/swresample.h>
 #include <libavutil/mem.h>
 #ifdef __cplusplus
 }
@@ -48,7 +48,7 @@ static int consume_decoded_audio_samples
 )
 {
     /* Input */
-    uint8_t *in_data[AVRESAMPLE_MAX_CHANNELS];
+    uint8_t *in_data[32];
     int decoded_data_offset = sample_offset * aohp->input_block_align;
     for( int i = 0; i < aohp->input_planes; i++ )
         in_data[i] = frame->extended_data[i] + decoded_data_offset;
@@ -79,7 +79,7 @@ static int consume_decoded_audio_samples
     out.sample_format  = aohp->output_sample_format;
     out.data           = resampled_buffer ? &resampled_buffer : out_data;
     /* Resample */
-    int resampled_size = resample_audio( aohp->avr_ctx, &out, &in );
+    int resampled_size = resample_audio( aohp->swr_ctx, &out, &in );
     if( resampled_buffer && resampled_size > 0 )
         resampled_size = resample_s32_to_s24( out_data, aohp->resampled_buffer, resampled_size );
     return resampled_size > 0 ? resampled_size / aohp->output_block_align : 0;
@@ -162,7 +162,7 @@ uint64_t output_pcm_samples_from_packet
             {
                 /* Detected a change of channel layout, sample rate or sample format.
                  * Reconfigure audio resampler. */
-                if( update_resampler_configuration( aohp->avr_ctx,
+                if( update_resampler_configuration( aohp->swr_ctx,
                                                     aohp->output_channel_layout,
                                                     aohp->output_sample_rate,
                                                     aohp->output_sample_format,
@@ -214,6 +214,6 @@ void lw_cleanup_audio_output_handler
 {
     if( aohp->resampled_buffer )
         av_freep( &aohp->resampled_buffer );
-    if( aohp->avr_ctx )
-        avresample_free( &aohp->avr_ctx );
+    if( aohp->swr_ctx )
+        swr_free( &aohp->swr_ctx );
 }

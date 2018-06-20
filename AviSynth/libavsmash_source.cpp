@@ -33,7 +33,7 @@ extern "C"
 #include <libavformat/avformat.h>       /* Codec specific info importer */
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libswscale/swscale.h>         /* Colorspace converter */
-#include <libavresample/avresample.h>   /* Audio resampler */
+#include <libswresample/swresample.h>   /* Audio resampler */
 #include <libavutil/imgutils.h>
 #include <libavutil/mem.h>
 #include <libavutil/opt.h>

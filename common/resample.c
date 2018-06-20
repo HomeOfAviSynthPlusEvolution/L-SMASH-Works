@@ -27,7 +27,7 @@ extern "C"
 {
 #endif  /* __cplusplus */
 #include <libavcodec/avcodec.h>
-#include <libavresample/avresample.h>
+#include <libswresample/swresample.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/opt.h>
 #ifdef __cplusplus
@@ -54,27 +54,27 @@ int resample_s32_to_s24( uint8_t **out_data, uint8_t *in_data, int data_size )
     return resampled_size;
 }
 
-int flush_resampler_buffers( AVAudioResampleContext *avr )
+int flush_resampler_buffers(SwrContext *swr )
 {
-    avresample_close( avr );
-    return avresample_open( avr ) < 0 ? -1 : 0;
+    swr_close( swr );
+    return swr_init( swr ) < 0 ? -1 : 0;
 }
 
-int update_resampler_configuration( AVAudioResampleContext *avr,
+int update_resampler_configuration(SwrContext *swr,
                                     uint64_t out_channel_layout, int out_sample_rate, enum AVSampleFormat out_sample_fmt,
                                     uint64_t  in_channel_layout, int  in_sample_rate, enum AVSampleFormat  in_sample_fmt,
                                     int *input_planes, int *input_block_align )
 {
     /* Reopen the resampler. */
-    avresample_close( avr );
-    av_opt_set_int( avr, "in_channel_layout",   in_channel_layout,  0 );
-    av_opt_set_int( avr, "in_sample_fmt",       in_sample_fmt,      0 );
-    av_opt_set_int( avr, "in_sample_rate",      in_sample_rate,     0 );
-    av_opt_set_int( avr, "out_channel_layout",  out_channel_layout, 0 );
-    av_opt_set_int( avr, "out_sample_fmt",      out_sample_fmt,     0 );
-    av_opt_set_int( avr, "out_sample_rate",     out_sample_rate,    0 );
-    av_opt_set_int( avr, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP, 0 );
-    if( avresample_open( avr ) < 0 )
+    swr_close( swr );
+    av_opt_set_int( swr, "in_channel_layout",   in_channel_layout,  0 );
+    av_opt_set_int( swr, "in_sample_fmt",       in_sample_fmt,      0 );
+    av_opt_set_int( swr, "in_sample_rate",      in_sample_rate,     0 );
+    av_opt_set_int( swr, "out_channel_layout",  out_channel_layout, 0 );
+    av_opt_set_int( swr, "out_sample_fmt",      out_sample_fmt,     0 );
+    av_opt_set_int( swr, "out_sample_rate",     out_sample_rate,    0 );
+    av_opt_set_int( swr, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP, 0 );
+    if( swr_init( swr ) < 0 )
         return -1;
     /* Set up the number of planes and the block alignment of input audio frame. */
     int input_channels = av_get_channel_layout_nb_channels( in_channel_layout );
@@ -91,27 +91,28 @@ int update_resampler_configuration( AVAudioResampleContext *avr,
     return 0;
 }
 
-int resample_audio( AVAudioResampleContext *avr, audio_samples_t *out, audio_samples_t *in )
+int resample_audio(SwrContext *swr, audio_samples_t *out, audio_samples_t *in )
 {
     /* Don't call this function over different block aligns. */
     uint8_t *out_orig = *out->data;
     int out_channels = get_channel_layout_nb_channels( out->channel_layout );
     int block_align = av_get_bytes_per_sample( out->sample_format ) * out_channels;
     int request_sample_count = out->sample_count;
-    if( avresample_available( avr ) > 0 )
+    if( swr_get_delay( swr,  request_sample_count) > 0 )
     {
-        int resampled_count = avresample_read( avr, out->data, request_sample_count );
+        int resampled_count = swr_convert( swr, out->data, request_sample_count, NULL, 0 );
         if( resampled_count < 0 )
             return 0;
         request_sample_count -= resampled_count;
         *out->data += resampled_count * block_align;
     }
     uint8_t **in_data = in->sample_count > 0 ? in->data : NULL;
+	const uint8_t **indata = const_cast<const uint8_t**>(in_data);
     int in_channels  = get_channel_layout_nb_channels( in->channel_layout );
     int in_linesize  = get_linesize( in_channels, in->sample_count, in->sample_format );
     int out_linesize = get_linesize( out_channels, request_sample_count, out->sample_format );
-    int resampled_count = avresample_convert( avr, out->data, out_linesize, request_sample_count,
-                                                     in_data,  in_linesize,     in->sample_count );
+    int resampled_count = swr_convert( swr, out->data, request_sample_count,
+                                                     indata,  in->sample_count );
     if( resampled_count < 0 )
         return 0;
     *out->data += resampled_count * block_align;

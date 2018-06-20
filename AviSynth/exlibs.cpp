@@ -27,7 +27,6 @@
 #pragma comment( lib, "libavcodec.a" )
 #pragma comment( lib, "libavformat.a" )
 #pragma comment( lib, "libswscale.a" )
-#pragma comment( lib, "libavresample.a" )
 #pragma comment( lib, "libswresample.a" )
 #pragma comment( lib, "zlib.lib" )
 #pragma comment( lib, "mfx.lib" )

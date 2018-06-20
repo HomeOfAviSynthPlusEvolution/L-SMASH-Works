@@ -26,7 +26,7 @@
 extern "C"
 {
 #include <libavcodec/avcodec.h>
-#include <libavresample/avresample.h>
+#include <libswresample/swresample.h>
 #include <libavutil/opt.h>
 }
 
@@ -96,19 +96,19 @@ void as_setup_audio_rendering
     int output_channels = av_get_channel_layout_nb_channels( aohp->output_channel_layout );
     aohp->output_block_align = (output_channels * aohp->output_bits_per_sample) / 8;
     /* Set up resampler. */
-    AVAudioResampleContext *avr_ctx = aohp->avr_ctx;
-    avr_ctx = avresample_alloc_context();
-    if( !avr_ctx )
-        env->ThrowError( "%s: failed to avresample_alloc_context.", filter_name );
-    aohp->avr_ctx = avr_ctx;
-    av_opt_set_int( avr_ctx, "in_channel_layout",   ctx->channel_layout,         0 );
-    av_opt_set_int( avr_ctx, "in_sample_fmt",       ctx->sample_fmt,             0 );
-    av_opt_set_int( avr_ctx, "in_sample_rate",      ctx->sample_rate,            0 );
-    av_opt_set_int( avr_ctx, "out_channel_layout",  aohp->output_channel_layout, 0 );
-    av_opt_set_int( avr_ctx, "out_sample_fmt",      aohp->output_sample_format,  0 );
-    av_opt_set_int( avr_ctx, "out_sample_rate",     aohp->output_sample_rate,    0 );
-    av_opt_set_int( avr_ctx, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP,          0 );
-    if( avresample_open( avr_ctx ) < 0 )
+    SwrContext *swr_ctx = aohp->swr_ctx;
+    swr_ctx = swr_alloc();
+    if( !swr_ctx )
+        env->ThrowError( "%s: failed to swr_alloc.", filter_name );
+    aohp->swr_ctx = swr_ctx;
+    av_opt_set_int( swr_ctx, "in_channel_layout",   ctx->channel_layout,         0 );
+    av_opt_set_int( swr_ctx, "in_sample_fmt",       ctx->sample_fmt,             0 );
+    av_opt_set_int( swr_ctx, "in_sample_rate",      ctx->sample_rate,            0 );
+    av_opt_set_int( swr_ctx, "out_channel_layout",  aohp->output_channel_layout, 0 );
+    av_opt_set_int( swr_ctx, "out_sample_fmt",      aohp->output_sample_format,  0 );
+    av_opt_set_int( swr_ctx, "out_sample_rate",     aohp->output_sample_rate,    0 );
+    av_opt_set_int( swr_ctx, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP,          0 );
+    if( swr_init( swr_ctx ) < 0 )
         env->ThrowError( "%s: failed to open resampler.", filter_name );
     /* Set up AviSynth output format. */
     vi->nchannels                = output_channels;
