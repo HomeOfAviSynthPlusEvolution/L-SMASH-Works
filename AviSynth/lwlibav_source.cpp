@@ -174,12 +174,22 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame( int n, IScriptEnvironment *e
 bool __stdcall LWLibavVideoSource::GetParity( int n )
 {
     uint32_t frame_number = n + 1;     /* frame_number is 1-origin. */
+    lwlibav_video_decode_handler_t *vdhp = this->vdhp.get();
     lwlibav_video_output_handler_t *vohp = this->vohp.get();
     if( !vohp->repeat_control )
-        return lwlibav_video_get_field_info( vdhp.get(), frame_number ) == LW_FIELD_INFO_TOP ? true : false;
+        return lwlibav_video_get_field_info( vdhp, frame_number ) == LW_FIELD_INFO_TOP ? true : false;
     uint32_t t = vohp->frame_order_list[frame_number].top;
     uint32_t b = vohp->frame_order_list[frame_number].bottom;
-    return t < b ? true : false;
+    uint32_t field_number = t < b ? t : b;
+    bool top_field_first = lwlibav_video_get_field_info( vdhp, field_number ) == LW_FIELD_INFO_TOP ? true : false;
+    if( frame_number <= 2 )
+        return vohp->repeat_correction_ts ? !top_field_first : top_field_first;
+    uint32_t prev_t = vohp->frame_order_list[frame_number - 1].top;
+    uint32_t prev_b = vohp->frame_order_list[frame_number - 1].bottom;
+    if( prev_t != prev_b && (field_number == prev_t || field_number == prev_b) )
+        return !top_field_first;
+    else
+        return top_field_first;
 }
 
 static void prepare_audio_decoding
