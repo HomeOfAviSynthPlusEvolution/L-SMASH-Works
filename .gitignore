@@ -39,3 +39,4 @@ BuildLog.htm
 *.mov
 *.mp4
 *.qt
+!include/avs/config.h

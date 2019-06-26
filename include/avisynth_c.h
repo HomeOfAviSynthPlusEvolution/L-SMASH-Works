@@ -35,9 +35,11 @@
 // new color spaces added in Avisynth 2.60. By no means is this document
 // completely Avisynth 2.60 compliant.
 // 170103: added new CPU constants (FMA4, AVX512xx)
-// 171102: define SIZETMOD (experimental. Offsets are size_t instead of int (x64 is different!)
+// 171102: define SIZETMOD. do not use yet, experimental. Offsets are size_t instead of int. Affects x64.
 // 171106: avs_get_row_size calls into avs_get_row_size_p, instead of direct field access
 // 171106: avs_get_height calls into avs_get_row_size_p, instead of direct field access
+// 180524: AVSC_EXPORT to dllexport in capi.h for avisynth_c_plugin_init
+// 180524: avs_is_same_colorspace VideoInfo parameters to const
 
 #ifndef __AVISYNTH_C__
 #define __AVISYNTH_C__
@@ -494,7 +496,7 @@ AVSC_INLINE void avs_set_fps(AVS_VideoInfo * p, unsigned numerator, unsigned den
     p->fps_denominator = denominator/x;
 }
 
-AVSC_INLINE int avs_is_same_colorspace(AVS_VideoInfo * x, AVS_VideoInfo * y)
+AVSC_INLINE int avs_is_same_colorspace(const AVS_VideoInfo * x, const AVS_VideoInfo * y)
 {
         return (x->pixel_type == y->pixel_type)
                 || (avs_is_yv12(x) && avs_is_yv12(y));
