@@ -29,6 +29,5 @@
 #pragma comment( lib, "libswscale.a" )
 #pragma comment( lib, "libswresample.a" )
 #pragma comment( lib, "zlib.lib" )
-#pragma comment( lib, "mfx.lib" )
 
 /* Add more external libraries user-self if needed. */

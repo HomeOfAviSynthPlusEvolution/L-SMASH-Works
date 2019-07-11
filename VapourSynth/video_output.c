@@ -21,12 +21,22 @@
 /* This file is available under an ISC license. */
 
 #include <string.h>
+#ifdef _MSC_VER
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* Libav */
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libswscale/swscale.h>         /* Colorspace converter */
 #include <libavutil/imgutils.h>
 #include <libavutil/mem.h>
+#ifdef __cplusplus
+}
+#endif
 
 #include "lsmashsource.h"
 #include "video_output.h"
@@ -623,7 +633,7 @@ static VSFrameRef *new_output_video_frame
     if( vs_vohp->variable_info )
     {
         if( !av_frame->opaque
-         && determine_colorspace_conversion( vs_vohp, av_frame->format, output_pixel_format ) < 0 )
+         && determine_colorspace_conversion( vs_vohp, (AVPixelFormat)av_frame->format, output_pixel_format ) < 0 )
             goto fail;
         const VSFormat *vs_format = vsapi->getFormatPreset( vs_vohp->vs_output_pixel_format, core );
         return vsapi->newVideoFrame( vs_format, av_frame->width, av_frame->height, NULL, core );
@@ -632,7 +642,7 @@ static VSFrameRef *new_output_video_frame
     {
         if( !av_frame->opaque
          && input_pix_fmt_change
-         && determine_colorspace_conversion( vs_vohp, av_frame->format, output_pixel_format ) < 0 )
+         && determine_colorspace_conversion( vs_vohp, (AVPixelFormat)av_frame->format, output_pixel_format ) < 0 )
             goto fail;
         return vsapi->copyFrame( vs_vohp->background_frame, core );
     }
@@ -790,14 +800,14 @@ static int vs_video_get_buffer
     av_frame->opaque = NULL;
     lw_video_output_handler_t *lw_vohp = (lw_video_output_handler_t *)ctx->opaque;
     vs_video_output_handler_t *vs_vohp = (vs_video_output_handler_t *)lw_vohp->private_handler;
-    enum AVPixelFormat pix_fmt = av_frame->format;
+    enum AVPixelFormat pix_fmt = (AVPixelFormat)av_frame->format;
     avoid_yuv_scale_conversion( &pix_fmt );
     av_frame->format = pix_fmt; /* Don't use AV_PIX_FMT_YUVJ*. */
     if( (!vs_vohp->variable_info && lw_vohp->scaler.output_pixel_format != pix_fmt)
      || !vs_check_dr_available( ctx, pix_fmt ) )
         return avcodec_default_get_buffer2( ctx, av_frame, flags );
     /* New VapourSynth video frame buffer. */
-    vs_video_buffer_handler_t *vs_vbhp = malloc( sizeof(vs_video_buffer_handler_t) );
+    vs_video_buffer_handler_t *vs_vbhp = (vs_video_buffer_handler_t *)malloc( sizeof(vs_video_buffer_handler_t) );
     if( !vs_vbhp )
     {
         av_frame_unref( av_frame );
@@ -909,7 +919,7 @@ vs_video_output_handler_t *vs_allocate_video_output_handler
     lw_video_output_handler_t *vohp
 )
 {
-    vs_video_output_handler_t *vs_vohp = lw_malloc_zero( sizeof(vs_video_output_handler_t) );
+    vs_video_output_handler_t *vs_vohp = (vs_video_output_handler_t *)lw_malloc_zero( sizeof(vs_video_output_handler_t) );
     if( !vs_vohp )
         return NULL;
     vohp->private_handler      = vs_vohp;
