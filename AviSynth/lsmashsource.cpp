@@ -67,7 +67,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LWLibavVideoSource",
-        "[source]s[stream_index]i[threads]i[cache]b[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[format]s[decoder]s",
+        "[source]s[stream_index]i[threads]i[cache]b[cachefile]s[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[format]s[decoder]s",
         CreateLWLibavVideoSource,
         0
     );
@@ -75,7 +75,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LWLibavAudioSource",
-        "[source]s[stream_index]i[cache]b[av_sync]b[layout]s[rate]i[decoder]s",
+        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s",
         CreateLWLibavAudioSource,
         0
     );
