@@ -2013,9 +2013,15 @@ static void create_index
         </ExtraDataList>
         </LibavReaderIndexFile>
      */
-    char index_path[512] = { 0 };
-    sprintf( index_path, "%s.lwi", lwhp->file_path );
-    FILE *index = !opt->no_create_index ? lw_fopen( index_path, "wb" ) : NULL;
+    FILE *index;
+    if( opt->index_file_path && *opt->index_file_path )
+        index = !opt->no_create_index ? lw_fopen( opt->index_file_path, "wb" ) : NULL;
+    else
+    {
+        char index_path[512] = { 0 };
+        sprintf( index_path, "%s.lwi", lwhp->file_path );
+        index = !opt->no_create_index ? lw_fopen( index_path, "wb" ) : NULL;
+    }
     if( !index && !opt->no_create_index )
     {
         free( video_info );
@@ -3201,21 +3207,20 @@ int lwlibav_construct_index
 {
     /* Try to open the index file. */
     size_t file_path_length = strlen( opt->file_path );
-    char *index_file_path = (char *)lw_malloc_zero(file_path_length + 5);
-    if( !index_file_path )
-        return -1;
-    memcpy( index_file_path, opt->file_path, file_path_length );
-    const char *ext = file_path_length >= 5 ? &opt->file_path[file_path_length - 4] : NULL;
-    int has_lwi_ext = ext && !strncmp( ext, ".lwi", strlen( ".lwi" ) );
-    if( has_lwi_ext )
-        index_file_path[file_path_length] = '\0';
+    FILE *index;
+    if( opt->index_file_path && *opt->index_file_path )
+        index = lw_fopen( opt->index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
     else
     {
+        char *index_file_path = (char *)lw_malloc_zero(file_path_length + 5);
+        if( !index_file_path )
+            return -1;
+        memcpy( index_file_path, opt->file_path, file_path_length );
         memcpy( index_file_path + file_path_length, ".lwi", strlen( ".lwi" ) );
         index_file_path[file_path_length + 4] = '\0';
+        index = lw_fopen( index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
+        free( index_file_path );
     }
-    FILE *index = lw_fopen( index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
-    free( index_file_path );
     if( index )
     {
         uint8_t lwindex_version[4] = { 0 };
@@ -3243,8 +3248,6 @@ int lwlibav_construct_index
         if( !lwhp->file_path )
             goto fail;
         memcpy( lwhp->file_path, opt->file_path, file_path_length );
-        if( has_lwi_ext )
-            lwhp->file_path[file_path_length - 4] = '\0';
     }
     av_register_all();
     avcodec_register_all();

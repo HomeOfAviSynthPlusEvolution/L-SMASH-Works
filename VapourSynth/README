@@ -90,7 +90,7 @@
                     used 'h264' and 'mpeg2video' decoder, then specify as "h264_qsv,mpeg2_qsv". The evaluations are done
                     in the written order and the first matched decoder is used if any.
         [LWLibavSource]
-            LWLibavSource(string source, int stream_index = -1, int threads = 0, int cache = 1,
+            LWLibavSource(string source, int stream_index = -1, int threads = 0, int cache = 1, string cachefile = source + ".lwi",
                           int seek_mode = 0, int seek_threshold = 10, int dr = 0, int fpsnum = 0, int fpsden = 1, 
                           int variable = 0, string format = "", int repeat = 0, int dominance = 1, string decoder = "")
                 * This function uses libavcodec as video decoder and libavformat as demuxer.
@@ -106,6 +106,8 @@
                     Create the index file (.lwi) to the same directory as the source file if set to 1.
                     The index file avoids parsing all frames in the source file at the next or later access.
                     Parsing all frames is very important for frame accurate seek.
+                + cachefile (default : source + ".lwi")
+                    The filename of the index file (where the indexing data is saved).
                 + seek_mode (default : 0)
                     Same as 'seek_mode' of LibavSMASHSource().
                 + seek_threshold (default : 10)

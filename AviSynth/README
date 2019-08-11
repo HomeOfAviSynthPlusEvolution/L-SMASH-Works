@@ -6,7 +6,7 @@
         [LSMASHVideoSource]
             LSMASHVideoSource(string source, int track = 0, int threads = 0, int seek_mode = 0, int seek_threshold = 10,
                               bool dr = false, int fpsnum = 0, int fpsden = 1,
-                              bool stacked = false, string format = "", string decoder = "")
+                              string format = "", string decoder = "")
                 * This function uses libavcodec as video decoder and L-SMASH as demuxer.
                 * RAP is an abbreviation of random accessible point.
             [Arguments]
@@ -179,10 +179,10 @@
                 + decoder (defalut : "")
                     Same as 'decoder' of LSMASHVideoSource().
         [LWLibavVideoSource]
-            LWLibavVideoSource(string source, int stream_index = -1, int threads = 0, bool cache = true,
+            LWLibavVideoSource(string source, int stream_index = -1, int threads = 0, bool cache = true, string cachefile = source + ".lwi",
                                int seek_mode = 0, int seek_threshold = 10, bool dr = false,
                                int fpsnum = 0, int fpsden = 1, bool repeat = false, int dominance = 0,
-                               bool stacked = false, string format = "", string decoder = "")
+                               string format = "", string decoder = "")
                 * This function uses libavcodec as video decoder and libavformat as demuxer.
             [Arguments]
                 + source
@@ -196,6 +196,8 @@
                     Create the index file (.lwi) to the same directory as the source file if set to true.
                     The index file avoids parsing all frames in the source file at the next or later access.
                     Parsing all frames is very important for frame accurate seek.
+                + cachefile (default : source + ".lwi")
+                    The filename of the index file (where the indexing data is saved).
                 + seek_mode (default : 0)
                     Same as 'seek_mode' of LSMASHVideoSource().
                 + seek_threshold (default : 10)
@@ -217,14 +219,12 @@
                     This option is enabled only if one or more of the following conditions is true.
                         - 'repeat' is set to true.
                         - There is a video frame consisting of two separated field coded pictures.
-                + stacked (default : false)
-                    Same as 'stacked' of LSMASHVideoSource().
                 + format (default : "")
                     Same as 'format' of LSMASHVideoSource().
                 + decoder (defalut : "")
                     Same as 'decoder' of LSMASHVideoSource().
         [LWLibavAudioSource]
-            LWLibavAudioSource(string source, int stream_index = -1, bool cache = true, bool av_sync = false,
+            LWLibavAudioSource(string source, int stream_index = -1, bool cache = true, string cachefile = source + ".lwi", bool av_sync = false,
                                string layout = "", int rate = 0, string decoder = "")
                 * This function uses libavcodec as audio decoder and libavformat as demuxer.
                 * If audio stream can be coded as lossy, do pre-roll whenever any seek of audio stream occurs.
@@ -236,6 +236,8 @@
                     The value -1 means trying to get the first detected audio stream.
                 + cache (default : true)
                     Same as 'cache' of LWLibavVideoSource().
+                + cachefile (default : source + ".lwi")
+                    Same as 'cachefile' of LWLibavVideoSource().
                 + av_sync (default : false)
                     Try Audio/Visual synchronization at the first video frame of the video stream activated in the index file if set to true.
                 + layout (defalut : "")

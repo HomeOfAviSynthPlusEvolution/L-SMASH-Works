@@ -285,6 +285,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     int64_t fps_den;
     int64_t apply_repeat_flag;
     int64_t field_dominance;
+    const char *index_file_path;
     const char *format;
     const char *preferred_decoder_names;
     set_option_int64 ( &stream_index,           -1,    "stream_index",   in, vsapi );
@@ -298,6 +299,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_int64 ( &fps_den,                 1,    "fpsden",         in, vsapi );
     set_option_int64 ( &apply_repeat_flag,       0,    "repeat",         in, vsapi );
     set_option_int64 ( &field_dominance,         0,    "dominance",      in, vsapi );
+    set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
@@ -307,6 +309,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     opt.threads           = threads >= 0 ? threads : 0;
     opt.av_sync           = 0;
     opt.no_create_index   = !cache_index;
+    opt.index_file_path   = index_file_path;
     opt.force_video       = (stream_index >= 0);
     opt.force_video_index = stream_index >= 0 ? stream_index : -1;
     opt.force_audio       = 0;
