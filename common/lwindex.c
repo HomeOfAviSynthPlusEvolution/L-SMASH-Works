@@ -2088,9 +2088,15 @@ static void create_index
         AVCodecParameters *codecpar = stream->codecpar;
         if( codecpar->codec_type != AVMEDIA_TYPE_VIDEO
          && codecpar->codec_type != AVMEDIA_TYPE_AUDIO )
+        {
+            stream->discard = AVDISCARD_ALL;
             continue;
+        }
         if( codecpar->codec_id == AV_CODEC_ID_NONE )
+        {
+            stream->discard = AVDISCARD_ALL;
             continue;
+        }
         lwindex_helper_t *helper = get_index_helper( &indexer, stream );
         if( !helper )
         {
@@ -2099,7 +2105,10 @@ static void create_index
         }
         AVCodecContext *pkt_ctx = helper->codec_ctx;
         if( !pkt_ctx )
+        {
+            stream->discard = AVDISCARD_ALL;
             continue;
+        }
         int extradata_index = append_extradata_if_new( helper, pkt_ctx, &pkt );
         if( extradata_index < 0 )
         {
@@ -2387,6 +2396,8 @@ static void create_index
                          av_get_sample_fmt_name( pkt_ctx->sample_fmt ) ? av_get_sample_fmt_name( pkt_ctx->sample_fmt ) : "none",
                          bits_per_sample, frame_length );
         }
+        else
+            stream->discard = AVDISCARD_ALL;
         if( indicator->update )
         {
             /* Update progress dialog. */
