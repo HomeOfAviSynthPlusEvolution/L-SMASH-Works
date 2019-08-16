@@ -2054,7 +2054,7 @@ static void create_index
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
         audio_index_pos = ftell( index );
-        fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", -1 );
+        fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index == -2 ? -2 : -1 );
     }
     AVPacket pkt = { 0 };
     av_init_packet( &pkt );
@@ -2285,7 +2285,7 @@ static void create_index
                          av_get_pix_fmt_name( pkt_ctx->pix_fmt ) ? av_get_pix_fmt_name( pkt_ctx->pix_fmt ) : "none",
                          pkt_ctx->colorspace );
         }
-        else
+        else if( adhp->stream_index != -2 )
         {
             if( adhp->stream_index == -1 && (!opt->force_audio || (opt->force_audio && pkt.stream_index == opt->force_audio_index)) )
             {
@@ -2751,6 +2751,8 @@ static int parse_index
         if( !audio_info )
             goto fail_parsing;
     }
+    if( active_audio_index == -2 && opt->force_audio_index >= -1 )
+        goto fail_parsing;
     vdhp->codec_id             = AV_CODEC_ID_NONE;
     adhp->codec_id             = AV_CODEC_ID_NONE;
     vdhp->initial_pix_fmt      = AV_PIX_FMT_NONE;
@@ -3260,7 +3262,7 @@ int lwlibav_construct_index
     }
     lwhp->threads      = opt->threads;
     vdhp->stream_index = -1;
-    adhp->stream_index = -1;
+    adhp->stream_index = ( opt->force_audio_index == -2 ) ? -2 : -1;
     /* Create the index file. */
     create_index( lwhp, vdhp, vohp, adhp, aohp, format_ctx, opt, indicator, php );
     /* Close file.
