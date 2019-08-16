@@ -21,6 +21,8 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#include <stdio.h>
+#include <string.h>
 #include "lsmashsource.h"
 
 extern "C"
@@ -41,6 +43,21 @@ extern "C"
 #include "lwlibav_source.h"
 
 #pragma warning( disable:4996 )
+
+static int update_indicator( progress_handler_t *, const char *message, int percent )
+{
+    if ( !strcmp( message, "Creating Index file" ) )
+    {
+        fprintf( stderr, "Creating lwi index file %d%%\r", percent );
+        fflush( stderr );
+    }
+    return 0;
+}
+
+static void close_indicator( progress_handler_t * )
+{
+    fprintf( stderr, "\n" );
+}
 
 static void prepare_video_decoding
 (
@@ -104,8 +121,8 @@ LWLibavVideoSource::LWLibavVideoSource
     /* Set up progress indicator. */
     progress_indicator_t indicator;
     indicator.open   = NULL;
-    indicator.update = NULL;
-    indicator.close  = NULL;
+    indicator.update = update_indicator;
+    indicator.close  = close_indicator;
     /* Construct index. */
     int ret = lwlibav_construct_index( &lwh, vdhp, vohp, adhp.get(), aohp.get(), lhp, opt, &indicator, NULL );
     free_audio_decode_handler();
@@ -214,8 +231,8 @@ LWLibavAudioSource::LWLibavAudioSource
     /* Set up progress indicator. */
     progress_indicator_t indicator;
     indicator.open   = NULL;
-    indicator.update = NULL;
-    indicator.close  = NULL;
+    indicator.update = update_indicator;
+    indicator.close  = close_indicator;
     /* Construct index. */
     if( lwlibav_construct_index( &lwh, vdhp.get(), vohp.get(), adhp, aohp, lhp, opt, &indicator, NULL ) < 0 )
         env->ThrowError( "LWLibavAudioSource: failed to get construct index." );

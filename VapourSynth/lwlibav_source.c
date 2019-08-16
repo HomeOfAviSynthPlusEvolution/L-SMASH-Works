@@ -73,6 +73,8 @@ uint64_t output_pcm_samples_from_packet
 
 void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ } */
 
+#include <stdio.h>
+#include <string.h>
 #include "lsmashsource.h"
 #include "video_output.h"
 
@@ -129,6 +131,21 @@ static lwlibav_handler_t *alloc_handler
         return NULL;
     }
     return hp;
+}
+
+static int update_indicator( progress_handler_t *, const char *message, int percent )
+{
+    if ( !strcmp( message, "Creating Index file" ) )
+    {
+        fprintf( stderr, "Creating lwi index file %d%%\r", percent );
+        fflush( stderr );
+    }
+    return 0;
+}
+
+static void close_indicator( progress_handler_t * )
+{
+    fprintf( stderr, "\n" );
 }
 
 static void VS_CC vs_filter_init( VSMap *in, VSMap *out, void **instance_data, VSNode *node, VSCore *core, const VSAPI *vsapi )
@@ -325,8 +342,8 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     /* Set up progress indicator. */
     progress_indicator_t indicator;
     indicator.open   = NULL;
-    indicator.update = NULL;
-    indicator.close  = NULL;
+    indicator.update = update_indicator;
+    indicator.close  = close_indicator;
     /* Construct index. */
     int ret = lwlibav_construct_index( lwhp, vdhp, vohp, hp->adhp, hp->aohp, &lh, &opt, &indicator, NULL );
     lwlibav_audio_free_decode_handler_ptr( &hp->adhp );
