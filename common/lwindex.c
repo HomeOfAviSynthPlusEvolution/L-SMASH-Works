@@ -48,6 +48,11 @@ extern "C"
 #include "lwindex.h"
 #include "decode.h"
 
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 typedef struct
 {
     lwlibav_extradata_handler_t exh;
@@ -1996,6 +2001,8 @@ static void create_index
     /*
         # Structure of Libav reader index file
         <LibavReaderIndexFile=14>
+        <FileSize=000>
+        <FileLastModificationTime=000>
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
         <ActiveAudioStreamIndex>-0000000001</ActiveAudioStreamIndex>
@@ -2048,6 +2055,17 @@ static void create_index
         fprintf( index, "<LSMASHWorksIndexVersion=%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 ">\n",
                  lwindex_version[0], lwindex_version[1], lwindex_version[2], lwindex_version[3] );
         fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
+#ifdef _WIN32
+        wchar_t *wname;
+        lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname );
+        struct _stat64 file_stat;
+        _wstat64( wname, &file_stat );
+#else
+        struct stat64 file_stat;
+        stat64( lwhp->file_path, &file_stat );
+#endif
+        fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
+        fprintf( index, "<FileLastModificationTime=%" PRId64 ">\n", file_stat.st_mtime );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
@@ -2715,9 +2733,27 @@ static int parse_index
 )
 {
     /* Parse the index file. */
+    int64_t file_size;
+    int64_t file_last_modification_time;
     char format_name[256];
     int active_video_index;
     int active_audio_index;
+#ifdef _WIN32
+    wchar_t *wname;
+    lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname );
+    struct _stat64 file_stat;
+    if( _wstat64( wname, &file_stat ) )
+        return -1;
+#else
+    struct stat64 file_stat;
+    if( stat64( lwhp->file_path, &file_stat ) )
+        return -1;
+#endif
+    if( fscanf( index, "<FileSize=%" SCNd64 ">\n", &file_size ) != 1
+     || fscanf( index, "<FileLastModificationTime=%" SCNd64 ">\n", &file_last_modification_time ) != 1 )
+        return -1;
+    if( file_size != file_stat.st_size || file_last_modification_time != file_stat.st_mtime )
+        return -1;
     if( fscanf( index, "<LibavReaderIndex=0x%x,%d,%[^>]>\n",
                 (unsigned int *)&lwhp->format_flags, &lwhp->raw_demuxer, format_name ) != 3 )
         return -1;
