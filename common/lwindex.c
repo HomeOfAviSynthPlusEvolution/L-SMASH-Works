@@ -1995,8 +1995,7 @@ static void create_index
     }
     /*
         # Structure of Libav reader index file
-        <LibavReaderIndexFile=13>
-        <InputFilePath>foobar.omo</InputFilePath>
+        <LibavReaderIndexFile=14>
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
         <ActiveAudioStreamIndex>-0000000001</ActiveAudioStreamIndex>
@@ -2049,7 +2048,6 @@ static void create_index
         fprintf( index, "<LSMASHWorksIndexVersion=%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 ">\n",
                  lwindex_version[0], lwindex_version[1], lwindex_version[2], lwindex_version[3] );
         fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
-        fprintf( index, "<InputFilePath>%s</InputFilePath>\n", lwhp->file_path );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
@@ -2716,19 +2714,6 @@ static int parse_index
     FILE                           *index
 )
 {
-    /* Test to open the target file. */
-    char file_path[512] = { 0 };
-    if( fscanf( index, "<InputFilePath>%[^\n<]</InputFilePath>\n", file_path ) != 1 )
-        return -1;
-    FILE *target = lw_fopen( file_path, "rb" );
-    if( !target )
-        return -1;
-    fclose( target );
-    size_t file_path_length = strlen( file_path );
-    lwhp->file_path = (char *)lw_malloc_zero( file_path_length + 1 );
-    if( !lwhp->file_path )
-        return -1;
-    memcpy( lwhp->file_path, file_path, file_path_length );
     /* Parse the index file. */
     char format_name[256];
     int active_video_index;
@@ -3220,6 +3205,10 @@ int lwlibav_construct_index
 {
     /* Try to open the index file. */
     size_t file_path_length = strlen( opt->file_path );
+    lwhp->file_path = (char *)lw_malloc_zero( file_path_length + 1 );
+    if( !lwhp->file_path )
+        goto fail;
+    memcpy( lwhp->file_path, opt->file_path, file_path_length );
     FILE *index;
     if( opt->index_file_path && *opt->index_file_path )
         index = lw_fopen( opt->index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
@@ -3255,13 +3244,6 @@ int lwlibav_construct_index
         fclose( index );
     }
     /* Open file. */
-    if( !lwhp->file_path )
-    {
-        lwhp->file_path = (char *)lw_malloc_zero( file_path_length + 1 );
-        if( !lwhp->file_path )
-            goto fail;
-        memcpy( lwhp->file_path, opt->file_path, file_path_length );
-    }
     av_register_all();
     avcodec_register_all();
     AVFormatContext *format_ctx = NULL;
