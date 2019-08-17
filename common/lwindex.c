@@ -48,6 +48,12 @@ extern "C"
 #include "lwindex.h"
 #include "decode.h"
 
+#include <sys/stat.h>
+#include "xxhash.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 typedef struct
 {
     lwlibav_extradata_handler_t exh;
@@ -1969,6 +1975,23 @@ static void cleanup_index_helpers( lwindex_indexer_t *indexer, AVFormatContext *
     av_freep( &indexer->helpers );
 }
 
+static unsigned xxhash_file( const char *file_path, int64_t file_size )
+{
+    uint8_t *file_buffer = (uint8_t *)lw_malloc_zero( 1 << 21 );
+    const size_t read_len = 1 << 20;
+    FILE *fp = lw_fopen( file_path, "rb" );
+    size_t buffer_len = fread( file_buffer, 1, read_len, fp );
+    if( file_size > (1 << 21) )
+    {
+        fseek( fp, -(1 << 20), SEEK_END );
+        buffer_len += fread( file_buffer + buffer_len, 1, read_len, fp );
+    }
+    fclose( fp );
+    unsigned hash = XXH32( file_buffer, buffer_len, 0 );
+    lw_free( file_buffer );
+    return hash;
+}
+
 static void create_index
 (
     lwlibav_file_handler_t         *lwhp,
@@ -1995,7 +2018,9 @@ static void create_index
     }
     /*
         # Structure of Libav reader index file
-        <LibavReaderIndexFile=14>
+        <LibavReaderIndexFile=15>
+        <FileSize=1048576>
+        <FileHash=0x1234abcd>
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
         <ActiveAudioStreamIndex>-0000000001</ActiveAudioStreamIndex>
@@ -2048,6 +2073,17 @@ static void create_index
         fprintf( index, "<LSMASHWorksIndexVersion=%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 ">\n",
                  lwindex_version[0], lwindex_version[1], lwindex_version[2], lwindex_version[3] );
         fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
+#ifdef _WIN32
+        wchar_t *wname;
+        lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname );
+        struct _stat64 file_stat;
+        _wstat64( wname, &file_stat );
+#else
+        struct stat file_stat;
+        stat( lwhp->file_path, &file_stat );
+#endif
+        fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
+        fprintf( index, "<FileHash=0x%08x>\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
@@ -2715,9 +2751,27 @@ static int parse_index
 )
 {
     /* Parse the index file. */
+    int64_t file_size;
+    unsigned file_hash;
     char format_name[256];
     int active_video_index;
     int active_audio_index;
+#ifdef _WIN32
+    wchar_t *wname;
+    lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname );
+    struct _stat64 file_stat;
+    if( _wstat64( wname, &file_stat ) )
+#else
+    struct stat file_stat;
+    if( stat( lwhp->file_path, &file_stat ) )
+#endif
+        return -1;
+    if( fscanf( index, "<FileSize=%" SCNd64 ">\n", &file_size ) != 1
+     || file_size != file_stat.st_size )
+        return -1;
+    if( fscanf( index, "<FileHash=0x%x>\n", &file_hash ) != 1
+     || file_hash != xxhash_file( lwhp->file_path, file_stat.st_size ) )
+        return -1;
     if( fscanf( index, "<LibavReaderIndex=0x%x,%d,%[^>]>\n",
                 (unsigned int *)&lwhp->format_flags, &lwhp->raw_demuxer, format_name ) != 3 )
         return -1;
