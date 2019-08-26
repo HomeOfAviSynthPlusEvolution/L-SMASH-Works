@@ -9,7 +9,7 @@ set_source_files_properties(${LSWSOURCES} PROPERTIES LANGUAGE CXX)
 add_library(LSMASHSource SHARED ${AVSSOURCES} ${VPYSOURCES} ${LSWSOURCES} version.rc)
 set_target_properties(LSMASHSource PROPERTIES LINKER_LANGUAGE CXX)
 
-set (VERSION "r935+26")
+set (VERSION "r935+33")
 configure_file (
   "${PROJECT_SOURCE_DIR}/version.rc.in"
   "${PROJECT_SOURCE_DIR}/version.rc"

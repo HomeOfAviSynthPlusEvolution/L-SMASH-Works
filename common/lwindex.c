@@ -48,6 +48,8 @@ extern "C"
 #include "lwindex.h"
 #include "decode.h"
 
+#include "xxhash.h"
+
 #include <sys/stat.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -1974,6 +1976,25 @@ static void cleanup_index_helpers( lwindex_indexer_t *indexer, AVFormatContext *
     av_freep( &indexer->helpers );
 }
 
+/* Hash the first and last mebibytes. */
+static int xxhash_file( const char * file_path, int64_t file_size )
+{
+    unsigned char* file_xxhash_buffer = (unsigned char *)lw_malloc_zero( 1 << 21 );
+    int buffer_len = 0;
+    FILE* fp = lw_fopen( file_path, "rb" );
+    int64_t read_len = 1 << 20;
+    buffer_len = fread( file_xxhash_buffer, 1, read_len, fp );
+    if( file_size > (read_len << 1) ) {
+        /* Only if file is larger than 2 mebibytes */
+        fseek( fp, -(1 << 20), SEEK_END );
+        buffer_len += fread( file_xxhash_buffer + buffer_len, 1, read_len, fp );
+    }
+    fclose( fp );
+    int hash = XXH32( file_xxhash_buffer, buffer_len, 0 );
+    lw_free( file_xxhash_buffer );
+    return hash;
+}
+
 static void create_index
 (
     lwlibav_file_handler_t         *lwhp,
@@ -2003,6 +2024,7 @@ static void create_index
         <LibavReaderIndexFile=14>
         <FileSize=000>
         <FileLastModificationTime=000>
+        <File1MXXH=0x1234abcd>
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
         <ActiveAudioStreamIndex>-0000000001</ActiveAudioStreamIndex>
@@ -2064,8 +2086,10 @@ static void create_index
         struct stat64 file_stat;
         stat64( lwhp->file_path, &file_stat );
 #endif
+        int file_1m_xxhash = xxhash_file( lwhp->file_path, file_stat.st_size );
         fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
         fprintf( index, "<FileLastModificationTime=%" PRId64 ">\n", file_stat.st_mtime );
+        fprintf( index, "<File1MXXH=0x%08x>\n", file_1m_xxhash );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
@@ -2735,6 +2759,7 @@ static int parse_index
     /* Parse the index file. */
     int64_t file_size;
     int64_t file_last_modification_time;
+    int file_1m_xxhash = 0;
     char format_name[256];
     int active_video_index;
     int active_audio_index;
@@ -2752,8 +2777,20 @@ static int parse_index
     if( fscanf( index, "<FileSize=%" SCNd64 ">\n", &file_size ) != 1
      || fscanf( index, "<FileLastModificationTime=%" SCNd64 ">\n", &file_last_modification_time ) != 1 )
         return -1;
-    if( file_size != file_stat.st_size || file_last_modification_time != file_stat.st_mtime )
+    if( file_size != file_stat.st_size )
         return -1;
+    off_t pos = ftell( index );
+    if( fscanf( index, "<File1MXXH=0x%x>\n", &file_1m_xxhash ) != 1 )
+        fseek( index, pos, SEEK_SET);
+    if( file_last_modification_time != file_stat.st_mtime )
+    {
+        if( !file_1m_xxhash )
+            return -1;
+        // Also check hashsum
+        int file_1m_xxhash_real = xxhash_file( lwhp->file_path, file_stat.st_size );
+        if( file_1m_xxhash != file_1m_xxhash_real )
+            return -1;
+    }
     if( fscanf( index, "<LibavReaderIndex=0x%x,%d,%[^>]>\n",
                 (unsigned int *)&lwhp->format_flags, &lwhp->raw_demuxer, format_name ) != 3 )
         return -1;
