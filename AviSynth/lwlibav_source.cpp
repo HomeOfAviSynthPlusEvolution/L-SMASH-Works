@@ -46,8 +46,10 @@ extern "C"
 
 static int update_indicator( progress_handler_t *, const char *message, int percent )
 {
-    if ( !strcmp( message, "Creating Index file" ) )
+    static int last_percent = -1;
+    if ( !strcmp( message, "Creating Index file" ) && last_percent != percent )
     {
+        last_percent = percent;
         fprintf( stderr, "Creating lwi index file %d%%\r", percent );
         fflush( stderr );
     }
