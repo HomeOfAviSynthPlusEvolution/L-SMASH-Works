@@ -80,7 +80,18 @@ static int load_vsscript_dll
     vpy_handler_t *hp
 )
 {
-    hp->library = LoadLibrary( "vsscript" );
+    HKEY  key_handle;
+    DWORD data_size;
+    if( RegOpenKeyEx( HKEY_LOCAL_MACHINE, "Software\\VapourSynth", 0, KEY_QUERY_VALUE, &key_handle ) == ERROR_SUCCESS
+     && RegQueryValueEx( key_handle, "VSScriptDLL", NULL, NULL, NULL, &data_size ) == ERROR_SUCCESS )
+    {
+        char dll_path[data_size];
+        if( RegQueryValueEx( key_handle, "VSScriptDLL", NULL, NULL, (LPBYTE)dll_path, &data_size ) == ERROR_SUCCESS )
+            hp->library = LoadLibrary( dll_path );
+        RegCloseKey( key_handle );
+    }
+    if( !hp->library )
+        hp->library = LoadLibrary( "vsscript" );
     if( !hp->library )
         return -1;
 #define SYM( name, size ) LW_STRINGFY( _vsscript_##name ) "@" LW_STRINGFY( size )
