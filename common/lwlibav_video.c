@@ -305,7 +305,8 @@ void lwlibav_video_setup_timestamp_info
      || vdhp->actual_time_base.num == 0
      || vdhp->actual_time_base.den == 0
      || ((lwhp->format_flags & AVFMT_TS_DISCONT) && !(vdhp->lw_seek_flags & SEEK_DTS_BASED))
-     || !(vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
+     || !(vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED))
+     || (stream->avg_frame_rate.num && stream->avg_frame_rate.den) )
         goto use_avg_frame_rate;
     uint64_t stream_timebase  = vdhp->actual_time_base.num;
     uint64_t stream_timescale = vdhp->actual_time_base.den;
