@@ -49,7 +49,7 @@ protected:
     {
         return lw_tokenize_string( preferred_decoder_names_buf, ',', nullptr );
     }
-    int __stdcall SetCacheHints( int cachehints, int frame_range ) { return 0; }
+    int __stdcall SetCacheHints( int cachehints, int frame_range ) { return cachehints == CACHE_GET_MTMODE ? MT_SERIALIZED : 0; }
     const VideoInfo& __stdcall GetVideoInfo() { return vi; }
 };
 
