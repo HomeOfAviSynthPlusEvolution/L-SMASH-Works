@@ -84,8 +84,6 @@ lsmash_root_t *libavsmash_open_file
         goto open_fail;
     }
     /* libavformat */
-    av_register_all();
-    avcodec_register_all();
     if( avformat_open_input( p_format_ctx, file_name, NULL, NULL ) )
     {
         strcpy( error_string, "Failed to avformat_open_input.\n" );

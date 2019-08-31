@@ -3309,16 +3309,12 @@ int lwlibav_construct_index
         {
             /* Opening and parsing the index file succeeded. */
             fclose( index );
-            av_register_all();
-            avcodec_register_all();
             lwhp->threads = opt->threads;
             return 0;
         }
         fclose( index );
     }
     /* Open file. */
-    av_register_all();
-    avcodec_register_all();
     AVFormatContext *format_ctx = NULL;
     if( lavf_open_file( &format_ctx, lwhp->file_path, lhp ) )
     {
