@@ -202,7 +202,7 @@ int lwlibav_audio_get_desired_track
      || adhp->frame_count == 0
      || lavf_open_file( &adhp->format, file_path, &adhp->lh ) < 0
      || find_and_open_decoder( &ctx, adhp->format->streams[ adhp->stream_index ]->codecpar,
-                               adhp->preferred_decoder_names, threads, 0 ) < 0 )
+                               adhp->preferred_decoder_names, threads ) < 0 )
     {
         av_freep( &adhp->index_entries );
         lw_freep( &adhp->frame_list );
