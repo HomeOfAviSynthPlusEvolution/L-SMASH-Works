@@ -35,13 +35,13 @@
 #include <libavcodec/version.h>
 #include <libavformat/version.h>
 #include <libswscale/version.h>
-#include <libavresample/version.h>
+#include <libswresample/version.h>
 /* License */
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
-#include <libavresample/avresample.h>
+#include <libswresample/swresample.h>
 
 #define MAX_AUTO_NUM_THREADS 16
 
@@ -63,7 +63,7 @@ static void get_plugin_information( void )
              AV_STRINGIFY( LIBAVCODEC_VERSION    ), avcodec_license   (),
              AV_STRINGIFY( LIBAVFORMAT_VERSION   ), avformat_license  (),
              AV_STRINGIFY( LIBSWSCALE_VERSION    ), swscale_license   (),
-             AV_STRINGIFY( LIBAVRESAMPLE_VERSION ), avresample_license() );
+             AV_STRINGIFY( LIBSWRESAMPLE_VERSION ), swresample_license() );
 }
 
 INPUT_PLUGIN_TABLE input_plugin_table =
