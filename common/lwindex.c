@@ -1318,7 +1318,7 @@ static lwindex_helper_t *get_index_helper
         const char **preferred_decoder_names = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
                                              ? indexer->preferred_video_decoder_names
                                              : indexer->preferred_audio_decoder_names;
-        if( find_and_open_decoder( &helper->codec_ctx, codecpar, preferred_decoder_names, indexer->thread_count, 0 ) < 0 )
+        if( find_and_open_decoder( &helper->codec_ctx, codecpar, preferred_decoder_names, indexer->thread_count ) < 0 )
             /* Failed to find and open an appropriate decoder, but do not abort indexing. */
             return helper;
         helper->mpeg12_video = (codecpar->codec_id == AV_CODEC_ID_MPEG1VIDEO || codecpar->codec_id == AV_CODEC_ID_MPEG2VIDEO);

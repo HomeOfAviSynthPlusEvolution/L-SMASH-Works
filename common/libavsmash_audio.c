@@ -361,7 +361,7 @@ int libavsmash_audio_initialize_decoder_configuration
     }
     /* libavcodec */
     AVCodecParameters *codecpar = format_ctx->streams[i]->codecpar;
-    if( libavsmash_find_and_open_decoder( &adhp->config, codecpar, threads, 0 ) < 0 )
+    if( libavsmash_find_and_open_decoder( &adhp->config, codecpar, threads ) < 0 )
     {
         strcpy( error_string, "Failed to find and open the audio decoder.\n" );
         goto fail;

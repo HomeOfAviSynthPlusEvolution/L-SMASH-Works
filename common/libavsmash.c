@@ -452,14 +452,13 @@ int libavsmash_find_and_open_decoder
 (
     codec_configuration_t   *config,
     const AVCodecParameters *codecpar,
-    const int                thread_count,
-    const int                refcounted_frames
+    const int                thread_count
 )
 {
     const AVCodec *codec = libavsmash_find_decoder( config, codecpar->codec_id );
     if( !codec )
         return -1;
-    return open_decoder( &config->ctx, codecpar, codec, thread_count, refcounted_frames );
+    return open_decoder( &config->ctx, codecpar, codec, thread_count );
 }
 
 static lsmash_codec_specific_data_type get_codec_specific_data_type
@@ -805,7 +804,7 @@ void libavsmash_flush_buffers
     AVCodecParameters *codecpar     = avcodec_parameters_alloc();
     if( !codecpar
      || avcodec_parameters_from_context( codecpar, config->ctx ) < 0
-     || open_decoder( &ctx, codecpar, codec, config->ctx->thread_count, config->ctx->refcounted_frames ) < 0 )
+     || open_decoder( &ctx, codecpar, codec, config->ctx->thread_count ) < 0 )
     {
         avcodec_flush_buffers( config->ctx );
         config->error = 1;
@@ -855,7 +854,6 @@ void update_configuration
     char               error_string[96]  = { 0 };
     void              *app_specific      = config->ctx->opaque;
     const int          thread_count      = config->ctx->thread_count;
-    const int          refcounted_frames = config->ctx->refcounted_frames;
     AVCodecParameters *codecpar          = avcodec_parameters_alloc();
     if( !codecpar || avcodec_parameters_from_context( codecpar, config->ctx ) < 0 )
     {
@@ -912,7 +910,7 @@ void update_configuration
     /* Open an appropriate decoder.
      * Here, we force single threaded decoding since some decoder doesn't do its proper initialization with multi-threaded decoding. */
     AVCodecContext *ctx = NULL;
-    if( open_decoder( &ctx, codecpar, codec, 1, refcounted_frames ) < 0 )
+    if( open_decoder( &ctx, codecpar, codec, 1 ) < 0 )
     {
         strcpy( error_string, "Failed to open decoder.\n" );
         goto fail;
