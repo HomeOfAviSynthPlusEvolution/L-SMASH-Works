@@ -133,7 +133,7 @@ static lwlibav_handler_t *alloc_handler
     return hp;
 }
 
-static int update_indicator( progress_handler_t *, const char *message, int percent )
+static int update_indicator( progress_handler_t *handler, const char *message, int percent )
 {
     if ( !strcmp( message, "Creating Index file" ) )
     {
@@ -143,7 +143,7 @@ static int update_indicator( progress_handler_t *, const char *message, int perc
     return 0;
 }
 
-static void close_indicator( progress_handler_t * )
+static void close_indicator( progress_handler_t *handler )
 {
     fprintf( stderr, "\n" );
 }
