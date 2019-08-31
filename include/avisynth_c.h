@@ -35,9 +35,21 @@
 // new color spaces added in Avisynth 2.60. By no means is this document
 // completely Avisynth 2.60 compliant.
 // 170103: added new CPU constants (FMA4, AVX512xx)
-// 171102: define SIZETMOD (experimental. Offsets are size_t instead of int (x64 is different!)
+// 171102: define SIZETMOD. do not use yet, experimental. Offsets are size_t instead of int. Affects x64.
 // 171106: avs_get_row_size calls into avs_get_row_size_p, instead of direct field access
 // 171106: avs_get_height calls into avs_get_row_size_p, instead of direct field access
+// 180524: AVSC_EXPORT to dllexport in capi.h for avisynth_c_plugin_init
+// 180524: avs_is_same_colorspace VideoInfo parameters to const
+// 181230: Readability: functions regrouped to mix less AVSC_API and AVSC_INLINE, put together Avisynth+ specific stuff
+// 181230: use #ifndef AVSC_NO_DECLSPEC for AVSC_INLINE functions which are calling API functions
+// 181230: comments on avs_load_library (helper for loading API entries dynamically into a struct using AVSC_NO_DECLSPEC define)
+// 181230: define alias AVS_FRAME_ALIGN as FRAME_ALIGN
+// 181230: remove unused form of avs_get_rowsize and avs_get_height (kept earlier for reference)
+// 190104: avs_load_library: smart fallback mechanism for Avisynth+ specific functions:
+//         if they are not loadable, they will work in a classic Avisynth compatible mode
+//         Example#1: e.g. avs_is_444 will call the existing avs_is_yv24 instead
+//         Example#2: avs_bits_per_component will return 8 for all colorspaces (Classic Avisynth supports only 8 bits/pixel)
+//         Thus the Avisynth+ specific API functions are safely callable even when connected to classic Avisynth DLL
 
 #ifndef __AVISYNTH_C__
 #define __AVISYNTH_C__
@@ -46,7 +58,7 @@
 #include <avs/capi.h>
 #include <avs/types.h>
 
-
+#define AVS_FRAME_ALIGN FRAME_ALIGN
 /////////////////////////////////////////////////////////////////////
 //
 // Constants
@@ -128,7 +140,7 @@ enum {
     AVS_CS_GENERIC_YUVA444 = AVS_CS_PLANAR | AVS_CS_YUVA | AVS_CS_VPLANEFIRST | AVS_CS_SUB_HEIGHT_1 | AVS_CS_SUB_WIDTH_1 }; // 4:4:4:A planar
 
 
-  // Specific colorformats
+  // Specific color formats
 enum {
   AVS_CS_UNKNOWN = 0,
   AVS_CS_BGR24 = AVS_CS_RGB_TYPE  | AVS_CS_BGR | AVS_CS_INTERLEAVED,
@@ -138,18 +150,18 @@ enum {
   //  AVS_CS_I420  = 1<<4  Reserved
   AVS_CS_RAW32 = 1<<5 | AVS_CS_INTERLEAVED,
 
-  AVS_CS_YV24  = AVS_CS_GENERIC_YUV444 | AVS_CS_SAMPLE_BITS_8,  // YVU 4:4:4 planar
-  AVS_CS_YV16  = AVS_CS_GENERIC_YUV422 | AVS_CS_SAMPLE_BITS_8,  // YVU 4:2:2 planar
-  AVS_CS_YV12  = AVS_CS_GENERIC_YUV420 | AVS_CS_SAMPLE_BITS_8,  // YVU 4:2:0 planar
+  AVS_CS_YV24  = AVS_CS_GENERIC_YUV444 | AVS_CS_SAMPLE_BITS_8,  // YUV 4:4:4 planar
+  AVS_CS_YV16  = AVS_CS_GENERIC_YUV422 | AVS_CS_SAMPLE_BITS_8,  // YUV 4:2:2 planar
+  AVS_CS_YV12  = AVS_CS_GENERIC_YUV420 | AVS_CS_SAMPLE_BITS_8,  // YUV 4:2:0 planar
   AVS_CS_I420  = AVS_CS_PLANAR | AVS_CS_YUV | AVS_CS_SAMPLE_BITS_8 | AVS_CS_UPLANEFIRST | AVS_CS_SUB_HEIGHT_2 | AVS_CS_SUB_WIDTH_2,  // YUV 4:2:0 planar
   AVS_CS_IYUV  = AVS_CS_I420,
-  AVS_CS_YV411 = AVS_CS_PLANAR | AVS_CS_YUV | AVS_CS_SAMPLE_BITS_8 | AVS_CS_VPLANEFIRST | AVS_CS_SUB_HEIGHT_1 | AVS_CS_SUB_WIDTH_4,  // YVU 4:1:1 planar
-  AVS_CS_YUV9  = AVS_CS_PLANAR | AVS_CS_YUV | AVS_CS_SAMPLE_BITS_8 | AVS_CS_VPLANEFIRST | AVS_CS_SUB_HEIGHT_4 | AVS_CS_SUB_WIDTH_4,  // YVU 4:1:0 planar
+  AVS_CS_YV411 = AVS_CS_PLANAR | AVS_CS_YUV | AVS_CS_SAMPLE_BITS_8 | AVS_CS_VPLANEFIRST | AVS_CS_SUB_HEIGHT_1 | AVS_CS_SUB_WIDTH_4,  // YUV 4:1:1 planar
+  AVS_CS_YUV9  = AVS_CS_PLANAR | AVS_CS_YUV | AVS_CS_SAMPLE_BITS_8 | AVS_CS_VPLANEFIRST | AVS_CS_SUB_HEIGHT_4 | AVS_CS_SUB_WIDTH_4,  // YUV 4:1:0 planar
   AVS_CS_Y8    = AVS_CS_GENERIC_Y | AVS_CS_SAMPLE_BITS_8,       // Y   4:0:0 planar
 
   //-------------------------
   // AVS16: new planar constants go live! Experimental PF 160613
-  // 10-12-14 bit + planar RGB + BRG48/64 160725
+  // 10-12-14-16 bit + planar RGB + BGR48/64 160725
   AVS_CS_YUV444P10 = AVS_CS_GENERIC_YUV444 | AVS_CS_SAMPLE_BITS_10, // YUV 4:4:4 10bit samples
   AVS_CS_YUV422P10 = AVS_CS_GENERIC_YUV422 | AVS_CS_SAMPLE_BITS_10, // YUV 4:2:2 10bit samples
   AVS_CS_YUV420P10 = AVS_CS_GENERIC_YUV420 | AVS_CS_SAMPLE_BITS_10, // YUV 4:2:0 10bit samples
@@ -250,9 +262,9 @@ enum {  //SUBTYPES
 enum {
   // New 2.6 explicitly defined cache hints.
   AVS_CACHE_NOTHING=10, // Do not cache video.
-  AVS_CACHE_WINDOW=11, // Hard protect upto X frames within a range of X from the current frame N.
-  AVS_CACHE_GENERIC=12, // LRU cache upto X frames.
-  AVS_CACHE_FORCE_GENERIC=13, // LRU cache upto X frames, override any previous CACHE_WINDOW.
+  AVS_CACHE_WINDOW=11, // Hard protect up to X frames within a range of X from the current frame N.
+  AVS_CACHE_GENERIC=12, // LRU cache up to X frames.
+  AVS_CACHE_FORCE_GENERIC=13, // LRU cache up to X frames, override any previous CACHE_WINDOW.
 
   AVS_CACHE_GET_POLICY=30, // Get the current policy.
   AVS_CACHE_GET_WINDOW=31, // Get the current window h_span.
@@ -260,8 +272,8 @@ enum {
 
   AVS_CACHE_AUDIO=50, // Explicitly do cache audio, X byte cache.
   AVS_CACHE_AUDIO_NOTHING=51, // Explicitly do not cache audio.
-  AVS_CACHE_AUDIO_NONE=52, // Audio cache off (auto mode), X byte intial cache.
-  AVS_CACHE_AUDIO_AUTO=53, // Audio cache on (auto mode), X byte intial cache.
+  AVS_CACHE_AUDIO_NONE=52, // Audio cache off (auto mode), X byte initial cache.
+  AVS_CACHE_AUDIO_AUTO=53, // Audio cache on (auto mode), X byte initial cache.
 
   AVS_CACHE_GET_AUDIO_POLICY=70, // Get the current audio policy.
   AVS_CACHE_GET_AUDIO_SIZE=71, // Get the current audio cache size.
@@ -288,7 +300,7 @@ enum {
     AVS_CACHE_COST_MED=224, // Child response of medium cost. (Real time)
     AVS_CACHE_COST_HI=225, // Child response of heavy cost. (Slow)
 
-  AVS_CACHE_GETCHILD_THREAD_MODE=240, // Cache ask Child for thread safetyness.
+  AVS_CACHE_GETCHILD_THREAD_MODE=240, // Cache ask Child for thread safety.
     AVS_CACHE_THREAD_UNSAFE=241, // Only 1 thread allowed for all instances. 2.5 filters default!
     AVS_CACHE_THREAD_CLASS=242, // Only 1 thread allowed for each instance. 2.6 filters default!
     AVS_CACHE_THREAD_SAFE=243, //  Allow all threads in any instance.
@@ -319,7 +331,7 @@ typedef struct AVS_ScriptEnvironment AVS_ScriptEnvironment;
 // AVS_VideoInfo
 //
 
-// AVS_VideoInfo is layed out identicly to VideoInfo
+// AVS_VideoInfo is laid out identically to VideoInfo
 typedef struct AVS_VideoInfo {
   int width, height;    // width=0 means no video
   unsigned fps_numerator, fps_denominator;
@@ -332,7 +344,7 @@ typedef struct AVS_VideoInfo {
   INT64 num_audio_samples;
   int nchannels;
 
-  // Imagetype properties
+  // Image type properties
 
   int image_type;
 } AVS_VideoInfo;
@@ -359,76 +371,19 @@ AVSC_INLINE int avs_is_yuv(const AVS_VideoInfo * p)
 AVSC_INLINE int avs_is_yuy2(const AVS_VideoInfo * p)
         { return (p->pixel_type & AVS_CS_YUY2) == AVS_CS_YUY2; }
 
-AVSC_API(int, avs_is_rgb48)(const AVS_VideoInfo * p);
+AVSC_API(int, avs_is_yv24)(const AVS_VideoInfo * p); // avs+: for generic 444 check, use avs_is_yuv444
 
-AVSC_API(int, avs_is_rgb64)(const AVS_VideoInfo * p);
+AVSC_API(int, avs_is_yv16)(const AVS_VideoInfo * p); // avs+: for generic 422 check, use avs_is_yuv422
 
-AVSC_API(int, avs_is_yv24)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yv16)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yv12)(const AVS_VideoInfo * p) ;
+AVSC_API(int, avs_is_yv12)(const AVS_VideoInfo * p) ; // avs+: for generic 420 check, use avs_is_yuv420
 
 AVSC_API(int, avs_is_yv411)(const AVS_VideoInfo * p);
 
-AVSC_API(int, avs_is_y8)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yuv444p16)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yuv422p16)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yuv420p16)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_y16)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yuv444ps)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yuv422ps)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yuv420ps)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_y32)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_444)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_422)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_420)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_y)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_yuva)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_planar_rgb)(const AVS_VideoInfo * p);
-
-AVSC_API(int, avs_is_planar_rgba)(const AVS_VideoInfo * p);
-
-
-
-AVSC_INLINE int avs_is_property(const AVS_VideoInfo * p, int property)
-        { return ((p->image_type & property)==property ); }
-
-AVSC_INLINE int avs_is_planar(const AVS_VideoInfo * p)
-        { return !!(p->pixel_type & AVS_CS_PLANAR); }
-
-AVSC_API(int, avs_is_color_space)(const AVS_VideoInfo * p, int c_space);
-
-AVSC_INLINE int avs_is_field_based(const AVS_VideoInfo * p)
-        { return !!(p->image_type & AVS_IT_FIELDBASED); }
-
-AVSC_INLINE int avs_is_parity_known(const AVS_VideoInfo * p)
-        { return ((p->image_type & AVS_IT_FIELDBASED)&&(p->image_type & (AVS_IT_BFF | AVS_IT_TFF))); }
-
-AVSC_INLINE int avs_is_bff(const AVS_VideoInfo * p)
-        { return !!(p->image_type & AVS_IT_BFF); }
-
-AVSC_INLINE int avs_is_tff(const AVS_VideoInfo * p)
-        { return !!(p->image_type & AVS_IT_TFF); }
+AVSC_API(int, avs_is_y8)(const AVS_VideoInfo * p); // avs+: for generic grayscale, use avs_is_y
 
 AVSC_API(int, avs_get_plane_width_subsampling)(const AVS_VideoInfo * p, int plane);
 
 AVSC_API(int, avs_get_plane_height_subsampling)(const AVS_VideoInfo * p, int plane);
-
 
 AVSC_API(int, avs_bits_per_pixel)(const AVS_VideoInfo * p);
 
@@ -438,9 +393,41 @@ AVSC_API(int, avs_row_size)(const AVS_VideoInfo * p, int plane);
 
 AVSC_API(int, avs_bmp_size)(const AVS_VideoInfo * vi);
 
+AVSC_API(int, avs_is_color_space)(const AVS_VideoInfo * p, int c_space);
+
+// no API for these, inline helper functions
+AVSC_INLINE int avs_is_property(const AVS_VideoInfo * p, int property)
+{
+  return ((p->image_type & property) == property);
+}
+
+AVSC_INLINE int avs_is_planar(const AVS_VideoInfo * p)
+{
+  return !!(p->pixel_type & AVS_CS_PLANAR);
+}
+
+AVSC_INLINE int avs_is_field_based(const AVS_VideoInfo * p)
+{
+  return !!(p->image_type & AVS_IT_FIELDBASED);
+}
+
+AVSC_INLINE int avs_is_parity_known(const AVS_VideoInfo * p)
+{
+  return ((p->image_type & AVS_IT_FIELDBASED) && (p->image_type & (AVS_IT_BFF | AVS_IT_TFF)));
+}
+
+AVSC_INLINE int avs_is_bff(const AVS_VideoInfo * p)
+{
+  return !!(p->image_type & AVS_IT_BFF);
+}
+
+AVSC_INLINE int avs_is_tff(const AVS_VideoInfo * p)
+{
+  return !!(p->image_type & AVS_IT_TFF);
+}
+
 AVSC_INLINE int avs_samples_per_second(const AVS_VideoInfo * p)
         { return p->audio_samples_per_second; }
-
 
 AVSC_INLINE int avs_bytes_per_channel_sample(const AVS_VideoInfo * p)
 {
@@ -453,6 +440,7 @@ AVSC_INLINE int avs_bytes_per_channel_sample(const AVS_VideoInfo * p)
       default: return 0;
     }
 }
+
 AVSC_INLINE int avs_bytes_per_audio_sample(const AVS_VideoInfo * p)
         { return p->nchannels*avs_bytes_per_channel_sample(p);}
 
@@ -494,17 +482,56 @@ AVSC_INLINE void avs_set_fps(AVS_VideoInfo * p, unsigned numerator, unsigned den
     p->fps_denominator = denominator/x;
 }
 
-AVSC_INLINE int avs_is_same_colorspace(AVS_VideoInfo * x, AVS_VideoInfo * y)
+#ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
+AVSC_INLINE int avs_is_same_colorspace(const AVS_VideoInfo * x, const AVS_VideoInfo * y)
 {
         return (x->pixel_type == y->pixel_type)
                 || (avs_is_yv12(x) && avs_is_yv12(y));
 }
+#endif
+
+// Avisynth+ extensions
+AVSC_API(int, avs_is_rgb48)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_rgb64)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_yuv444p16)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv444
+
+AVSC_API(int, avs_is_yuv422p16)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv422
+
+AVSC_API(int, avs_is_yuv420p16)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv420
+
+AVSC_API(int, avs_is_y16)(const AVS_VideoInfo * p); // obsolete, use avs_is_y
+
+AVSC_API(int, avs_is_yuv444ps)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv444
+
+AVSC_API(int, avs_is_yuv422ps)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv422
+
+AVSC_API(int, avs_is_yuv420ps)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv420
+
+AVSC_API(int, avs_is_y32)(const AVS_VideoInfo * p); // obsolete, use avs_is_y
+
+AVSC_API(int, avs_is_444)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_422)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_420)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_y)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_yuva)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_planar_rgb)(const AVS_VideoInfo * p);
+
+AVSC_API(int, avs_is_planar_rgba)(const AVS_VideoInfo * p);
 
 AVSC_API(int, avs_num_components)(const AVS_VideoInfo * p);
 
 AVSC_API(int, avs_component_size)(const AVS_VideoInfo * p);
 
 AVSC_API(int, avs_bits_per_component)(const AVS_VideoInfo * p);
+// end of Avisynth+ specific
 
 /////////////////////////////////////////////////////////////////////
 //
@@ -517,7 +544,7 @@ AVSC_API(int, avs_bits_per_component)(const AVS_VideoInfo * p);
 // to be reused.  The instances are deleted when the corresponding AVS
 // file is closed.
 
-// AVS_VideoFrameBuffer is layed out identicly to VideoFrameBuffer
+// AVS_VideoFrameBuffer is laid out identically to VideoFrameBuffer
 // DO NOT USE THIS STRUCTURE DIRECTLY
 typedef struct AVS_VideoFrameBuffer {
   BYTE * data;
@@ -535,7 +562,7 @@ typedef struct AVS_VideoFrameBuffer {
 
 // VideoFrame holds a "window" into a VideoFrameBuffer.
 
-// AVS_VideoFrame is layed out identicly to IVideoFrame
+// AVS_VideoFrame is laid out identically to IVideoFrame
 // DO NOT USE THIS STRUCTURE DIRECTLY
 typedef struct AVS_VideoFrame {
   volatile long refcount;
@@ -554,7 +581,7 @@ typedef struct AVS_VideoFrame {
   int pitchUV;  // U&V offsets are from top of picture.
   int row_sizeUV, heightUV; // for Planar RGB offsetU, offsetV is for the 2nd and 3rd Plane.
                             // for Planar RGB pitchUV and row_sizeUV = 0, because when no VideoInfo (MakeWriteable)
-                            // the decision on existance of UV is checked by zero pitch
+                            // the decision on existence of UV is checked by zero pitch
   // AVS+ extension, avisynth.h: class does not break plugins if appended here
 #ifdef SIZETMOD
   size_t offsetA;
@@ -567,53 +594,62 @@ typedef struct AVS_VideoFrame {
 // Access functions for AVS_VideoFrame
 AVSC_API(int, avs_get_pitch_p)(const AVS_VideoFrame * p, int plane);
 
-AVSC_INLINE int avs_get_pitch(const AVS_VideoFrame * p) {
-        return avs_get_pitch_p(p, 0);}
-
 AVSC_API(int, avs_get_row_size_p)(const AVS_VideoFrame * p, int plane);
-
-// 171106: this inline breaks because it accesses directly row_size.
-// When x64 and offset is size_t, row_size is misplaced
-#if 0
-AVSC_INLINE int avs_get_row_size(const AVS_VideoFrame * p) {
-        return p->row_size; }
-#else
-AVSC_INLINE int avs_get_row_size(const AVS_VideoFrame * p) {
-        return avs_get_row_size_p(p, 0); }
-#endif
 
 AVSC_API(int, avs_get_height_p)(const AVS_VideoFrame * p, int plane);
 
-// 171106: this inline breaks because it accesses directly row_size.
-// When x64 and offset is size_t, height is misplaced
-#if 0
-AVSC_INLINE int avs_get_height(const AVS_VideoFrame * p) {
-        return p->height;}
-#else
-AVSC_INLINE int avs_get_height(const AVS_VideoFrame * p) {
-  return avs_get_height_p(p, 0);
-}
-#endif
-
 AVSC_API(const BYTE *, avs_get_read_ptr_p)(const AVS_VideoFrame * p, int plane);
-
-AVSC_INLINE const BYTE* avs_get_read_ptr(const AVS_VideoFrame * p) {
-        return avs_get_read_ptr_p(p, 0);}
 
 AVSC_API(int, avs_is_writable)(const AVS_VideoFrame * p);
 
 AVSC_API(BYTE *, avs_get_write_ptr_p)(const AVS_VideoFrame * p, int plane);
 
-AVSC_INLINE BYTE* avs_get_write_ptr(const AVS_VideoFrame * p) {
-        return avs_get_write_ptr_p(p, 0);}
-
 AVSC_API(void, avs_release_video_frame)(AVS_VideoFrame *);
 // makes a shallow copy of a video frame
 AVSC_API(AVS_VideoFrame *, avs_copy_video_frame)(AVS_VideoFrame *);
 
+// no API for these, inline helper functions
 #ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
+AVSC_INLINE int avs_get_pitch(const AVS_VideoFrame * p) {
+  return avs_get_pitch_p(p, 0);
+}
+#endif
+
+#ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
+AVSC_INLINE int avs_get_row_size(const AVS_VideoFrame * p) {
+        return avs_get_row_size_p(p, 0); }
+#endif
+
+
+#ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
+AVSC_INLINE int avs_get_height(const AVS_VideoFrame * p) {
+  return avs_get_height_p(p, 0);
+}
+#endif
+
+#ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
+AVSC_INLINE const BYTE* avs_get_read_ptr(const AVS_VideoFrame * p) {
+        return avs_get_read_ptr_p(p, 0);}
+#endif
+
+#ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
+AVSC_INLINE BYTE* avs_get_write_ptr(const AVS_VideoFrame * p) {
+        return avs_get_write_ptr_p(p, 0);}
+#endif
+
+#ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
 AVSC_INLINE void avs_release_frame(AVS_VideoFrame * f)
   {avs_release_video_frame(f);}
+#endif
+
+#ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
 AVSC_INLINE AVS_VideoFrame * avs_copy_frame(AVS_VideoFrame * f)
   {return avs_copy_video_frame(f);}
 #endif
@@ -624,14 +660,14 @@ AVSC_INLINE AVS_VideoFrame * avs_copy_frame(AVS_VideoFrame * f)
 //
 
 // Treat AVS_Value as a fat pointer.  That is use avs_copy_value
-// and avs_release_value appropiaty as you would if AVS_Value was
+// and avs_release_value appropriately as you would if AVS_Value was
 // a pointer.
 
 // To maintain source code compatibility with future versions of the
 // avisynth_c API don't use the AVS_Value directly.  Use the helper
 // functions below.
 
-// AVS_Value is layed out identicly to AVSValue
+// AVS_Value is laid out identically to AVSValue
 typedef struct AVS_Value AVS_Value;
 struct AVS_Value {
   short type;  // 'a'rray, 'c'lip, 'b'ool, 'i'nt, 'f'loat, 's'tring, 'v'oid, or 'l'ong
@@ -647,15 +683,19 @@ struct AVS_Value {
   } d;
 };
 
-// AVS_Value should be initilized with avs_void.
+// AVS_Value should be initialized with avs_void.
 // Should also set to avs_void after the value is released
-// with avs_copy_value.  Consider it the equalvent of setting
+// with avs_copy_value.  Consider it the equivalent of setting
 // a pointer to NULL
 static const AVS_Value avs_void = {'v'};
 
 AVSC_API(void, avs_copy_value)(AVS_Value * dest, AVS_Value src);
 AVSC_API(void, avs_release_value)(AVS_Value);
+AVSC_API(AVS_Clip *, avs_take_clip)(AVS_Value, AVS_ScriptEnvironment *);
+AVSC_API(void, avs_set_to_clip)(AVS_Value *, AVS_Clip *);
 
+
+// no API for these, inline helper functions
 AVSC_INLINE int avs_defined(AVS_Value v) { return v.type != 'v'; }
 AVSC_INLINE int avs_is_clip(AVS_Value v) { return v.type == 'c'; }
 AVSC_INLINE int avs_is_bool(AVS_Value v) { return v.type == 'b'; }
@@ -664,9 +704,6 @@ AVSC_INLINE int avs_is_float(AVS_Value v) { return v.type == 'f' || v.type == 'i
 AVSC_INLINE int avs_is_string(AVS_Value v) { return v.type == 's'; }
 AVSC_INLINE int avs_is_array(AVS_Value v) { return v.type == 'a'; }
 AVSC_INLINE int avs_is_error(AVS_Value v) { return v.type == 'e'; }
-
-AVSC_API(AVS_Clip *, avs_take_clip)(AVS_Value, AVS_ScriptEnvironment *);
-AVSC_API(void, avs_set_to_clip)(AVS_Value *, AVS_Clip *);
 
 AVSC_INLINE int avs_as_bool(AVS_Value v)
         { return v.d.boolean; }
@@ -698,11 +735,13 @@ AVSC_INLINE AVS_Value avs_new_value_float(float v0)
 AVSC_INLINE AVS_Value avs_new_value_error(const char * v0)
         { AVS_Value v; v.type = 'e'; v.d.string = v0; return v; }
 #ifndef AVSC_NO_DECLSPEC
+// this inline function is calling an API function
 AVSC_INLINE AVS_Value avs_new_value_clip(AVS_Clip * v0)
         { AVS_Value v; avs_set_to_clip(&v, v0); return v; }
 #endif
 AVSC_INLINE AVS_Value avs_new_value_array(AVS_Value * v0, int size)
         { AVS_Value v; v.type = 'a'; v.d.array = v0; v.array_size = (short)size; return v; }
+// end of inline helper functions
 
 /////////////////////////////////////////////////////////////////////
 //
@@ -759,7 +798,7 @@ struct AVS_FilterInfo
 
 // Create a new filter
 // fi is set to point to the AVS_FilterInfo so that you can
-//   modify it once it is initilized.
+//   modify it once it is initialized.
 // store_child should generally be set to true.  If it is not
 //    set than ALL methods (the function pointers) must be defined
 // If it is set than you do not need to worry about freeing the child
@@ -846,20 +885,23 @@ AVSC_API(int, avs_set_global_var)(AVS_ScriptEnvironment *, const char* name, con
 
 AVSC_API(AVS_VideoFrame *, avs_new_video_frame_a)(AVS_ScriptEnvironment *,
                                           const AVS_VideoInfo * vi, int align);
-// align should be at least 16
+// align should be at least 16 for classic Avisynth
+// Avisynth+: any value, Avs+ ensures a minimum alignment if too small align is provided
 
+// no API for these, inline helper functions
 #ifndef AVSC_NO_DECLSPEC
-AVSC_INLINE
-AVS_VideoFrame * avs_new_video_frame(AVS_ScriptEnvironment * env,
+// this inline function is calling an API function
+AVSC_INLINE AVS_VideoFrame * avs_new_video_frame(AVS_ScriptEnvironment * env,
                                      const AVS_VideoInfo * vi)
-  {return avs_new_video_frame_a(env,vi,FRAME_ALIGN);}
+  {return avs_new_video_frame_a(env,vi,AVS_FRAME_ALIGN);}
 
-AVSC_INLINE
-AVS_VideoFrame * avs_new_frame(AVS_ScriptEnvironment * env,
+// an older compatibility alias
+// this inline function is calling an API function
+AVSC_INLINE AVS_VideoFrame * avs_new_frame(AVS_ScriptEnvironment * env,
                                const AVS_VideoInfo * vi)
-  {return avs_new_video_frame_a(env,vi,FRAME_ALIGN);}
+  {return avs_new_video_frame_a(env,vi,AVS_FRAME_ALIGN);}
 #endif
-
+// end of inline helper functions
 
 AVSC_API(int, avs_make_writable)(AVS_ScriptEnvironment *, AVS_VideoFrame * * pvf);
 
@@ -892,7 +934,10 @@ AVSC_API(AVS_VideoFrame *, avs_subframe_planar)(AVS_ScriptEnvironment *, AVS_Vid
 // The returned video frame must be be released
 
 #ifdef AVSC_NO_DECLSPEC
-// use LoadLibrary and related functions to dynamically load Avisynth instead of declspec(dllimport)
+// This part uses LoadLibrary and related functions to dynamically load Avisynth instead of declspec(dllimport)
+// When AVSC_NO_DECLSPEC is defined, you can use avs_load_library to populate API functions into a struct
+// AVSC_INLINE functions which call onto an API functions should be treated specially (todo)
+
 /*
   The following functions needs to have been declared, probably from windows.h
 
@@ -908,6 +953,14 @@ AVSC_API(AVS_VideoFrame *, avs_subframe_planar)(AVS_ScriptEnvironment *, AVS_Vid
 typedef struct AVS_Library AVS_Library;
 
 #define AVSC_DECLARE_FUNC(name) name##_func name
+
+// AVSC_DECLARE_FUNC helps keeping naming convention: type is xxxxx_func, function name is xxxxx
+// e.g. "AVSC_DECLARE_FUNC(avs_add_function);"
+// is a shortcut for "avs_add_function_func avs_add_function;"
+
+// Note: AVSC_INLINE functions which call into API,
+// are guarded by #ifndef AVSC_NO_DECLSPEC
+// They should call the appropriate library-> API entry
 
 struct AVS_Library {
   HMODULE handle;
@@ -951,28 +1004,11 @@ struct AVS_Library {
   AVSC_DECLARE_FUNC(avs_vsprintf);
 
   AVSC_DECLARE_FUNC(avs_get_error);
-  AVSC_DECLARE_FUNC(avs_is_rgb48);
-  AVSC_DECLARE_FUNC(avs_is_rgb64);
   AVSC_DECLARE_FUNC(avs_is_yv24);
   AVSC_DECLARE_FUNC(avs_is_yv16);
   AVSC_DECLARE_FUNC(avs_is_yv12);
   AVSC_DECLARE_FUNC(avs_is_yv411);
   AVSC_DECLARE_FUNC(avs_is_y8);
-  AVSC_DECLARE_FUNC(avs_is_yuv444p16);
-  AVSC_DECLARE_FUNC(avs_is_yuv422p16);
-  AVSC_DECLARE_FUNC(avs_is_yuv420p16);
-  AVSC_DECLARE_FUNC(avs_is_y16);
-  AVSC_DECLARE_FUNC(avs_is_yuv444ps);
-  AVSC_DECLARE_FUNC(avs_is_yuv422ps);
-  AVSC_DECLARE_FUNC(avs_is_yuv420ps);
-  AVSC_DECLARE_FUNC(avs_is_y32);
-  AVSC_DECLARE_FUNC(avs_is_444);
-  AVSC_DECLARE_FUNC(avs_is_422);
-  AVSC_DECLARE_FUNC(avs_is_420);
-  AVSC_DECLARE_FUNC(avs_is_y);
-  AVSC_DECLARE_FUNC(avs_is_yuva);
-  AVSC_DECLARE_FUNC(avs_is_planar_rgb);
-  AVSC_DECLARE_FUNC(avs_is_planar_rgba);
   AVSC_DECLARE_FUNC(avs_is_color_space);
 
   AVSC_DECLARE_FUNC(avs_get_plane_width_subsampling);
@@ -988,14 +1024,73 @@ struct AVS_Library {
   AVSC_DECLARE_FUNC(avs_is_writable);
   AVSC_DECLARE_FUNC(avs_get_write_ptr_p);
 
+  // Avisynth+ specific
+  // Note: these functions are simulated/use fallback to existing functions
+  AVSC_DECLARE_FUNC(avs_is_rgb48);
+  AVSC_DECLARE_FUNC(avs_is_rgb64);
+  AVSC_DECLARE_FUNC(avs_is_yuv444p16);
+  AVSC_DECLARE_FUNC(avs_is_yuv422p16);
+  AVSC_DECLARE_FUNC(avs_is_yuv420p16);
+  AVSC_DECLARE_FUNC(avs_is_y16);
+  AVSC_DECLARE_FUNC(avs_is_yuv444ps);
+  AVSC_DECLARE_FUNC(avs_is_yuv422ps);
+  AVSC_DECLARE_FUNC(avs_is_yuv420ps);
+  AVSC_DECLARE_FUNC(avs_is_y32);
+  AVSC_DECLARE_FUNC(avs_is_444);
+  AVSC_DECLARE_FUNC(avs_is_422);
+  AVSC_DECLARE_FUNC(avs_is_420);
+  AVSC_DECLARE_FUNC(avs_is_y);
+  AVSC_DECLARE_FUNC(avs_is_yuva);
+  AVSC_DECLARE_FUNC(avs_is_planar_rgb);
+  AVSC_DECLARE_FUNC(avs_is_planar_rgba);
   AVSC_DECLARE_FUNC(avs_num_components);
   AVSC_DECLARE_FUNC(avs_component_size);
   AVSC_DECLARE_FUNC(avs_bits_per_component);
+  // end of Avisynth+ specific
 
 };
 
 #undef AVSC_DECLARE_FUNC
 
+// Helper functions for fallback simulation
+// Avisynth+ extensions do not exist in classic Avisynth so they are simulated
+AVSC_INLINE int avs_is_xx_fallback_return_false(const AVS_VideoInfo * p)
+{
+  return 0;
+}
+
+// Avisynth+ extensions do not exist in classic Avisynth so they are simulated
+AVSC_INLINE int avs_num_components_fallback(const AVS_VideoInfo * p)
+{
+  switch (p->pixel_type) {
+  case AVS_CS_UNKNOWN:
+    return 0;
+  case AVS_CS_RAW32:
+  case AVS_CS_Y8:
+    return 1;
+  case AVS_CS_BGR32:
+    return 4; // not planar but return the count
+  default:
+    return 3;
+  }
+}
+
+// Avisynth+ extensions do not exist in classic Avisynth so they are simulated
+AVSC_INLINE int avs_component_size_fallback(const AVS_VideoInfo * p)
+{
+  return 1;
+}
+
+// Avisynth+ extensions do not exist in classic Avisynth so they are simulated
+AVSC_INLINE int avs_bits_per_component_fallback(const AVS_VideoInfo * p)
+{
+  return 8;
+}
+// End of helper functions for fallback simulation
+
+// avs_load_library() allocates an array for API procedure entries
+// reads and fills the entries with live procedure addresses.
+// AVSC_INLINE helpers which are calling into API procedures are not treated here (todo)
 
 AVSC_INLINE AVS_Library * avs_load_library() {
   AVS_Library *library = (AVS_Library *)malloc(sizeof(AVS_Library));
@@ -1009,6 +1104,50 @@ AVSC_INLINE AVS_Library * avs_load_library() {
 #define AVSC_STRINGIFY(x) __AVSC_STRINGIFY(x)
 #define AVSC_LOAD_FUNC(name) {\
   library->name = (name##_func) GetProcAddress(library->handle, AVSC_STRINGIFY(name));\
+  if (library->name == NULL)\
+    goto fail;\
+}
+
+// When an API function is not loadable, let's try a replacement
+// Missing Avisynth+ functions will be substituted with classic Avisynth compatible methods
+/*
+Avisynth+                 When method is missing (classic Avisynth)
+avs_is_rgb48              constant false
+avs_is_rgb64              constant false
+avs_is_yuv444p16          constant false
+avs_is_yuv422p16          constant false
+avs_is_yuv420p16          constant false
+avs_is_y16                constant false
+avs_is_yuv444ps           constant false
+avs_is_yuv422ps           constant false
+avs_is_yuv420ps           constant false
+avs_is_y32                constant false
+avs_is_444                avs_is_yv24
+avs_is_422                avs_is_yv16
+avs_is_420                avs_is_yv12
+avs_is_y                  avs_is_y8
+avs_is_yuva               constant false
+avs_is_planar_rgb         constant false
+avs_is_planar_rgba        constant false
+avs_num_components        special: avs_num_components_fake Y8:1 RGB32:4 else 3
+avs_component_size        constant 1 (1 bytes/component)
+avs_bits_per_component    constant 8 (8 bits/component)
+*/
+
+  // try to load an alternative function
+#define AVSC_LOAD_FUNC_FALLBACK(name,name2) {\
+  library->name = (name##_func) GetProcAddress(library->handle, AVSC_STRINGIFY(name));\
+  if (library->name == NULL)\
+    library->name = (name##_func) GetProcAddress(library->handle, AVSC_STRINGIFY(name2));\
+  if (library->name == NULL)\
+    goto fail;\
+}
+
+  // try to assign a replacement function
+#define AVSC_LOAD_FUNC_FALLBACK_SIMULATED(name,name2) {\
+  library->name = (name##_func) GetProcAddress(library->handle, AVSC_STRINGIFY(name));\
+  if (library->name == NULL)\
+    library->name = name2;\
   if (library->name == NULL)\
     goto fail;\
 }
@@ -1052,28 +1191,11 @@ AVSC_INLINE AVS_Library * avs_load_library() {
   AVSC_LOAD_FUNC(avs_vsprintf);
 
   AVSC_LOAD_FUNC(avs_get_error);
-  AVSC_LOAD_FUNC(avs_is_rgb48);
-  AVSC_LOAD_FUNC(avs_is_rgb64);
   AVSC_LOAD_FUNC(avs_is_yv24);
   AVSC_LOAD_FUNC(avs_is_yv16);
   AVSC_LOAD_FUNC(avs_is_yv12);
   AVSC_LOAD_FUNC(avs_is_yv411);
   AVSC_LOAD_FUNC(avs_is_y8);
-  AVSC_LOAD_FUNC(avs_is_yuv444p16);
-  AVSC_LOAD_FUNC(avs_is_yuv422p16);
-  AVSC_LOAD_FUNC(avs_is_yuv420p16);
-  AVSC_LOAD_FUNC(avs_is_y16);
-  AVSC_LOAD_FUNC(avs_is_yuv444ps);
-  AVSC_LOAD_FUNC(avs_is_yuv422ps);
-  AVSC_LOAD_FUNC(avs_is_yuv420ps);
-  AVSC_LOAD_FUNC(avs_is_y32);
-  AVSC_LOAD_FUNC(avs_is_444);
-  AVSC_LOAD_FUNC(avs_is_422);
-  AVSC_LOAD_FUNC(avs_is_420);
-  AVSC_LOAD_FUNC(avs_is_y);
-  AVSC_LOAD_FUNC(avs_is_yuva);
-  AVSC_LOAD_FUNC(avs_is_planar_rgb);
-  AVSC_LOAD_FUNC(avs_is_planar_rgba);
   AVSC_LOAD_FUNC(avs_is_color_space);
 
   AVSC_LOAD_FUNC(avs_get_plane_width_subsampling);
@@ -1089,15 +1211,33 @@ AVSC_INLINE AVS_Library * avs_load_library() {
   AVSC_LOAD_FUNC(avs_is_writable);
   AVSC_LOAD_FUNC(avs_get_write_ptr_p);
 
-  AVSC_LOAD_FUNC(avs_num_components);
-  AVSC_LOAD_FUNC(avs_component_size);
-  AVSC_LOAD_FUNC(avs_bits_per_component);
-
-
+  // Avisynth+ specific but made them callable for classic Avisynth hosts
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_rgb48, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_rgb64, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv444p16, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv422p16, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv420p16, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_y16, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv444ps, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv422ps, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv420ps, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_y32, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK(avs_is_444, avs_is_yv24);
+  AVSC_LOAD_FUNC_FALLBACK(avs_is_422, avs_is_yv16);
+  AVSC_LOAD_FUNC_FALLBACK(avs_is_420, avs_is_yv12);
+  AVSC_LOAD_FUNC_FALLBACK(avs_is_y, avs_is_y8);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuva, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_planar_rgb, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_planar_rgba, avs_is_xx_fallback_return_false);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_num_components, avs_num_components_fallback);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_component_size, avs_component_size_fallback);
+  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_bits_per_component, avs_bits_per_component_fallback);
 
 #undef __AVSC_STRINGIFY
 #undef AVSC_STRINGIFY
 #undef AVSC_LOAD_FUNC
+#undef AVSC_LOAD_FUNC_FALLBACK
+#undef AVSC_LOAD_FUNC_FALLBACK_SIMULATED
 
   return library;
 
