@@ -24,11 +24,18 @@
 /* L-SMASH (ISC) */
 #include <lsmash.h>                 /* Demuxer */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
 /* Libav (LGPL or GPL) */
 #include <libavformat/avformat.h>       /* Codec specific info importer */
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libswscale/swscale.h>         /* Colorspace converter */
 #include <libavutil/imgutils.h>
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */
 
 #include "lsmashsource.h"
 #include "video_output.h"
@@ -71,7 +78,7 @@ static lsmas_handler_t *alloc_handler
     void
 )
 {
-    lsmas_handler_t *hp = lw_malloc_zero( sizeof(lsmas_handler_t) );
+    lsmas_handler_t *hp = (lsmas_handler_t *)lw_malloc_zero( sizeof(lsmas_handler_t) );
     if( !hp )
         return NULL;
     hp->vdhp = libavsmash_video_alloc_decode_handler();
@@ -355,7 +362,7 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     if( track_number && track_number > number_of_tracks )
     {
         vs_filter_free( hp, core, vsapi );
-        set_error_on_init( out, vsapi, "lsmas: the number of tracks equals %"PRIu32".", number_of_tracks );
+        set_error_on_init( out, vsapi, "lsmas: the number of tracks equals %" PRIu32 ".", number_of_tracks );
         return;
     }
     libavsmash_video_set_log_handler( vdhp, &lh );

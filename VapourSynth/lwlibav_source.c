@@ -23,11 +23,19 @@
 
 #define NO_PROGRESS_HANDLER
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
 /* Libav (LGPL or GPL) */
 #include <libavformat/avformat.h>       /* Codec specific info importer */
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libswscale/swscale.h>         /* Colorspace converter */
+#include <libswresample/swresample.h>   /* Audio resampler */
 #include <libavutil/imgutils.h>
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */
 
 /* Dummy definitions.
  * Audio resampler/buffer is NOT used at all in this filter. */
@@ -40,6 +48,7 @@ int update_resampler_configuration( AVAudioResampleContext *avr,
                                     int *input_planes, int *input_block_align ){ return 0; }
 int resample_audio( AVAudioResampleContext *avr, audio_samples_t *out, audio_samples_t *in ){ return 0; }
 #include "../common/audio_output.h"
+#ifndef _MSC_VER
 uint64_t output_pcm_samples_from_buffer
 (
     lw_audio_output_handler_t *aohp,
@@ -65,6 +74,7 @@ uint64_t output_pcm_samples_from_packet
 }
 
 void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ }
+#endif
 
 #include "lsmashsource.h"
 #include "video_output.h"
@@ -110,7 +120,7 @@ static lwlibav_handler_t *alloc_handler
     void
 )
 {
-    lwlibav_handler_t *hp = lw_malloc_zero( sizeof(lwlibav_handler_t) );
+    lwlibav_handler_t *hp = (lwlibav_handler_t *)lw_malloc_zero( sizeof(lwlibav_handler_t) );
     if( !hp )
         return NULL;
     if( !(hp->vdhp = lwlibav_video_alloc_decode_handler())
