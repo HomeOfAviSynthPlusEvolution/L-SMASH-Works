@@ -97,6 +97,7 @@ LWLibavVideoSource::LWLibavVideoSource
     int                 direct_rendering,
     enum AVPixelFormat  pixel_format,
     const char         *preferred_decoder_names,
+    int                 prefer_hw_decoder,
     IScriptEnvironment *env
 ) : LWLibavVideoSource{}
 {
@@ -108,6 +109,7 @@ LWLibavVideoSource::LWLibavVideoSource
     lwlibav_video_set_seek_mode              ( vdhp, seek_mode );
     lwlibav_video_set_forward_seek_threshold ( vdhp, forward_seek_threshold );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names() );
+    lwlibav_video_set_prefer_hw_decoder      ( vdhp, prefer_hw_decoder);
     as_video_output_handler_t *as_vohp = (as_video_output_handler_t *)lw_malloc_zero( sizeof(as_video_output_handler_t) );
     if( !as_vohp )
         env->ThrowError( "LWLibavVideoSource: failed to allocate the AviSynth video output handler." );
@@ -298,6 +300,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         field_dominance         = args[11].AsInt( 0 );
     enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[12].AsString( nullptr ) );
     const char *preferred_decoder_names = args[13].AsString( nullptr );
+    int         prefer_hw_decoder       = args[14].AsInt( 0 );
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -317,8 +320,9 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
+    prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 2 );
     return new LWLibavVideoSource( &opt, seek_mode, forward_seek_threshold,
-                                   direct_rendering, pixel_format, preferred_decoder_names, env );
+                                   direct_rendering, pixel_format, preferred_decoder_names, prefer_hw_decoder, env );
 }
 
 AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )

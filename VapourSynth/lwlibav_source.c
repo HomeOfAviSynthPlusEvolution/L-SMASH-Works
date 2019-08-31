@@ -261,7 +261,7 @@ static void VS_CC vs_filter_free( void *instance_data, VSCore *core, const VSAPI
 
 void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
 {
-#ifndef VSDEBUG
+#ifdef NDEBUG
     av_log_set_level( AV_LOG_QUIET );
 #endif
     const char *file_path = vsapi->propGetData( in, "source", 0, NULL );
@@ -302,6 +302,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     int64_t direct_rendering;
     int64_t fps_num;
     int64_t fps_den;
+    int64_t prefer_hw_decoder;
     int64_t apply_repeat_flag;
     int64_t field_dominance;
     const char *index_file_path;
@@ -316,6 +317,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_int64 ( &direct_rendering,        0,    "dr",             in, vsapi );
     set_option_int64 ( &fps_num,                 0,    "fpsnum",         in, vsapi );
     set_option_int64 ( &fps_den,                 1,    "fpsden",         in, vsapi );
+    set_option_int64 ( &prefer_hw_decoder,       0,    "prefer_hw",      in, vsapi );
     set_option_int64 ( &apply_repeat_flag,       0,    "repeat",         in, vsapi );
     set_option_int64 ( &field_dominance,         0,    "dominance",      in, vsapi );
     set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
@@ -341,6 +343,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     lwlibav_video_set_seek_mode              ( vdhp, CLIP_VALUE( seek_mode,      0, 2 ) );
     lwlibav_video_set_forward_seek_threshold ( vdhp, CLIP_VALUE( seek_threshold, 1, 999 ) );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names( hp->preferred_decoder_names_buf ) );
+    lwlibav_video_set_prefer_hw_decoder      ( vdhp, CLIP_VALUE( prefer_hw_decoder, 0, 2 ) );
     vs_vohp->variable_info          = CLIP_VALUE( variable_info,     0, 1 );
     vs_vohp->direct_rendering       = CLIP_VALUE( direct_rendering,  0, 1 ) && !format;
     vs_vohp->vs_output_pixel_format = vs_vohp->variable_info ? pfNone : get_vs_output_pixel_format( format );

@@ -72,6 +72,7 @@ public:
         int                 fps_den,
         enum AVPixelFormat  pixel_format,
         const char         *preferred_decoder_names,
+        int                 prefer_hw_decoder,
         IScriptEnvironment *env
     );
     ~LSMASHVideoSource();

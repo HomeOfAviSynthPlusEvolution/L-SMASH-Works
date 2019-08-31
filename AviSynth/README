@@ -6,7 +6,7 @@
         [LSMASHVideoSource]
             LSMASHVideoSource(string source, int track = 0, int threads = 0, int seek_mode = 0, int seek_threshold = 10,
                               bool dr = false, int fpsnum = 0, int fpsden = 1,
-                              string format = "", string decoder = "")
+                              string format = "", string decoder = "", int prefer_hw = 0)
                 * This function uses libavcodec as video decoder and L-SMASH as demuxer.
                 * RAP is an abbreviation of random accessible point.
             [Arguments]
@@ -89,6 +89,12 @@
                     For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
                     used 'h264' and 'mpeg2video' decoder, then specify as "h264_qsv,mpeg2_qsv". The evaluations are done
                     in the written order and the first matched decoder is used if any.
+                + prefer_hw (default : 0)
+                    Whether to prefer hardware accelerated decoder to software decoder.
+                    Have no effect if 'decoder' is specified.
+                      - 0 : Use default software decoder.
+                      - 1 : Use NVIDIA CUVID acceleration for supported codec, otherwise use default software decoder.
+                      - 2 : Use Intel Quick Sync Video acceleration for supported codec, otherwise use default software decoder.
         [LSMASHAudioSource]
             LSMASHAudioSource(string source, int track = 0, bool skip_priming = true,
                               string layout = "", int rate = 0, string decoder = "")
@@ -182,7 +188,7 @@
             LWLibavVideoSource(string source, int stream_index = -1, int threads = 0, bool cache = true, string cachefile = source + ".lwi",
                                int seek_mode = 0, int seek_threshold = 10, bool dr = false,
                                int fpsnum = 0, int fpsden = 1, bool repeat = false, int dominance = 0,
-                               string format = "", string decoder = "")
+                               string format = "", string decoder = "", int prefer_hw = 0)
                 * This function uses libavcodec as video decoder and libavformat as demuxer.
             [Arguments]
                 + source
@@ -223,6 +229,8 @@
                     Same as 'format' of LSMASHVideoSource().
                 + decoder (defalut : "")
                     Same as 'decoder' of LSMASHVideoSource().
+                + prefer_hw (default : 0)
+                    Same as 'prefer_hw' of LSMASHVideoSource().
         [LWLibavAudioSource]
             LWLibavAudioSource(string source, int stream_index = -1, bool cache = true, string cachefile = source + ".lwi", bool av_sync = false,
                                string layout = "", int rate = 0, string decoder = "")

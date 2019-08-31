@@ -48,6 +48,7 @@ typedef struct
     uint8_t              *input_buffer;
     AVCodecContext       *ctx;
     const char          **preferred_decoder_names;
+    int                   prefer_hw_decoder;
     libavsmash_summary_t *entries;
     extended_summary_t    prefer;
     lw_log_handler_t      lh;

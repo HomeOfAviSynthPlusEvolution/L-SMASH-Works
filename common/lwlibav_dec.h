@@ -80,6 +80,7 @@ typedef struct
     int                         dv_in_avi;
     enum AVCodecID              codec_id;
     const char                **preferred_decoder_names;
+    int                         prefer_hw_decoder;
     AVRational                  time_base;
     uint32_t                    frame_count;
     AVFrame                    *frame_buffer;
@@ -131,6 +132,7 @@ int find_and_open_decoder
     AVCodecContext         **ctx,
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
+    const int                prefer_hw_decoder,
     const int                thread_count
 );
 

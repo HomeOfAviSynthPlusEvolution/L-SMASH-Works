@@ -31,7 +31,8 @@ static inline uint32_t get_decoder_delay
 const AVCodec *find_decoder
 (
     enum AVCodecID  codec_id,
-    const char    **preferred_decoder_names
+    const char    **preferred_decoder_names,
+    const int       prefer_hw_decoder
 );
 
 int open_decoder
@@ -47,6 +48,7 @@ int find_and_open_decoder
     AVCodecContext         **ctx,
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
+    const int                prefer_hw_decoder,
     const int                thread_count
 );
 

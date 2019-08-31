@@ -94,6 +94,12 @@ void libavsmash_video_set_preferred_decoder_names
     const char                       **preferred_decoder_names
 );
 
+void libavsmash_video_set_prefer_hw_decoder
+(
+    libavsmash_video_decode_handler_t *vdhp,
+    int                                prefer_hw_decoder
+);
+
 void libavsmash_video_set_log_handler
 (
     libavsmash_video_decode_handler_t *vdhp,

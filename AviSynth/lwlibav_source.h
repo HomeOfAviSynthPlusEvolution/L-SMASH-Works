@@ -64,6 +64,7 @@ public:
         int                 direct_rendering,
         enum AVPixelFormat  pixel_format,
         const char         *preferred_decoder_names,
+        int                 prefer_hw_decoder,
         IScriptEnvironment *env
     );
     ~LWLibavVideoSource();

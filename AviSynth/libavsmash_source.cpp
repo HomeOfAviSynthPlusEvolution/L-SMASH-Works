@@ -138,6 +138,7 @@ LSMASHVideoSource::LSMASHVideoSource
     int                 fps_den,
     enum AVPixelFormat  pixel_format,
     const char         *preferred_decoder_names,
+    int                 prefer_hw_decoder,
     IScriptEnvironment *env
 ) : LSMASHVideoSource{}
 {
@@ -148,6 +149,7 @@ LSMASHVideoSource::LSMASHVideoSource
     libavsmash_video_set_seek_mode              ( vdhp, seek_mode );
     libavsmash_video_set_forward_seek_threshold ( vdhp, forward_seek_threshold );
     libavsmash_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names() );
+    libavsmash_video_set_prefer_hw_decoder      ( vdhp, prefer_hw_decoder );
     vohp->vfr2cfr = (fps_num > 0 && fps_den > 0);
     vohp->cfr_num = (uint32_t)fps_num;
     vohp->cfr_den = (uint32_t)fps_den;
@@ -399,12 +401,14 @@ AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScrip
     int         fps_den                 = args[7].AsInt( 1 );
     enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[8].AsString( nullptr ) );
     const char *preferred_decoder_names = args[9].AsString( nullptr );
+    int         prefer_hw_decoder       = args[10].AsInt( 0 );
     threads                = threads >= 0 ? threads : 0;
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
+    prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 2 );
     return new LSMASHVideoSource( source, track_number, threads, seek_mode, forward_seek_threshold,
-                                  direct_rendering, fps_num, fps_den, pixel_format, preferred_decoder_names, env );
+                                  direct_rendering, fps_num, fps_den, pixel_format, preferred_decoder_names, prefer_hw_decoder, env );
 }
 
 AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )

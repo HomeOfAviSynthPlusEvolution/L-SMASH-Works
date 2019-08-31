@@ -92,6 +92,12 @@ void lwlibav_video_set_preferred_decoder_names
     const char                    **preferred_decoder_names
 );
 
+void lwlibav_video_set_prefer_hw_decoder
+(
+    lwlibav_video_decode_handler_t *vdhp,
+    int                             prefer_hw_decoder
+);
+
 void lwlibav_video_set_log_handler
 (
     lwlibav_video_decode_handler_t *vdhp,
