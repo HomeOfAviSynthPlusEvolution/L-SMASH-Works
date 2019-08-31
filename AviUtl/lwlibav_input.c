@@ -27,7 +27,7 @@
 #include <libavformat/avformat.h>       /* Demuxer */
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libswscale/swscale.h>         /* Colorspace converter */
-#include <libavresample/avresample.h>   /* Audio resampler */
+#include <libswresample/swresample.h>   /* Audio resampler */
 
 #include "lwinput.h"
 #include "resource.h"

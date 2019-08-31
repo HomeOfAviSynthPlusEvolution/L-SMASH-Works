@@ -27,7 +27,7 @@
 #include <math.h>
 
 #include <libavcodec/avcodec.h>
-#include <libavresample/avresample.h>
+#include <libswresample/swresample.h>
 #include <libavutil/opt.h>
 
 #include "lwinput.h"
@@ -65,12 +65,12 @@ static inline enum AVSampleFormat au_decide_audio_output_sample_format
 
 static inline void au_opt_set_mix_level
 (
-    AVAudioResampleContext *avr_ctx,
+    SwrContext             *swr_ctx,
     const char             *opt,
     int                     value
 )
 {
-    av_opt_set_double( avr_ctx, opt, value == 71 ? M_SQRT1_2 : (value / 100.0), 0 );
+    av_opt_set_double( swr_ctx, opt, value == 71 ? M_SQRT1_2 : (value / 100.0), 0 );
 }
 
 int au_setup_audio_rendering
@@ -115,25 +115,25 @@ int au_setup_audio_rendering
     int output_channels = av_get_channel_layout_nb_channels( aohp->output_channel_layout );
     aohp->output_block_align = (output_channels * aohp->output_bits_per_sample) / 8;
     /* Set up resampler. */
-    AVAudioResampleContext *avr_ctx = aohp->avr_ctx;
-    avr_ctx = avresample_alloc_context();
-    if( !avr_ctx )
+    SwrContext *swr_ctx = aohp->swr_ctx;
+    swr_ctx = swr_alloc();
+    if( !swr_ctx )
     {
         DEBUG_AUDIO_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to avresample_alloc_context." );
         return -1;
     }
-    aohp->avr_ctx = avr_ctx;
-    av_opt_set_int( avr_ctx, "in_channel_layout",   ctx->channel_layout,         0 );
-    av_opt_set_int( avr_ctx, "in_sample_fmt",       ctx->sample_fmt,             0 );
-    av_opt_set_int( avr_ctx, "in_sample_rate",      ctx->sample_rate,            0 );
-    av_opt_set_int( avr_ctx, "out_channel_layout",  aohp->output_channel_layout, 0 );
-    av_opt_set_int( avr_ctx, "out_sample_fmt",      aohp->output_sample_format,  0 );
-    av_opt_set_int( avr_ctx, "out_sample_rate",     aohp->output_sample_rate,    0 );
-    av_opt_set_int( avr_ctx, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP,          0 );
-    au_opt_set_mix_level( avr_ctx, "center_mix_level",   opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] );
-    au_opt_set_mix_level( avr_ctx, "surround_mix_level", opt->mix_level[MIX_LEVEL_INDEX_SURROUND] );
-    au_opt_set_mix_level( avr_ctx, "lfe_mix_level",      opt->mix_level[MIX_LEVEL_INDEX_LFE     ] );
-    if( avresample_open( avr_ctx ) < 0 )
+    aohp->swr_ctx = swr_ctx;
+    av_opt_set_int( swr_ctx, "in_channel_layout",   ctx->channel_layout,         0 );
+    av_opt_set_int( swr_ctx, "in_sample_fmt",       ctx->sample_fmt,             0 );
+    av_opt_set_int( swr_ctx, "in_sample_rate",      ctx->sample_rate,            0 );
+    av_opt_set_int( swr_ctx, "out_channel_layout",  aohp->output_channel_layout, 0 );
+    av_opt_set_int( swr_ctx, "out_sample_fmt",      aohp->output_sample_format,  0 );
+    av_opt_set_int( swr_ctx, "out_sample_rate",     aohp->output_sample_rate,    0 );
+    av_opt_set_int( swr_ctx, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP,          0 );
+    au_opt_set_mix_level( swr_ctx, "center_mix_level",   opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] );
+    au_opt_set_mix_level( swr_ctx, "surround_mix_level", opt->mix_level[MIX_LEVEL_INDEX_SURROUND] );
+    au_opt_set_mix_level( swr_ctx, "lfe_mix_level",      opt->mix_level[MIX_LEVEL_INDEX_LFE     ] );
+    if( swr_init( swr_ctx ) < 0 )
     {
         DEBUG_AUDIO_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to open resampler." );
         return -1;

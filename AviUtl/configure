@@ -81,7 +81,7 @@ libdir=""
 CFLAGS="-Wall -std=c99 -pedantic -D__USE_MINGW_ANSI_STDIO=1 -I. -I$SRCDIR -I../include"
 AU_LDFLAGS="-shared -Wl,--dll,--add-stdcall-alias"
 LDFLAGS="-L."
-DEPLIBS="liblsmash libavformat libavcodec libswscale libavresample libavutil"
+DEPLIBS="liblsmash libavformat libavcodec libswscale libswresample libavutil"
 
 SRC_INPUT="lwinput.c libavsmash_input.c lwlibav_input.c avs_input.c dummy_input.c            \
            vpy_input.c colorspace.c colorspace_simd.c                                        \
@@ -212,10 +212,10 @@ if ! cc_check "$CFLAGS" "$LDFLAGS $LIBS $XLIBS" "libswscale/swscale.h" "sws_getC
     error_exit "libswscale/swscale.h might not be installed or some libs missing."
 fi
 
-log_echo "checking for libavresample..."
-if ! cc_check "$CFLAGS" "$LDFLAGS $LIBS $XLIBS" "libavresample/avresample.h" "avresample_open(0);" ; then
-    log_echo "error: libavresample checking failed."
-    error_exit "libavresample/avresample.h might not be installed or some libs missing."
+log_echo "checking for libswresample..."
+if ! cc_check "$CFLAGS" "$LDFLAGS $LIBS $XLIBS" "libswresample/swresample.h" "swr_init(0);" ; then
+    log_echo "error: libswresample checking failed."
+    error_exit "libswresample/swresample.h might not be installed or some libs missing."
 fi
 
 LDFLAGS="$AU_LDFLAGS $LDFLAGS"
