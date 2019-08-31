@@ -47,7 +47,7 @@ int update_resampler_configuration( AVAudioResampleContext *avr,
                                     int *input_planes, int *input_block_align ){ return 0; }
 int resample_audio( AVAudioResampleContext *avr, audio_samples_t *out, audio_samples_t *in ){ return 0; }
 #include "../common/audio_output.h"
-/*
+#ifndef BUILD_SINGLE_BINARY
 uint64_t output_pcm_samples_from_buffer
 (
     lw_audio_output_handler_t *aohp,
@@ -71,7 +71,8 @@ uint64_t output_pcm_samples_from_packet
     return 0;
 }
 
-void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ } */
+void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ }
+#endif /* BUILD_SINGLE_BINARY */
 
 #include <stdio.h>
 #include <string.h>
