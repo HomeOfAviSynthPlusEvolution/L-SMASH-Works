@@ -203,6 +203,7 @@ static void *open_file( char *file_path, reader_option_t *opt )
     lwlibav_opt.threads           = opt->threads;
     lwlibav_opt.av_sync           = opt->av_sync;
     lwlibav_opt.no_create_index   = opt->no_create_index;
+    lwlibav_opt.index_file_path   = NULL;
     lwlibav_opt.force_video       = opt->force_video;
     lwlibav_opt.force_video_index = opt->force_video_index;
     lwlibav_opt.force_audio       = opt->force_audio;
