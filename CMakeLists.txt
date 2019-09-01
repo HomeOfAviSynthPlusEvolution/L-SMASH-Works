@@ -26,6 +26,7 @@ target_link_libraries(LSMASHSource
   ${PROJECT_SOURCE_DIR}/vendor/lib-${_DIR}/libswresample.a
   bcrypt.lib
 )
+add_definitions("-DBUILD_SINGLE_BINARY")
 if (MSVC)
   add_definitions("/utf-8")
   add_definitions("/GL")

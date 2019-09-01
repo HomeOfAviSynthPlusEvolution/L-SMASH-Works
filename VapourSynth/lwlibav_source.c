@@ -47,7 +47,7 @@ int update_resampler_configuration( AVAudioResampleContext *avr,
                                     int *input_planes, int *input_block_align ){ return 0; }
 int resample_audio( AVAudioResampleContext *avr, audio_samples_t *out, audio_samples_t *in ){ return 0; }
 #include "../common/audio_output.h"
-/*
+#ifndef BUILD_SINGLE_BINARY
 uint64_t output_pcm_samples_from_buffer
 (
     lw_audio_output_handler_t *aohp,
@@ -71,7 +71,8 @@ uint64_t output_pcm_samples_from_packet
     return 0;
 }
 
-void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ } */
+void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ }
+#endif /* BUILD_SINGLE_BINARY */
 
 #include <stdio.h>
 #include <string.h>
@@ -133,7 +134,7 @@ static lwlibav_handler_t *alloc_handler
     return hp;
 }
 
-static int update_indicator( progress_handler_t *, const char *message, int percent )
+static int update_indicator( progress_handler_t *handler, const char *message, int percent )
 {
     if ( !strcmp( message, "Creating Index file" ) )
     {
@@ -143,7 +144,7 @@ static int update_indicator( progress_handler_t *, const char *message, int perc
     return 0;
 }
 
-static void close_indicator( progress_handler_t * )
+static void close_indicator( progress_handler_t *handler )
 {
     fprintf( stderr, "\n" );
 }
