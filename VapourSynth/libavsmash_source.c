@@ -325,7 +325,8 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     uint32_t number_of_tracks = open_file( hp, file_name, &lh );
     if( number_of_tracks == 0 )
     {
-        vs_filter_free( hp, core, vsapi );
+        free_handler( &hp );
+        vsapi->setError( out, "lsmas: failed to open file." );
         return;
     }
     /* Get options. */
@@ -361,7 +362,7 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     vs_vohp->vs_output_pixel_format = vs_vohp->variable_info ? pfNone : get_vs_output_pixel_format( format );
     if( track_number && track_number > number_of_tracks )
     {
-        vs_filter_free( hp, core, vsapi );
+        free_handler( &hp );
         set_error_on_init( out, vsapi, "lsmas: the number of tracks equals %" PRIu32 ".", number_of_tracks );
         return;
     }
@@ -369,17 +370,17 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     /* Get video track. */
     if( libavsmash_video_get_track( vdhp, track_number ) < 0 )
     {
-        vs_filter_free( hp, core, vsapi );
+        free_handler( &hp );
+        vsapi->setError( out, "lsmas: failed to get video track." );
         return;
     }
     /* Set up decoders for this track. */
     threads = threads >= 0 ? threads : 0;
     if( prepare_video_decoding( hp, threads, out, core, vsapi ) < 0 )
     {
-        vs_filter_free( hp, core, vsapi );
+        free_handler( &hp );
         return;
     }
     lsmash_discard_boxes( libavsmash_video_get_root( vdhp ) );
     vsapi->createFilter( in, out, "LibavSMASHSource", vs_filter_init, vs_filter_get_frame, vs_filter_free, fmUnordered, nfMakeLinear, hp, core );
-    return;
 }

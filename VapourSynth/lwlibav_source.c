@@ -355,7 +355,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     lwlibav_audio_free_output_handler_ptr( &hp->aohp );
     if( ret < 0 )
     {
-        vs_filter_free( hp, core, vsapi );
+        free_handler( &hp );
         set_error_on_init( out, vsapi, "lsmas: failed to construct index." );
         return;
     }
@@ -363,7 +363,8 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     lwlibav_video_set_log_handler( vdhp, &lh );
     if( lwlibav_video_get_desired_track( lwhp->file_path, vdhp, lwhp->threads ) < 0 )
     {
-        vs_filter_free( hp, core, vsapi );
+        free_handler( &hp );
+        vsapi->setError( out, "lsmas: failed to get video track." );
         return;
     }
     /* Set average framerate. */
@@ -374,9 +375,8 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     /* Set up decoders for this stream. */
     if( prepare_video_decoding( hp, out, core, vsapi ) < 0 )
     {
-        vs_filter_free( hp, core, vsapi );
+        free_handler( &hp );
         return;
     }
     vsapi->createFilter( in, out, "LWLibavSource", vs_filter_init, vs_filter_get_frame, vs_filter_free, fmUnordered, nfMakeLinear, hp, core );
-    return;
 }
