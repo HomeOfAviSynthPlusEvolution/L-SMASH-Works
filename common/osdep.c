@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 int lw_string_to_wchar( int cp, const char *from, wchar_t **to )

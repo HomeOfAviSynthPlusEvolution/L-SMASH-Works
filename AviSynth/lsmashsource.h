@@ -22,6 +22,7 @@
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
 #include <memory>
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include "../common/cpp_compat.h"
