@@ -2445,9 +2445,9 @@ static void create_index
             int percent = 0;
             if( first_dts == AV_NOPTS_VALUE )
                 first_dts = pkt.dts;
-            if( filesize > 0 && pkt.pos > 0 )
-                /* Update if packet's file offset is valid. */
-                percent = (int)(100.0 * ((double)pkt.pos / filesize) + 0.5);
+            if( filesize > 0 && format_ctx->pb->pos > 0 )
+                /* Update if IO context's file offset is valid. */
+                percent = (int)(100.0 * ((double)format_ctx->pb->pos / filesize) + 0.5);
             else if( format_ctx->duration > 0 && first_dts != AV_NOPTS_VALUE && pkt.dts != AV_NOPTS_VALUE )
                 /* Update if packet's DTS is valid. */
                 percent = (int)(100.0
