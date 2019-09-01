@@ -90,7 +90,7 @@ SRC_INPUT="lwinput.c libavsmash_input.c lwlibav_input.c avs_input.c dummy_input.
            ../common/lwlibav_dec.c ../common/lwlibav_video.c ../common/lwlibav_audio.c       \
            ../common/lwindex.c ../common/resample.c ../common/audio_output.c                 \
            ../common/video_output.c ../common/lwsimd.c ../common/utils.c ../common/qsv.c     \
-           ../common/decode.c ../common/osdep.c"
+           ../common/decode.c ../common/osdep.c ../common/xxhash.c"
 SRC_MUXER="lwmuxer.c progress_dlg.c ../common/utils.c"
 SRC_DUMPER="lwdumper.c"
 SRC_COLOR="lwcolor.c lwcolor_simd.c ../common/lwsimd.c"
