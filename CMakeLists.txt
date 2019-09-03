@@ -3,13 +3,15 @@ project (LSMASHSource)
 file(GLOB AVSSOURCES "AviSynth/*.cpp")
 file(GLOB VPYSOURCES "VapourSynth/*.c")
 file(GLOB LSWSOURCES "common/*.c")
+find_package(Git)
 set_source_files_properties(${VPYSOURCES} PROPERTIES LANGUAGE CXX)
 set_source_files_properties(${LSWSOURCES} PROPERTIES LANGUAGE CXX)
 
 add_library(LSMASHSource SHARED ${AVSSOURCES} ${VPYSOURCES} ${LSWSOURCES} version.rc)
 set_target_properties(LSMASHSource PROPERTIES LINKER_LANGUAGE CXX)
 
-set (VERSION "r935+34")
+execute_process(COMMAND ${GIT_EXECUTABLE} describe --first-parent --tags --always OUTPUT_VARIABLE GIT_REPO_VERSION)
+string(REGEX REPLACE "(r.*)-(.*)-.*" "\\1+\\2" VERSION ${GIT_REPO_VERSION})
 configure_file (
   "${PROJECT_SOURCE_DIR}/version.rc.in"
   "${PROJECT_SOURCE_DIR}/version.rc"
