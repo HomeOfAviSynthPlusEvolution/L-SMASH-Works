@@ -113,7 +113,7 @@ uint32_t libavsmash_get_track_by_media_type
 )
 {
     char error_string[128] = { 0 };
-    char *media_type_str = type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK ? "video" : "audio";
+    const char *media_type_str = type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK ? "video" : "audio";
     uint32_t track_id;
     lsmash_media_parameters_t media_param;
     if( track_number == 0 )
