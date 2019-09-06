@@ -229,7 +229,7 @@ enum AVPixelFormat get_av_output_pixel_format
             { NULL,        AV_PIX_FMT_NONE        }
         };
     for( int i = 0; format_table[i].format_name; i++ )
-        if( stricmp( format_name, format_table[i].format_name ) == 0 )
+        if( _stricmp( format_name, format_table[i].format_name ) == 0 )
             return format_table[i].av_output_pixel_format;
     return AV_PIX_FMT_NONE;
 }
