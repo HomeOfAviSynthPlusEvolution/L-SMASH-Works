@@ -20,10 +20,11 @@
 
 /* This file is available under an ISC license. */
 
-#include <string.h>
-
 #ifdef _MSC_VER
+#include <string.h>
 #define strcasecmp _stricmp
+#else
+#include <strings.h>
 #endif
 
 #ifdef __cplusplus
