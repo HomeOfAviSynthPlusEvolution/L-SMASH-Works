@@ -115,6 +115,8 @@ int open_decoder
                                          * For instance, when stream is encoded as AC-3,
                                          * AVCodecContext.codec_id might have been set to AV_CODEC_ID_EAC3
                                          * while AVCodec.id is set to AV_CODEC_ID_AC3. */
+    if( codec->wrapper_name && !strcmp( codec->wrapper_name, "cuvid" ) )
+        c->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
     if( stream->avg_frame_rate.num )
         c->framerate = stream->avg_frame_rate;
     if( stream->time_base.num )
