@@ -96,9 +96,9 @@ int get_summaries
 
 int libavsmash_find_and_open_decoder
 (
-    codec_configuration_t   *config,
-    const AVCodecParameters *codecpar,
-    const int                thread_count
+    codec_configuration_t *config,
+    const AVStream        *stream,
+    const int              thread_count
 );
 
 int initialize_decoder_configuration

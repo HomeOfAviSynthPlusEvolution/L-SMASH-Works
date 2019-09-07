@@ -24,6 +24,7 @@
 extern "C"
 {
 #endif  /* __cplusplus */
+#include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #ifdef __cplusplus
 }
@@ -96,17 +97,17 @@ const AVCodec *find_decoder
 
 int open_decoder
 (
-    AVCodecContext         **ctx,
-    const AVCodecParameters *codecpar,
-    const AVCodec           *codec,
-    const int                thread_count
+    AVCodecContext **ctx,
+    const AVStream  *stream,
+    const AVCodec   *codec,
+    const int        thread_count
 )
 {
     AVCodecContext *c = avcodec_alloc_context3( codec );
     if( !c )
         return -1;
     int ret;
-    if( (ret = avcodec_parameters_to_context( c, codecpar )) < 0 )
+    if( (ret = avcodec_parameters_to_context( c, stream->codecpar )) < 0 )
         goto fail;
     c->thread_count = thread_count;
     c->codec_id     = AV_CODEC_ID_NONE; /* AVCodecContext.codec_id is supposed to be set properly in avcodec_open2().
@@ -114,6 +115,10 @@ int open_decoder
                                          * For instance, when stream is encoded as AC-3,
                                          * AVCodecContext.codec_id might have been set to AV_CODEC_ID_EAC3
                                          * while AVCodec.id is set to AV_CODEC_ID_AC3. */
+    if( stream->avg_frame_rate.num )
+        c->framerate = stream->avg_frame_rate;
+    if( stream->time_base.num )
+        c->pkt_timebase = stream->time_base;
     if( (ret = avcodec_open2( c, codec, NULL )) < 0 )
         goto fail;
     if( is_qsv_decoder( c->codec ) )
@@ -128,17 +133,17 @@ fail:
 
 int find_and_open_decoder
 (
-    AVCodecContext         **ctx,
-    const AVCodecParameters *codecpar,
-    const char             **preferred_decoder_names,
-    const int                prefer_hw_decoder,
-    const int                thread_count
+    AVCodecContext **ctx,
+    const AVStream  *stream,
+    const char     **preferred_decoder_names,
+    const int        prefer_hw_decoder,
+    const int        thread_count
 )
 {
-    const AVCodec *codec = find_decoder( codecpar->codec_id, preferred_decoder_names, prefer_hw_decoder );
+    const AVCodec *codec = find_decoder( stream->codecpar->codec_id, preferred_decoder_names, prefer_hw_decoder );
     if( !codec )
         return -1;
-    return open_decoder( ctx, codecpar, codec, thread_count );
+    return open_decoder( ctx, stream, codec, thread_count );
 }
 
 /* An incomplete simulator of the old libavcodec video decoder API
