@@ -74,7 +74,6 @@ void LSMASHVideoSource::get_video_track
 )
 {
     libavsmash_video_decode_handler_t *vdhp = this->vdhp.get();
-    libavsmash_video_output_handler_t *vohp = this->vohp.get();
     uint32_t number_of_tracks = open_file( source, env );
     if( track_number && track_number > number_of_tracks )
         env->ThrowError( "LSMASHVideoSource: the number of tracks equals %I32u.", number_of_tracks );
@@ -293,7 +292,7 @@ static void count_output_audio_samples
             uint32_t priming_samples;
             uint32_t padding;
             uint64_t duration;
-            if( 12 != sscanf( value, " %I32x %I32x %I32x %I64x %I32x %I32x %I32x %I32x %I32x %I32x %I32x %I32x",
+            if( 12 != sscanf( value, " %x %x %x %llx %x %x %x %x %x %x %x %x",
                               &dummy[0], &priming_samples, &padding, &duration, &dummy[1], &dummy[2],
                               &dummy[3], &dummy[4], &dummy[5], &dummy[6], &dummy[7], &dummy[8] ) )
             {

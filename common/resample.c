@@ -108,9 +108,6 @@ int resample_audio(SwrContext *swr, audio_samples_t *out, audio_samples_t *in )
     }
     uint8_t **in_data = in->sample_count > 0 ? in->data : NULL;
 	const uint8_t **indata = const_cast<const uint8_t**>(in_data);
-    int in_channels  = get_channel_layout_nb_channels( in->channel_layout );
-    int in_linesize  = get_linesize( in_channels, in->sample_count, in->sample_format );
-    int out_linesize = get_linesize( out_channels, request_sample_count, out->sample_format );
     int resampled_count = swr_convert( swr, out->data, request_sample_count,
                                                      indata,  in->sample_count );
     if( resampled_count < 0 )
