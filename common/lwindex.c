@@ -2094,6 +2094,7 @@ static void create_index
     }
     AVPacket pkt = { 0 };
     av_init_packet( &pkt );
+    int       pix_fmt_investigated  = 0;
     int       video_resolution      = 0;
     int       is_attached_pic       = 0;
     uint32_t  video_sample_count    = 0;
@@ -2154,8 +2155,12 @@ static void create_index
         }
         if( pkt_ctx->codec_type == AVMEDIA_TYPE_VIDEO )
         {
-            if( pkt_ctx->pix_fmt == AV_PIX_FMT_NONE )
+            if( pkt_ctx->pix_fmt == AV_PIX_FMT_NONE
+             || (pkt_ctx->codec->wrapper_name && !pix_fmt_investigated) )
+            {
                 investigate_pix_fmt_by_decoding( pkt_ctx, &pkt, vdhp->frame_buffer );
+                pix_fmt_investigated = 1;
+            }
             int dv_in_avi_init = 0;
             if( adhp->dv_in_avi    == -1
              && vdhp->stream_index == -1
