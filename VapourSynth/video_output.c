@@ -531,6 +531,8 @@ static int determine_colorspace_conversion
             { AV_PIX_FMT_YUV444P9BE,  pfYUV444P9,  1 },
             { AV_PIX_FMT_YUV420P10LE, pfYUV420P10, 0 },
             { AV_PIX_FMT_YUV420P10BE, pfYUV420P10, 1 },
+            { AV_PIX_FMT_P010LE,      pfYUV420P10, 1 },
+            { AV_PIX_FMT_P010BE,      pfYUV420P10, 1 },
             { AV_PIX_FMT_YUV422P10LE, pfYUV422P10, 0 },
             { AV_PIX_FMT_YUV422P10BE, pfYUV422P10, 1 },
             { AV_PIX_FMT_YUV444P10LE, pfYUV444P10, 0 },
@@ -551,6 +553,8 @@ static int determine_colorspace_conversion
 #endif
             { AV_PIX_FMT_YUV420P16LE, pfYUV420P16, 0 },
             { AV_PIX_FMT_YUV420P16BE, pfYUV420P16, 1 },
+            { AV_PIX_FMT_P016LE,      pfYUV420P16, 1 },
+            { AV_PIX_FMT_P016BE,      pfYUV420P16, 1 },
             { AV_PIX_FMT_YUV422P16LE, pfYUV422P16, 0 },
             { AV_PIX_FMT_YUV422P16BE, pfYUV422P16, 1 },
             { AV_PIX_FMT_YUV444P16LE, pfYUV444P16, 0 },
