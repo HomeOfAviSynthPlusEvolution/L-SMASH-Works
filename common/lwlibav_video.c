@@ -1232,7 +1232,7 @@ static uint32_t lwlibav_vfr2cfr
     {
         for( composition_frame_number--;
              composition_frame_number;
-             composition_frame_number /= 2 )
+             composition_frame_number-- )
         {
             ts = lwlibav_get_ts( vdhp, composition_frame_number );
             if( ts != AV_NOPTS_VALUE )
@@ -1260,12 +1260,15 @@ static uint32_t lwlibav_vfr2cfr
                 uint32_t prev_composition_frame_number = composition_frame_number;
                 while( lwlibav_get_ts( vdhp, --prev_composition_frame_number ) == AV_NOPTS_VALUE );
                 if( current_ts > next_target_ts )
+                    /* Between the current target and the next target, there are no input frames.
+                     * Therefore, output the previous frame. This is absolutely correct. */
                     frame_number = prev_composition_frame_number;
                 else
                 {
                     if( prev_composition_frame_number )
                     {
-                        /* Choose the nearest one unless the previous one is not output. */
+                        /* Choose the nearest one unless the previous one is not output.
+                         * Note that due to this, the seek is non-deterministic when CFR->VFR conversion is enabled. */
                         if( current_ts - target_ts >= target_ts - prev_ts
                          || prev_composition_frame_number != vdhp->last_ts_frame_number )
                             frame_number = prev_composition_frame_number;

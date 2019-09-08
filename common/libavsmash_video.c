@@ -942,7 +942,7 @@ static uint32_t libavsmash_vfr2cfr
     {
         for( composition_sample_number--;
              composition_sample_number;
-             composition_sample_number /= 2 )
+             composition_sample_number-- )
         {
             uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
             if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
@@ -968,10 +968,13 @@ static uint32_t libavsmash_vfr2cfr
         {
             uint32_t prev_composition_sample_number = composition_sample_number - 1;
             if( current_pts > next_target_pts )
+                /* Between the current target and the next target, there are no input samples.
+                 * Therefore, output the previous sample. This is absolutely correct. */
                 sample_number = prev_composition_sample_number;
             else
             {
-                /* Choose the nearest one unless the previous one is not output. */
+                /* Choose the nearest one unless the previous one is not output.
+                 * Note that due to this, the seek is non-deterministic when CFR->VFR conversion is enabled. */
                 if( current_pts - target_pts >= target_pts - prev_pts
                  || prev_composition_sample_number != vdhp->last_sample_number )
                     sample_number = prev_composition_sample_number;
