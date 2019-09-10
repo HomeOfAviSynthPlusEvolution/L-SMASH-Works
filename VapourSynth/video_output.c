@@ -57,12 +57,12 @@ typedef struct
     int      linesize[4];
 } vs_picture_t;
 
-static inline __m128i _MM_PACKUS_EPI32( const __m128i &low, const __m128i &high )
+static inline __m128i _MM_PACKUS_EPI32( const __m128i *low, const __m128i *high )
 {
     const __m128i val_32 = _mm_set1_epi32( 0x8000 );
     const __m128i val_16 = _mm_set1_epi16( 0x8000 );
-    const __m128i low1   = _mm_sub_epi32( low, val_32 );
-    const __m128i high1  = _mm_sub_epi32( high, val_32 );
+    const __m128i low1   = _mm_sub_epi32( *low, val_32 );
+    const __m128i high1  = _mm_sub_epi32( *high, val_32 );
     return _mm_add_epi16( _mm_packs_epi32( low1, high1 ), val_16 );
 }
 
@@ -182,13 +182,13 @@ static void make_frame_planar_yuv
 
                 __m128i u_low  = _mm_and_si128( uv_low, mask );
                 __m128i u_high = _mm_and_si128( uv_high, mask );
-                __m128i u      = _MM_PACKUS_EPI32( u_low, u_high );
+                __m128i u      = _MM_PACKUS_EPI32( &u_low, &u_high );
                 u              = _mm_srli_epi16( u, 6 );
                 _mm_stream_si128( (__m128i *)(dstp_u + x), u );
 
                 __m128i v_low  = _mm_srli_epi32( uv_low, 16 );
                 __m128i v_high = _mm_srli_epi32( uv_high, 16 );
-                __m128i v      = _MM_PACKUS_EPI32( v_low, v_high );
+                __m128i v      = _MM_PACKUS_EPI32( &v_low, &v_high );
                 v              = _mm_srli_epi16( v, 6 );
                 _mm_stream_si128( (__m128i *)(dstp_v + x), v );
             }
