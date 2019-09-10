@@ -43,6 +43,8 @@ extern "C"
 #include "lsmashsource.h"
 #include "video_output.h"
 
+#include <emmintrin.h>
+
 #if (LIBAVUTIL_VERSION_MICRO >= 100) && (LIBSWSCALE_VERSION_MICRO >= 100)
 #define FFMPEG_HIGH_DEPTH_SUPPORT 1
 #else
@@ -54,6 +56,15 @@ typedef struct
     uint8_t *data    [4];
     int      linesize[4];
 } vs_picture_t;
+
+static inline __m128i _MM_PACKUS_EPI32( const __m128i &low, const __m128i &high )
+{
+    const __m128i val_32 = _mm_set1_epi32( 0x8000 );
+    const __m128i val_16 = _mm_set1_epi16( 0x8000 );
+    const __m128i low1   = _mm_sub_epi32( low, val_32 );
+    const __m128i high1  = _mm_sub_epi32( high, val_32 );
+    return _mm_add_epi16( _mm_packs_epi32( low1, high1 ), val_16 );
+}
 
 static void make_black_background_planar_yuv8
 (
@@ -133,7 +144,61 @@ static void make_frame_planar_yuv
             0
         }
     };
-    sws_scale( vshp->sws_ctx, (const uint8_t* const*)av_picture->data, av_picture->linesize, 0, av_picture->height, vs_picture.data, vs_picture.linesize );
+    if( vshp->input_pixel_format == AV_PIX_FMT_P010LE && vshp->output_pixel_format == AV_PIX_FMT_YUV420P10LE )
+    {
+        const int width_y       = vsapi->getFrameWidth( vs_frame, 0 );
+        const int width_uv      = vsapi->getFrameWidth( vs_frame, 1 );
+        const int height_y      = vsapi->getFrameHeight( vs_frame, 0 );
+        const int height_uv     = vsapi->getFrameHeight( vs_frame, 1 );
+        const int src_stride_y  = av_picture->linesize[0] / sizeof( uint16_t );
+        const int src_stride_uv = av_picture->linesize[1] / sizeof( uint16_t );
+        const int dst_stride_y  = vs_picture.linesize[0] / sizeof( uint16_t );
+        const int dst_stride_uv = vs_picture.linesize[1] / sizeof( uint16_t );
+        uint16_t *srcp_y        = (uint16_t *)av_picture->data[0];
+        uint16_t *srcp_uv       = (uint16_t *)av_picture->data[1];
+        uint16_t *dstp_y        = (uint16_t *)vs_picture.data[0];
+        uint16_t *dstp_u        = (uint16_t *)vs_picture.data[1];
+        uint16_t *dstp_v        = (uint16_t *)vs_picture.data[2];
+
+        for( int y = 0; y < height_y; y++ )
+        {
+            for( int x = 0; x < width_y; x += 8 )
+            {
+                __m128i yy = _mm_load_si128( (const __m128i *)(srcp_y + x) );
+                yy         = _mm_srli_epi16( yy, 6 );
+                _mm_stream_si128( (__m128i *)(dstp_y + x), yy );
+            }
+            srcp_y += src_stride_y;
+            dstp_y += dst_stride_y;
+        }
+
+        const __m128i mask = _mm_set1_epi32(0x0000FFFF);
+        for( int y = 0; y < height_uv; y++ )
+        {
+            for( int x = 0; x < width_uv; x += 8 )
+            {
+                __m128i uv_low  = _mm_load_si128( (__m128i *)((uint32_t *)srcp_uv + x + 0) );
+                __m128i uv_high = _mm_load_si128( (__m128i *)((uint32_t *)srcp_uv + x + 4) );
+
+                __m128i u_low  = _mm_and_si128( uv_low, mask );
+                __m128i u_high = _mm_and_si128( uv_high, mask );
+                __m128i u      = _MM_PACKUS_EPI32( u_low, u_high );
+                u              = _mm_srli_epi16( u, 6 );
+                _mm_stream_si128( (__m128i *)(dstp_u + x), u );
+
+                __m128i v_low  = _mm_srli_epi32( uv_low, 16 );
+                __m128i v_high = _mm_srli_epi32( uv_high, 16 );
+                __m128i v      = _MM_PACKUS_EPI32( v_low, v_high );
+                v              = _mm_srli_epi16( v, 6 );
+                _mm_stream_si128( (__m128i *)(dstp_v + x), v );
+            }
+            srcp_uv += src_stride_uv;
+            dstp_u  += dst_stride_uv;
+            dstp_v  += dst_stride_uv;
+        }
+    }
+    else
+        sws_scale(vshp->sws_ctx, (const uint8_t * const *)av_picture->data, av_picture->linesize, 0, av_picture->height, vs_picture.data, vs_picture.linesize);
 }
 
 static void make_frame_planar_rgb

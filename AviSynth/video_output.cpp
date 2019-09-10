@@ -55,6 +55,15 @@ extern "C"
 static const int sse2_available = lw_check_sse2();
 static const int avx2_available = VC_HAS_AVX2 && lw_check_avx2();
 
+static inline __m128i _MM_PACKUS_EPI32( const __m128i &low, const __m128i &high )
+{
+    const __m128i val_32 = _mm_set1_epi32( 0x8000 );
+    const __m128i val_16 = _mm_set1_epi16( 0x8000 );
+    const __m128i low1   = _mm_sub_epi32( low, val_32 );
+    const __m128i high1  = _mm_sub_epi32( high, val_32 );
+    return _mm_add_epi16( _mm_packs_epi32( low1, high1 ), val_16 );
+}
+
 static void make_black_background_planar_yuv
 (
     PVideoFrame &frame,
@@ -151,7 +160,63 @@ static int make_frame_planar_yuv
 {
     as_picture_t as_picture = { { { NULL } } };
     as_assign_planar_yuv( as_frame, &as_picture );
-    return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
+    if( vohp->scaler.input_pixel_format == AV_PIX_FMT_P010LE && vohp->scaler.output_pixel_format == AV_PIX_FMT_YUV420P10LE )
+    {
+        const int width_y       = as_frame->GetRowSize( PLANAR_Y ) / sizeof( uint16_t );
+        const int width_uv      = as_frame->GetRowSize( PLANAR_U ) / sizeof( uint16_t );
+        const int height_y      = as_frame->GetHeight( PLANAR_Y );
+        const int height_uv     = as_frame->GetHeight( PLANAR_U );
+        const int src_pitch_y   = av_frame->linesize[0] / sizeof( uint16_t );
+        const int src_pitch_uv  = av_frame->linesize[1] / sizeof( uint16_t );
+        const int dst_pitch_y   = as_picture.linesize[0] / sizeof( uint16_t );
+        const int dst_pitch_uv  = as_picture.linesize[1] / sizeof( uint16_t );
+        uint16_t *srcp_y        = (uint16_t *)av_frame->data[0];
+        uint16_t *srcp_uv       = (uint16_t *)av_frame->data[1];
+        uint16_t *dstp_y        = (uint16_t *)as_picture.data[0];
+        uint16_t *dstp_u        = (uint16_t *)as_picture.data[1];
+        uint16_t *dstp_v        = (uint16_t *)as_picture.data[2];
+
+        for( int y = 0; y < height_y; y++ )
+        {
+            for( int x = 0; x < width_y; x += 8 )
+            {
+                __m128i yy = _mm_load_si128( (const __m128i *)(srcp_y + x) );
+                yy         = _mm_srli_epi16( yy, 6 );
+                _mm_stream_si128( (__m128i *)(dstp_y + x), yy );
+            }
+            srcp_y += src_pitch_y;
+            dstp_y += dst_pitch_y;
+        }
+
+        const __m128i mask = _mm_set1_epi32(0x0000FFFF);
+        for( int y = 0; y < height_uv; y++ )
+        {
+            for( int x = 0; x < width_uv; x += 8 )
+            {
+                __m128i uv_low  = _mm_load_si128( (__m128i *)((uint32_t *)srcp_uv + x + 0) );
+                __m128i uv_high = _mm_load_si128( (__m128i *)((uint32_t *)srcp_uv + x + 4) );
+
+                __m128i u_low  = _mm_and_si128( uv_low, mask );
+                __m128i u_high = _mm_and_si128( uv_high, mask );
+                __m128i u      = _MM_PACKUS_EPI32( u_low, u_high );
+                u              = _mm_srli_epi16( u, 6 );
+                _mm_stream_si128( (__m128i *)(dstp_u + x), u );
+
+                __m128i v_low  = _mm_srli_epi32( uv_low, 16 );
+                __m128i v_high = _mm_srli_epi32( uv_high, 16 );
+                __m128i v      = _MM_PACKUS_EPI32( v_low, v_high );
+                v              = _mm_srli_epi16( v, 6 );
+                _mm_stream_si128( (__m128i *)(dstp_v + x), v );
+            }
+            srcp_uv += src_pitch_uv;
+            dstp_u  += dst_pitch_uv;
+            dstp_v  += dst_pitch_uv;
+        }
+
+        return height_y;
+    }
+    else
+        return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
 }
 
 static int make_frame_packed_yuv
