@@ -734,6 +734,8 @@ static int is_picture_stored_in_frame
     uint32_t                        picture_number
 )
 {
+    if( !frame )
+        return -1;
     int64_t output_id = get_output_order_id( frame );
     if( output_id != AV_NOPTS_VALUE )
     {
