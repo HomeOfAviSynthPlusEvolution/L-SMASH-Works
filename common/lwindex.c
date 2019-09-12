@@ -1983,6 +1983,7 @@ static void cleanup_index_helpers( lwindex_indexer_t *indexer, AVFormatContext *
     av_freep( &indexer->helpers );
 }
 
+/* Hash the first and last mebibytes. */
 static uint64_t xxhash_file( const char *file_path, int64_t file_size )
 {
     FILE *fp = lw_fopen( file_path, "rb" );
@@ -1992,11 +1993,31 @@ static uint64_t xxhash_file( const char *file_path, int64_t file_size )
     size_t buffer_len = fread( file_buffer, 1, read_len, fp );
     if( file_size > (1 << 21) )
     {
+        /* Only if file is larger than 2 mebibytes */
         fseek( fp, -(1 << 20), SEEK_END );
         buffer_len += fread( file_buffer + buffer_len, 1, read_len, fp );
     }
     fclose( fp );
     uint64_t hash = XXH3_64bits( file_buffer, buffer_len );
+    lw_free( file_buffer );
+    return hash;
+}
+
+/* Hash the first and last mebibytes. */
+static unsigned xxhash32_file( const char *file_path, int64_t file_size )
+{
+    uint8_t *file_buffer = (uint8_t *)lw_malloc_zero( 1 << 21 );
+    const size_t read_len = 1 << 20;
+    FILE *fp = lw_fopen( file_path, "rb" );
+    size_t buffer_len = fread( file_buffer, 1, read_len, fp );
+    if( file_size > (1 << 21) )
+    {
+        /* Only if file is larger than 2 mebibytes */
+        fseek( fp, -(1 << 20), SEEK_END );
+        buffer_len += fread( file_buffer + buffer_len, 1, read_len, fp );
+    }
+    fclose( fp );
+    unsigned hash = XXH32( file_buffer, buffer_len, 0 );
     lw_free( file_buffer );
     return hash;
 }
@@ -2075,6 +2096,7 @@ static int create_index
         <LibavReaderIndexFile=16>
         <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
+        <FileLastModificationTime=000>
         <FileHash=0x0123456789abcdef>
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
@@ -2146,6 +2168,7 @@ static int create_index
         stat( lwhp->file_path, &file_stat );
 #endif
         fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
+        fprintf( index, "<FileLastModificationTime=%" PRId64 ">\n", file_stat.st_mtime );
         fprintf( index, "<FileHash=0x%016" PRIx64 ">\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
@@ -2864,7 +2887,9 @@ static int parse_index
     }
     /* Parse the index file. */
     int64_t file_size;
-    uint64_t file_hash;
+    int64_t file_last_modification_time;
+    uint64_t file_hash = 0;
+    unsigned file_hash_32 = 0;
     char format_name[256];
     int active_video_index;
     int active_audio_index;
@@ -2887,11 +2912,26 @@ static int parse_index
         return -1;
 #endif
     if( fscanf( index, "<FileSize=%" SCNd64 ">\n", &file_size ) != 1
-     || file_size != file_stat.st_size )
+     || fscanf( index, "<FileLastModificationTime=%" SCNd64 ">\n", &file_last_modification_time ) != 1 )
         return -1;
-    if( fscanf( index, "<FileHash=0x%" SCNx64 ">\n", &file_hash ) != 1
-     || file_hash != xxhash_file( lwhp->file_path, file_stat.st_size ) )
+    if( file_size != file_stat.st_size )
         return -1;
+    int32_t pos = ftell( index );
+    if( fscanf( index, "<FileHash=0x%" SCNx64 ">\n", &file_hash ) != 1 )
+        fseek( index, pos, SEEK_SET);
+    pos = ftell( index );
+    if( fscanf( index, "<FileHash=0x%x>\n", &file_hash_32 ) != 1 )
+        fseek( index, pos, SEEK_SET);
+    if( file_last_modification_time != file_stat.st_mtime )
+    {
+        // Also check hashsum
+        if( ( !file_hash
+             || file_hash != xxhash_file( lwhp->file_path, file_stat.st_size ) )
+         &&
+            ( !file_hash_32
+             || file_hash_32 != xxhash32_file( lwhp->file_path, file_stat.st_size ) ) )
+            return -1;
+    }
     if( fscanf( index, "<LibavReaderIndex=0x%x,%d,%[^>]>\n",
                 (unsigned int *)&lwhp->format_flags, &lwhp->raw_demuxer, format_name ) != 3 )
         return -1;
