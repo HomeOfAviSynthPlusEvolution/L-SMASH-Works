@@ -90,7 +90,19 @@ const AVCodec *find_decoder
             break;
         }
         if( preferred_decoder )
-            codec = preferred_decoder;
+        {
+            AVCodecContext *ctx = avcodec_alloc_context3( preferred_decoder );
+            if( !ctx )
+                return codec;
+            if( avcodec_open2( ctx, preferred_decoder, NULL ) < 0
+             || avcodec_send_packet(ctx, NULL) < 0 )
+            {
+                avcodec_free_context( &ctx );
+                return codec;
+            }
+            avcodec_free_context( &ctx );
+            return preferred_decoder;
+        }
     }
     return codec;
 }
