@@ -2077,9 +2077,11 @@ static void create_index
         fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
 #ifdef _WIN32
         wchar_t *wname;
-        lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname );
         struct _stat64 file_stat;
-        _wstat64( wname, &file_stat );
+        if( lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname ) )
+            _wstat64( wname, &file_stat );
+        else
+            _stat64( lwhp->file_path, &file_stat );
 #else
         struct stat file_stat;
         stat( lwhp->file_path, &file_stat );
@@ -2766,14 +2768,22 @@ static int parse_index
     int active_audio_index;
 #ifdef _WIN32
     wchar_t *wname;
-    lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname );
     struct _stat64 file_stat;
-    if( _wstat64( wname, &file_stat ) )
+    if( lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname ) )
+    {
+        if( _wstat64( wname, &file_stat ) )
+            return -1;
+    }
+    else
+    {
+        if( _stat64( lwhp->file_path, &file_stat ) )
+            return -1;
+    }
 #else
     struct stat file_stat;
     if( stat( lwhp->file_path, &file_stat ) )
-#endif
         return -1;
+#endif
     if( fscanf( index, "<FileSize=%" SCNd64 ">\n", &file_size ) != 1
      || file_size != file_stat.st_size )
         return -1;
