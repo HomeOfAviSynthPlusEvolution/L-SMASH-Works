@@ -56,39 +56,19 @@ const AVCodec *find_decoder
         }
     else if( codec->type == AVMEDIA_TYPE_VIDEO && prefer_hw_decoder )
     {
-        AVCodec *preferred_decoder = NULL;
-        switch( codec->id )
-        {
-        case AV_CODEC_ID_H264:
-            preferred_decoder = avcodec_find_decoder_by_name( prefer_hw_decoder == 1 ? "h264_cuvid" : "h264_qsv" );
-            break;
-        case AV_CODEC_ID_HEVC:
-            preferred_decoder = avcodec_find_decoder_by_name( prefer_hw_decoder == 1 ? "hevc_cuvid" : "hevc_qsv" );
-            break;
-        case AV_CODEC_ID_MJPEG:
-            preferred_decoder = prefer_hw_decoder == 1 ? avcodec_find_decoder_by_name( "mjpeg_cuvid" ) : NULL;
-            break;
-        case AV_CODEC_ID_MPEG1VIDEO:
-            preferred_decoder = prefer_hw_decoder == 1 ? avcodec_find_decoder_by_name( "mpeg1_cuvid" ) : NULL;
-            break;
-        case AV_CODEC_ID_MPEG2VIDEO:
-            preferred_decoder = avcodec_find_decoder_by_name( prefer_hw_decoder == 1 ? "mpeg2_cuvid" : "mpeg2_qsv" );
-            break;
-        case AV_CODEC_ID_MPEG4:
-            preferred_decoder = prefer_hw_decoder == 1 ? avcodec_find_decoder_by_name( "mpeg4_cuvid" ) : NULL;
-            break;
-        case AV_CODEC_ID_VC1:
-            preferred_decoder = avcodec_find_decoder_by_name( prefer_hw_decoder == 1 ? "vc1_cuvid" : "vc1_qsv" );
-            break;
-        case AV_CODEC_ID_VP8:
-            preferred_decoder = avcodec_find_decoder_by_name( prefer_hw_decoder == 1 ? "vp8_cuvid" : "vp8_qsv" );
-            break;
-        case AV_CODEC_ID_VP9:
-            preferred_decoder = prefer_hw_decoder == 1 ? avcodec_find_decoder_by_name( "vp9_cuvid" ) : NULL;
-            break;
-        default:
-            break;
-        }
+        const char *original_codec_name;
+        if( !strcmp( codec->name, "mpeg1video" ) )
+            original_codec_name = "mpeg1";
+        else if( !strcmp( codec->name, "mpeg2video" ) )
+            original_codec_name = "mpeg2";
+        else
+            original_codec_name = codec->name;
+        const size_t original_codec_name_length = strlen( original_codec_name );
+        char preferred_codec_name[32] = { 0 };
+        const char *wrapper = prefer_hw_decoder == 1 ? "_cuvid" : "_qsv";
+        memcpy( preferred_codec_name, original_codec_name, original_codec_name_length );
+        memcpy( preferred_codec_name + original_codec_name_length, wrapper, strlen( wrapper ) );
+        AVCodec *preferred_decoder = avcodec_find_decoder_by_name( preferred_codec_name );
         if( preferred_decoder )
         {
             AVCodecContext *ctx = avcodec_alloc_context3( preferred_decoder );
