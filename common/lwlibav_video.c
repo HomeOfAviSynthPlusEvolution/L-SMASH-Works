@@ -1240,9 +1240,9 @@ static uint32_t lwlibav_vfr2cfr
             if( ts != AV_NOPTS_VALUE )
             {
                 current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+                prev_ts = current_ts;
                 if( current_ts <= target_ts )
                     break;
-                prev_ts = current_ts;
             }
         }
         if( composition_frame_number == 0 )
@@ -1261,24 +1261,28 @@ static uint32_t lwlibav_vfr2cfr
             {
                 uint32_t prev_composition_frame_number = composition_frame_number;
                 while( lwlibav_get_ts( vdhp, --prev_composition_frame_number ) == AV_NOPTS_VALUE );
-                if( current_ts > next_target_ts )
-                    /* Between the current target and the next target, there are no input frames.
-                     * Therefore, output the previous frame. This is absolutely correct. */
-                    frame_number = prev_composition_frame_number;
+                if( prev_composition_frame_number == 0 )
+                    frame_number = 1;
                 else
                 {
-                    if( prev_composition_frame_number )
+                    if( current_ts > next_target_ts )
+                        /* Between the current target and the next target, there are no input frames.
+                         * Therefore, output the previous frame. This is absolutely correct. */
+                        frame_number = prev_composition_frame_number;
+                    else
                     {
-                        /* Choose the nearest one unless the previous one is not output.
-                         * Note that due to this, the seek is non-deterministic when CFR->VFR conversion is enabled. */
-                        if( current_ts - target_ts >= target_ts - prev_ts
-                         || prev_composition_frame_number != vdhp->last_ts_frame_number )
+                        if( current_ts > (next_target_ts + target_ts) / 2 )
+                            /* The current frame is far from the current target and should be a candidate for the next target. */
                             frame_number = prev_composition_frame_number;
                         else
-                            frame_number = composition_frame_number;
+                        {
+                            /* Choose the nearest one. */
+                            if( current_ts - target_ts >= target_ts - prev_ts )
+                                frame_number = prev_composition_frame_number;
+                            else
+                                frame_number = composition_frame_number;
+                        }
                     }
-                    else
-                        frame_number = 1;
                 }
                 break;
             }
