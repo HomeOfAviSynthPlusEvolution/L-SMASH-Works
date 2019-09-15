@@ -948,9 +948,9 @@ static uint32_t libavsmash_vfr2cfr
             if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
                 return 0;
             current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
+            prev_pts = current_pts;
             if( current_pts <= target_pts )
                 break;
-            prev_pts = current_pts;
         }
         if( composition_sample_number == 0 )
             return 0;
@@ -973,13 +973,17 @@ static uint32_t libavsmash_vfr2cfr
                 sample_number = prev_composition_sample_number;
             else
             {
-                /* Choose the nearest one unless the previous one is not output.
-                 * Note that due to this, the seek is non-deterministic when CFR->VFR conversion is enabled. */
-                if( current_pts - target_pts >= target_pts - prev_pts
-                 || prev_composition_sample_number != vdhp->last_sample_number )
+                if( current_pts > (next_target_pts + target_pts) / 2 )
+                    /* The current sample is far from the current target and should be a candidate for the next target. */
                     sample_number = prev_composition_sample_number;
                 else
-                    sample_number = composition_sample_number;
+                {
+                    /* Choose the nearest one. */
+                    if( current_pts - target_pts >= target_pts - prev_pts )
+                        sample_number = prev_composition_sample_number;
+                    else
+                        sample_number = composition_sample_number;
+                }
             }
             break;
         }
