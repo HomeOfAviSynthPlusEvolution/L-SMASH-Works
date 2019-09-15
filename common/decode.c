@@ -33,6 +33,29 @@ extern "C"
 #include "decode.h"
 #include "qsv.h"
 
+static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_decoder )
+{
+    char hw_decoder_name[32] = { 0 };
+    const size_t codec_name_length = strlen( codec_name );
+    const char *wrapper = prefer_hw_decoder == 1 ? "_cuvid" : "_qsv";
+    memcpy( hw_decoder_name, codec_name, codec_name_length );
+    memcpy( hw_decoder_name + codec_name_length, wrapper, strlen( wrapper ) );
+    AVCodec *hw_decoder = avcodec_find_decoder_by_name( hw_decoder_name );
+    if( !hw_decoder )
+        return NULL;
+    AVCodecContext *ctx = avcodec_alloc_context3( hw_decoder );
+    if( !ctx )
+        return NULL;
+    if( avcodec_open2( ctx, hw_decoder, NULL ) < 0
+     || avcodec_send_packet( ctx, NULL ) < 0 )
+    {
+        avcodec_free_context( &ctx );
+        return NULL;
+    }
+    avcodec_free_context( &ctx );
+    return hw_decoder;
+}
+
 const AVCodec *find_decoder
 (
     enum AVCodecID  codec_id,
@@ -42,7 +65,7 @@ const AVCodec *find_decoder
 {
     AVCodec *codec = avcodec_find_decoder( codec_id );
     if( !codec )
-        return codec;
+        return NULL;
     if( preferred_decoder_names && *preferred_decoder_names && *preferred_decoder_names[0] )
         for( const char **decoder_name = preferred_decoder_names; *decoder_name != NULL; decoder_name++ )
         {
@@ -56,33 +79,24 @@ const AVCodec *find_decoder
         }
     else if( codec->type == AVMEDIA_TYPE_VIDEO && prefer_hw_decoder )
     {
-        const char *original_codec_name;
+        const char *codec_name;
         if( !strcmp( codec->name, "mpeg1video" ) )
-            original_codec_name = "mpeg1";
+            codec_name = "mpeg1";
         else if( !strcmp( codec->name, "mpeg2video" ) )
-            original_codec_name = "mpeg2";
+            codec_name = "mpeg2";
         else
-            original_codec_name = codec->name;
-        const size_t original_codec_name_length = strlen( original_codec_name );
-        char preferred_codec_name[32] = { 0 };
-        const char *wrapper = prefer_hw_decoder == 1 ? "_cuvid" : "_qsv";
-        memcpy( preferred_codec_name, original_codec_name, original_codec_name_length );
-        memcpy( preferred_codec_name + original_codec_name_length, wrapper, strlen( wrapper ) );
-        AVCodec *preferred_decoder = avcodec_find_decoder_by_name( preferred_codec_name );
-        if( preferred_decoder )
+            codec_name = codec->name;
+        AVCodec *preferred_decoder;
+        if( prefer_hw_decoder == 3 )
         {
-            AVCodecContext *ctx = avcodec_alloc_context3( preferred_decoder );
-            if( !ctx )
-                return codec;
-            if( avcodec_open2( ctx, preferred_decoder, NULL ) < 0
-             || avcodec_send_packet(ctx, NULL) < 0 )
-            {
-                avcodec_free_context( &ctx );
-                return codec;
-            }
-            avcodec_free_context( &ctx );
-            return preferred_decoder;
+            preferred_decoder = select_hw_decoder( codec_name, 1 );
+            if( !preferred_decoder )
+                preferred_decoder = select_hw_decoder( codec_name, 2 );
         }
+        else
+            preferred_decoder = select_hw_decoder( codec_name, prefer_hw_decoder );
+        if( preferred_decoder )
+            codec = preferred_decoder;
     }
     return codec;
 }

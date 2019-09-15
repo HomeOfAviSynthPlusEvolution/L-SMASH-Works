@@ -405,7 +405,7 @@ AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScrip
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
-    prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 2 );
+    prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 3 );
     return new LSMASHVideoSource( source, track_number, threads, seek_mode, forward_seek_threshold,
                                   direct_rendering, fps_num, fps_den, pixel_format, preferred_decoder_names, prefer_hw_decoder, env );
 }
