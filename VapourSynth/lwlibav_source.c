@@ -84,6 +84,7 @@ void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ }
 #include "../common/progress.h"
 #include "../common/lwlibav_dec.h"
 #include "../common/lwlibav_video.h"
+#include "../common/lwlibav_video_internal.h"
 #include "../common/lwlibav_audio.h"
 #include "../common/lwindex.h"
 
@@ -163,6 +164,7 @@ static void set_frame_properties
 (
     VSVideoInfo *vi,
     AVFrame     *av_frame,
+    AVStream    *stream,
     VSFrameRef  *vs_frame,
     const VSAPI *vsapi
 )
@@ -170,7 +172,7 @@ static void set_frame_properties
     /* Variable Frame Rate is not supported yet. */
     int64_t duration_num = vi->fpsDen;
     int64_t duration_den = vi->fpsNum;
-    vs_set_frame_properties( av_frame, duration_num, duration_den, vs_frame, vsapi );
+    vs_set_frame_properties( av_frame, stream, duration_num, duration_den, vs_frame, vsapi );
 }
 
 static int prepare_video_decoding
@@ -250,7 +252,7 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->setFilterError( "lsmas: failed to output a video frame.", frame_ctx );
         return NULL;
     }
-    set_frame_properties( vi, av_frame, vs_frame, vsapi );
+    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, vsapi );
     return vs_frame;
 }
 

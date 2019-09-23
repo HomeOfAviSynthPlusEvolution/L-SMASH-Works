@@ -164,7 +164,7 @@ static void set_frame_properties
     int64_t duration_num;
     int64_t duration_den;
     get_sample_duration( vdhp, vi, sample_number, &duration_num, &duration_den );
-    vs_set_frame_properties( av_frame, duration_num, duration_den, vs_frame, vsapi );
+    vs_set_frame_properties( av_frame, NULL, duration_num, duration_den, vs_frame, vsapi );
 }
 
 static int prepare_video_decoding
