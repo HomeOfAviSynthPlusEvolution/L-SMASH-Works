@@ -93,7 +93,7 @@ void lwlibav_update_configuration
     avcodec_free_context( &dhp->ctx );
     /* Find an appropriate decoder. */
     const lwlibav_extradata_t *entry = &exhp->entries[extradata_index];
-    const AVCodec *codec = find_decoder( entry->codec_id, dhp->preferred_decoder_names, dhp->prefer_hw_decoder );
+    const AVCodec *codec = find_decoder( entry->codec_id, codecpar, dhp->preferred_decoder_names, dhp->prefer_hw_decoder );
     if( !codec )
     {
         strcpy( error_string, "Failed to find the decoder.\n" );

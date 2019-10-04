@@ -33,7 +33,7 @@ extern "C"
 #include "decode.h"
 #include "qsv.h"
 
-static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_decoder )
+static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_decoder, AVCodecParameters *codecpar )
 {
     char hw_decoder_name[32] = { 0 };
     const size_t codec_name_length = strlen( codec_name );
@@ -46,7 +46,8 @@ static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_d
     AVCodecContext *ctx = avcodec_alloc_context3( hw_decoder );
     if( !ctx )
         return NULL;
-    if( avcodec_open2( ctx, hw_decoder, NULL ) < 0
+    if( avcodec_parameters_to_context( ctx, codecpar ) < 0
+     || avcodec_open2( ctx, hw_decoder, NULL ) < 0
      || avcodec_send_packet( ctx, NULL ) < 0 )
     {
         avcodec_free_context( &ctx );
@@ -58,9 +59,10 @@ static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_d
 
 const AVCodec *find_decoder
 (
-    enum AVCodecID  codec_id,
-    const char    **preferred_decoder_names,
-    const int       prefer_hw_decoder
+    enum AVCodecID     codec_id,
+    AVCodecParameters *codecpar,
+    const char       **preferred_decoder_names,
+    const int          prefer_hw_decoder
 )
 {
     AVCodec *codec = avcodec_find_decoder( codec_id );
@@ -89,12 +91,12 @@ const AVCodec *find_decoder
         AVCodec *preferred_decoder;
         if( prefer_hw_decoder == 3 )
         {
-            preferred_decoder = select_hw_decoder( codec_name, 1 );
+            preferred_decoder = select_hw_decoder( codec_name, 1, codecpar );
             if( !preferred_decoder )
-                preferred_decoder = select_hw_decoder( codec_name, 2 );
+                preferred_decoder = select_hw_decoder( codec_name, 2, codecpar );
         }
         else
-            preferred_decoder = select_hw_decoder( codec_name, prefer_hw_decoder );
+            preferred_decoder = select_hw_decoder( codec_name, prefer_hw_decoder, codecpar );
         if( preferred_decoder )
             codec = preferred_decoder;
     }
@@ -148,7 +150,7 @@ int find_and_open_decoder
     const int        thread_count
 )
 {
-    const AVCodec *codec = find_decoder( stream->codecpar->codec_id, preferred_decoder_names, prefer_hw_decoder );
+    const AVCodec *codec = find_decoder( stream->codecpar->codec_id, stream->codecpar, preferred_decoder_names, prefer_hw_decoder );
     if( !codec )
         return -1;
     return open_decoder( ctx, stream, codec, thread_count );

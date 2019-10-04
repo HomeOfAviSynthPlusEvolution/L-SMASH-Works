@@ -445,7 +445,12 @@ static const AVCodec *libavsmash_find_decoder
         /* Try to get any valid codec_id from summaries. */
         for( uint32_t i = 0; i < config->count && codec_id == AV_CODEC_ID_NONE; i++ )
             codec_id = get_codec_id_from_description( config->entries[i].summary );
-    return find_decoder( codec_id, config->preferred_decoder_names, config->prefer_hw_decoder );
+    AVCodecParameters *codecpar = avcodec_parameters_alloc();
+    if( codecpar )
+        avcodec_parameters_from_context( codecpar, config->ctx );
+    const AVCodec *codec = find_decoder( codec_id, codecpar, config->preferred_decoder_names, config->prefer_hw_decoder );
+    avcodec_parameters_free( &codecpar );
+    return codec;
 }
 
 int libavsmash_find_and_open_decoder
@@ -866,7 +871,7 @@ void update_configuration
     config->ctx->opaque = NULL;
     avcodec_free_context( &config->ctx );
     /* Find an appropriate decoder. */
-    const AVCodec *codec = find_decoder( config->queue.codec_id, config->preferred_decoder_names, config->prefer_hw_decoder );
+    const AVCodec *codec = find_decoder( config->queue.codec_id, codecpar, config->preferred_decoder_names, config->prefer_hw_decoder );
     if( !codec )
     {
         strcpy( error_string, "Failed to find the decoder.\n" );
