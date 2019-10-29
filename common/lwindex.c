@@ -1113,14 +1113,6 @@ static inline int check_vp8_invisible_frame( const AVPacket *pkt )
     return !(pkt->data[0] & 0x10);
 }
 
-static inline int check_vp9_invisible_frame( const AVPacket *pkt )
-{
-    if( ((pkt->data[0] >> 4) & 0x03) == 0x03 )
-        return !(pkt->data[0] & 0x04) && !(pkt->data[0] & 0x01);
-    else
-        return !(pkt->data[0] & 0x08) && !(pkt->data[0] & 0x02);
-}
-
 static void create_video_visible_frame_list
 (
     lwlibav_video_decode_handler_t *vdhp,
@@ -2276,8 +2268,7 @@ static void create_index
                  && (pkt_ctx->codec_id == AV_CODEC_ID_H264 || pkt_ctx->codec_id == AV_CODEC_ID_HEVC)
                  && (pkt_ctx->width == 0 || pkt_ctx->height == 0) )
                     info->flags |= LW_VFRAME_FLAG_CORRUPT;
-                if( (pkt_ctx->codec_id == AV_CODEC_ID_VP8 && check_vp8_invisible_frame( &pkt ))
-                 || (pkt_ctx->codec_id == AV_CODEC_ID_VP9 && check_vp9_invisible_frame( &pkt )) )
+                if( pkt_ctx->codec_id == AV_CODEC_ID_VP8 && check_vp8_invisible_frame( &pkt ) )
                 {
                     /* VPx invisible altref frame. */
                     info->flags |= LW_VFRAME_FLAG_INVISIBLE;
@@ -2926,7 +2917,7 @@ static int parse_index
                      && ((enum AVCodecID)codec_id == AV_CODEC_ID_H264 || (enum AVCodecID)codec_id == AV_CODEC_ID_HEVC)
                      && (width == 0 || height == 0) )
                         info->flags |= LW_VFRAME_FLAG_CORRUPT;
-                    if( ((enum AVCodecID)codec_id == AV_CODEC_ID_VP8 || (enum AVCodecID)codec_id == AV_CODEC_ID_VP9)
+                    if( (enum AVCodecID)codec_id == AV_CODEC_ID_VP8
                      && pts == AV_NOPTS_VALUE && dts == AV_NOPTS_VALUE && pos == -1 )
                     {
                         /* VPx invisible altref frame. */
