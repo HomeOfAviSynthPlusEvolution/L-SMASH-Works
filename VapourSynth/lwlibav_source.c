@@ -263,9 +263,6 @@ static void VS_CC vs_filter_free( void *instance_data, VSCore *core, const VSAPI
 
 void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
 {
-#ifdef NDEBUG
-    av_log_set_level( AV_LOG_QUIET );
-#endif
     const char *file_path = vsapi->propGetData( in, "source", 0, NULL );
     /* Allocate the handler of this filter function. */
     lwlibav_handler_t *hp = alloc_handler();
@@ -307,6 +304,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     int64_t prefer_hw_decoder;
     int64_t apply_repeat_flag;
     int64_t field_dominance;
+    int64_t ff_loglevel;
     const char *index_file_path;
     const char *format;
     const char *preferred_decoder_names;
@@ -322,6 +320,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_int64 ( &prefer_hw_decoder,       0,    "prefer_hw",      in, vsapi );
     set_option_int64 ( &apply_repeat_flag,       0,    "repeat",         in, vsapi );
     set_option_int64 ( &field_dominance,         0,    "dominance",      in, vsapi );
+    set_option_int64 ( &ff_loglevel,             0,    "ff_loglevel",    in, vsapi );
     set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
@@ -349,6 +348,24 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     vs_vohp->variable_info          = CLIP_VALUE( variable_info,     0, 1 );
     vs_vohp->direct_rendering       = CLIP_VALUE( direct_rendering,  0, 1 ) && !format;
     vs_vohp->vs_output_pixel_format = vs_vohp->variable_info ? pfNone : get_vs_output_pixel_format( format );
+    if( ff_loglevel <= 0 )
+        av_log_set_level( AV_LOG_QUIET );
+    else if( ff_loglevel == 1 )
+        av_log_set_level( AV_LOG_PANIC );
+    else if( ff_loglevel == 2 )
+        av_log_set_level( AV_LOG_FATAL );
+    else if( ff_loglevel == 3 )
+        av_log_set_level( AV_LOG_ERROR );
+    else if( ff_loglevel == 4 )
+        av_log_set_level( AV_LOG_WARNING );
+    else if( ff_loglevel == 5 )
+        av_log_set_level( AV_LOG_INFO );
+    else if( ff_loglevel == 6 )
+        av_log_set_level( AV_LOG_VERBOSE );
+    else if( ff_loglevel == 7 )
+        av_log_set_level( AV_LOG_DEBUG );
+    else
+        av_log_set_level( AV_LOG_TRACE );
     /* Set up progress indicator. */
     progress_indicator_t indicator;
     indicator.open   = NULL;

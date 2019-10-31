@@ -291,9 +291,6 @@ static uint32_t open_file
 
 void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
 {
-#ifdef NDEBUG
-    av_log_set_level( AV_LOG_QUIET );
-#endif
     const char *file_name = vsapi->propGetData( in, "source", 0, NULL );
     /* Allocate the handler of this plugin. */
     lsmas_handler_t *hp = alloc_handler();
@@ -339,6 +336,7 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     int64_t fps_num;
     int64_t fps_den;
     int64_t prefer_hw_decoder;
+    int64_t ff_loglevel;
     const char *format;
     const char *preferred_decoder_names;
     set_option_int64 ( &track_number,            0,    "track",          in, vsapi );
@@ -350,6 +348,7 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     set_option_int64 ( &fps_num,                 0,    "fpsnum",         in, vsapi );
     set_option_int64 ( &fps_den,                 1,    "fpsden",         in, vsapi );
     set_option_int64 ( &prefer_hw_decoder,       0,    "prefer_hw",      in, vsapi );
+    set_option_int64 ( &ff_loglevel,             0,    "ff_loglevel",    in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
@@ -363,6 +362,24 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     vs_vohp->variable_info               = CLIP_VALUE( variable_info,  0, 1 );
     vs_vohp->direct_rendering            = CLIP_VALUE( direct_rendering,  0, 1 ) && !format;
     vs_vohp->vs_output_pixel_format = vs_vohp->variable_info ? pfNone : get_vs_output_pixel_format( format );
+    if( ff_loglevel <= 0 )
+        av_log_set_level( AV_LOG_QUIET );
+    else if( ff_loglevel == 1 )
+        av_log_set_level( AV_LOG_PANIC );
+    else if( ff_loglevel == 2 )
+        av_log_set_level( AV_LOG_FATAL );
+    else if( ff_loglevel == 3 )
+        av_log_set_level( AV_LOG_ERROR );
+    else if( ff_loglevel == 4 )
+        av_log_set_level( AV_LOG_WARNING );
+    else if( ff_loglevel == 5 )
+        av_log_set_level( AV_LOG_INFO );
+    else if( ff_loglevel == 6 )
+        av_log_set_level( AV_LOG_VERBOSE );
+    else if( ff_loglevel == 7 )
+        av_log_set_level( AV_LOG_DEBUG );
+    else
+        av_log_set_level( AV_LOG_TRACE );
     if( track_number && track_number > number_of_tracks )
     {
         free_handler( &hp );

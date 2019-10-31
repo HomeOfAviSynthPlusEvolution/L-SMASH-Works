@@ -385,11 +385,30 @@ void __stdcall LSMASHAudioSource::GetAudio( void *buf, __int64 start, __int64 wa
     return (void)libavsmash_audio_get_pcm_samples( adhp, aohp, buf, start, wanted_length );
 }
 
+static void set_av_log_level( int level )
+{
+    if( level <= 0 )
+        av_log_set_level( AV_LOG_QUIET );
+    else if( level == 1 )
+        av_log_set_level( AV_LOG_PANIC );
+    else if( level == 2 )
+        av_log_set_level( AV_LOG_FATAL );
+    else if( level == 3 )
+        av_log_set_level( AV_LOG_ERROR );
+    else if( level == 4 )
+        av_log_set_level( AV_LOG_WARNING );
+    else if( level == 5 )
+        av_log_set_level( AV_LOG_INFO );
+    else if( level == 6 )
+        av_log_set_level( AV_LOG_VERBOSE );
+    else if( level == 7 )
+        av_log_set_level( AV_LOG_DEBUG );
+    else
+        av_log_set_level( AV_LOG_TRACE );
+}
+
 AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-#ifdef NDEBUG
-    av_log_set_level( AV_LOG_QUIET );
-#endif
     const char *source                  = args[0].AsString();
     uint32_t    track_number            = args[1].AsInt( 0 );
     int         threads                 = args[2].AsInt( 0 );
@@ -401,27 +420,28 @@ AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScrip
     enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[8].AsString( nullptr ) );
     const char *preferred_decoder_names = args[9].AsString( nullptr );
     int         prefer_hw_decoder       = args[10].AsInt( 0 );
+    int         ff_loglevel             = args[11].AsInt( 0 );
     threads                = threads >= 0 ? threads : 0;
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
     prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 3 );
+    set_av_log_level( ff_loglevel );
     return new LSMASHVideoSource( source, track_number, threads, seek_mode, forward_seek_threshold,
                                   direct_rendering, fps_num, fps_den, pixel_format, preferred_decoder_names, prefer_hw_decoder, env );
 }
 
 AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-#ifdef NDEBUG
-    av_log_set_level( AV_LOG_QUIET );
-#endif
     const char *source                  = args[0].AsString();
     uint32_t    track_number            = args[1].AsInt( 0 );
     bool        skip_priming            = args[2].AsBool( true );
     const char *layout_string           = args[3].AsString( nullptr );
     int         sample_rate             = args[4].AsInt( 0 );
     const char *preferred_decoder_names = args[5].AsString( nullptr );
+    int         ff_loglevel             = args[6].AsInt( 0 );
     uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
+    set_av_log_level( ff_loglevel );
     return new LSMASHAudioSource( source, track_number, skip_priming,
                                   channel_layout, sample_rate, preferred_decoder_names, env );
 }

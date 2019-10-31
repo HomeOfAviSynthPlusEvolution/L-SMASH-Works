@@ -51,7 +51,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LSMASHVideoSource",
-        "[source]s[track]i[threads]i[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[format]s[decoder]s[prefer_hw]i",
+        "[source]s[track]i[threads]i[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[format]s[decoder]s[prefer_hw]i[ff_loglevel]i",
         CreateLSMASHVideoSource,
         0
     );
@@ -59,7 +59,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LSMASHAudioSource",
-        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s",
+        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s[ff_loglevel]i",
         CreateLSMASHAudioSource,
         0
     );
@@ -67,7 +67,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LWLibavVideoSource",
-        "[source]s[stream_index]i[threads]i[cache]b[cachefile]s[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[format]s[decoder]s[prefer_hw]i",
+        "[source]s[stream_index]i[threads]i[cache]b[cachefile]s[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[format]s[decoder]s[prefer_hw]i[ff_loglevel]i",
         CreateLWLibavVideoSource,
         0
     );
@@ -75,7 +75,7 @@ extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScr
     env->AddFunction
     (
         "LWLibavAudioSource",
-        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s",
+        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s[ff_loglevel]i",
         CreateLWLibavAudioSource,
         0
     );

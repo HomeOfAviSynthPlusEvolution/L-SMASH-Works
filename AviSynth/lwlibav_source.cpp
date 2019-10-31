@@ -281,11 +281,30 @@ void __stdcall LWLibavAudioSource::GetAudio( void *buf, __int64 start, __int64 w
     memset( buf, silence, (size_t)(wanted_length * aohp->output_block_align) );
 }
 
+static void set_av_log_level( int level )
+{
+    if( level <= 0 )
+        av_log_set_level( AV_LOG_QUIET );
+    else if( level == 1 )
+        av_log_set_level( AV_LOG_PANIC );
+    else if( level == 2 )
+        av_log_set_level( AV_LOG_FATAL );
+    else if( level == 3 )
+        av_log_set_level( AV_LOG_ERROR );
+    else if( level == 4 )
+        av_log_set_level( AV_LOG_WARNING );
+    else if( level == 5 )
+        av_log_set_level( AV_LOG_INFO );
+    else if( level == 6 )
+        av_log_set_level( AV_LOG_VERBOSE );
+    else if( level == 7 )
+        av_log_set_level( AV_LOG_DEBUG );
+    else
+        av_log_set_level( AV_LOG_TRACE );
+}
+
 AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-#ifdef NDEBUG
-    av_log_set_level( AV_LOG_QUIET );
-#endif
     const char *source                  = args[0].AsString();
     int         stream_index            = args[1].AsInt( -1 );
     int         threads                 = args[2].AsInt( 0 );
@@ -301,6 +320,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[12].AsString( nullptr ) );
     const char *preferred_decoder_names = args[13].AsString( nullptr );
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
+    int         ff_loglevel             = args[15].AsInt( 0 );
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -321,15 +341,13 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
     prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 3 );
+    set_av_log_level( ff_loglevel );
     return new LWLibavVideoSource( &opt, seek_mode, forward_seek_threshold,
                                    direct_rendering, pixel_format, preferred_decoder_names, prefer_hw_decoder, env );
 }
 
 AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-#ifdef NDEBUG
-    av_log_set_level( AV_LOG_QUIET );
-#endif
     const char *source                  = args[0].AsString();
     int         stream_index            = args[1].AsInt( -1 );
     int         no_create_index         = args[2].AsBool( true  ) ? 0 : 1;
@@ -338,6 +356,7 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     const char *layout_string           = args[5].AsString( nullptr );
     uint32_t    sample_rate             = args[6].AsInt( 0 );
     const char *preferred_decoder_names = args[7].AsString( nullptr );
+    int         ff_loglevel             = args[8].AsInt( 0 );
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -355,5 +374,6 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.vfr2cfr.fps_num   = 0;
     opt.vfr2cfr.fps_den   = 0;
     uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
+    set_av_log_level( ff_loglevel );
     return new LWLibavAudioSource( &opt, channel_layout, sample_rate, preferred_decoder_names, env );
 }

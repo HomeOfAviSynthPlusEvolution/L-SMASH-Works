@@ -77,7 +77,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit( VSConfigPlugin config_func, VSRegis
     register_func
     (
         "LibavSMASHSource",
-        "source:data;track:int:opt;" COMMON_OPTS,
+        "source:data;track:int:opt;" COMMON_OPTS "ff_loglevel:int:opt;",
         vs_libavsmashsource_create,
         NULL,
         plugin
@@ -85,7 +85,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit( VSConfigPlugin config_func, VSRegis
     register_func
     (
         "LWLibavSource",
-        "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;" COMMON_OPTS "repeat:int:opt;dominance:int:opt;",
+        "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;" COMMON_OPTS "repeat:int:opt;dominance:int:opt;ff_loglevel:int:opt;",
         vs_lwlibavsource_create,
         NULL,
         plugin
