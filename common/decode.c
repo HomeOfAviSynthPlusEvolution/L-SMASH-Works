@@ -26,6 +26,7 @@ extern "C"
 #endif  /* __cplusplus */
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
+#include <libavutil/opt.h>
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
@@ -68,7 +69,9 @@ const AVCodec *find_decoder
     AVCodec *codec = avcodec_find_decoder( codec_id );
     if( !codec )
         return NULL;
-    if( preferred_decoder_names && *preferred_decoder_names && *preferred_decoder_names[0] )
+    if( preferred_decoder_names
+     && *preferred_decoder_names
+     && *preferred_decoder_names[0] )
         for( const char **decoder_name = preferred_decoder_names; *decoder_name != NULL; decoder_name++ )
         {
             AVCodec *preferred_decoder = avcodec_find_decoder_by_name( *decoder_name );
@@ -79,7 +82,8 @@ const AVCodec *find_decoder
                 break;
             }
         }
-    else if( codec->type == AVMEDIA_TYPE_VIDEO && prefer_hw_decoder )
+    else if( codec->type == AVMEDIA_TYPE_VIDEO
+          && prefer_hw_decoder )
     {
         const char *codec_name;
         if( !strcmp( codec->name, "mpeg1video" ) )
@@ -123,7 +127,11 @@ int open_decoder
                                          * For instance, when stream is encoded as AC-3,
                                          * AVCodecContext.codec_id might have been set to AV_CODEC_ID_EAC3
                                          * while AVCodec.id is set to AV_CODEC_ID_AC3. */
-    if( codec->wrapper_name && !strcmp( codec->wrapper_name, "cuvid" ) )
+    if( !strcmp( codec->name, "libdav1d" )
+     && (ret = av_opt_set_int( c->priv_data, "framethreads", 1, 0 )) < 0 )
+        goto fail;
+    if( codec->wrapper_name
+     && !strcmp( codec->wrapper_name, "cuvid" ) )
         c->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
     if( stream->avg_frame_rate.num )
         c->framerate = stream->avg_frame_rate;
