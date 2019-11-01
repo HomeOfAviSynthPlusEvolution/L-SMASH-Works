@@ -43,11 +43,11 @@ vapoursynth_dep = dependency('vapoursynth').partial_dependency(compile_args : tr
 deps = [
   vapoursynth_dep,
   dependency('liblsmash'),
-  dependency('libavcodec', version : '>=53.24.0'),
-  dependency('libavformat', version : '>=53.20.0'),
-  dependency('libavutil', version : '>=51.21.0'),
-  dependency('libswresample', version : '>=1.0.0'),
-  dependency('libswscale', version : '>=0.7.0')
+  dependency('libavcodec', version : '>=58.18.0'),
+  dependency('libavformat', version : '>=58.12.0'),
+  dependency('libavutil', version : '>=56.14.0'),
+  dependency('libswresample', version : '>=3.1.0'),
+  dependency('libswscale', version : '>=5.1.0')
 ]
 
 if host_machine.cpu_family().startswith('x86')
