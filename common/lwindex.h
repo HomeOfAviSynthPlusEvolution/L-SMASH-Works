@@ -27,7 +27,7 @@
 /* index file version
  * This version is bumped when its structure changed so that the lwindex invokes
  * reindexing opened file immediately. */
-#define LWINDEX_INDEX_FILE_VERSION 15
+#define LWINDEX_INDEX_FILE_VERSION 16
 
 typedef struct
 {
