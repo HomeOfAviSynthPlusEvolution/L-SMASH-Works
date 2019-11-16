@@ -47,7 +47,7 @@ static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_d
     AVCodecContext *ctx = avcodec_alloc_context3( hw_decoder );
     if( !ctx )
         return NULL;
-    if( avcodec_parameters_to_context( ctx, codecpar ) < 0
+    if( (codecpar && avcodec_parameters_to_context( ctx, codecpar ) < 0)
      || avcodec_open2( ctx, hw_decoder, NULL ) < 0
      || avcodec_send_packet( ctx, NULL ) < 0 )
     {
