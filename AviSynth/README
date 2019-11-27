@@ -42,7 +42,7 @@
                         After the check, if the closest RAP is identical with the last RAP, do the same as the case M > N and M - N <= T.
                         Otherwise, the decoder tries to get f(M) by decoding frames from the frame which is the closest RAP sequentially.
                 + dr (default : false)
-                    Try direct rendering from the video decoder if set to true.
+                    Try direct rendering from the video decoder if 'dr' is set to true and 'format' is unspecfied.
                     The output resolution will be aligned to be mod16-width and mod32-height by assuming two vertical 16x16 macroblock.
                     For H.264 streams, in addition, 2 lines could be added because of the optimized chroma MC.
                 + fpsnum (default : 0)
@@ -83,7 +83,6 @@
                         "RGB24"
                         "RGB32"
                         "RGB48"
-                    Note: direct rendering is not available at all if pixel format is forced.
                 + decoder (defalut : "")
                     Names of preferred decoder candidates separated by comma.
                     For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
