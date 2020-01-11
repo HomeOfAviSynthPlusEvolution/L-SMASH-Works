@@ -2137,7 +2137,7 @@ static void create_index
         AVStream *stream = format_ctx->streams[stream_index];
         enum AVMediaType codec_type = stream->codecpar->codec_type;
         if( codec_type != AVMEDIA_TYPE_VIDEO
-         && codec_type != AVMEDIA_TYPE_AUDIO )
+         && (codec_type != AVMEDIA_TYPE_AUDIO || adhp->stream_index == -2) )
             continue;
         lwindex_helper_t *helper = get_index_helper( &indexer, stream );
         if( !helper || !helper->codec_ctx )
@@ -2480,7 +2480,7 @@ static void create_index
             if( first_dts == AV_NOPTS_VALUE )
                 first_dts = pkt.dts;
             if( filesize > 0 && format_ctx->pb->pos > 0 )
-                /* Update if IO context's file offset is valid. */
+                /* Update if I/O context's file offset is valid. */
                 percent = (int)(100.0 * ((double)format_ctx->pb->pos / filesize) + 0.5);
             else if( format_ctx->duration > 0 && first_dts != AV_NOPTS_VALUE && pkt.dts != AV_NOPTS_VALUE )
                 /* Update if packet's DTS is valid. */
@@ -2502,7 +2502,7 @@ static void create_index
     {
         AVStream         *stream = format_ctx->streams[stream_index];
         lwindex_helper_t *helper = get_index_helper( &indexer, stream );
-        if( !helper || !helper->codec_ctx || !helper->decode || stream->codecpar->codec_type != AVMEDIA_TYPE_AUDIO )
+        if( !helper || !helper->codec_ctx || !helper->decode || stream->codecpar->codec_type != AVMEDIA_TYPE_AUDIO || adhp->stream_index == -2 )
             continue;
         AVCodecContext *pkt_ctx = helper->codec_ctx;
         /* Flush if decoding is delayed. */
@@ -2572,7 +2572,7 @@ static void create_index
     {
         AVStream *stream = format_ctx->streams[stream_index];
         if( stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO
-         || stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+         || (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && adhp->stream_index != -2) )
             print_index( index, "<StreamDuration=%d,%d>%" PRId64 "</StreamDuration>\n",
                          stream_index, stream->codecpar->codec_type, stream->duration );
     }
@@ -2670,7 +2670,7 @@ static void create_index
             }
             print_index( index, "</StreamIndexEntries>\n" );
         }
-        else if( stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+        else if( stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && adhp->stream_index != -2 )
         {
             print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_AUDIO, stream->nb_index_entries );
             if( adhp->stream_index != stream_index )
@@ -2698,7 +2698,8 @@ static void create_index
     {
         AVStream          *stream   = format_ctx->streams[stream_index];
         AVCodecParameters *codecpar = stream->codecpar;
-        if( codecpar->codec_type == AVMEDIA_TYPE_VIDEO || codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+        if( codecpar->codec_type == AVMEDIA_TYPE_VIDEO
+         || (codecpar->codec_type == AVMEDIA_TYPE_AUDIO && adhp->stream_index != -2) )
         {
             lwindex_helper_t *helper = get_index_helper( &indexer, stream );
             if( !helper || !helper->codec_ctx )
@@ -2848,7 +2849,7 @@ static int parse_index
         if( !audio_info )
             goto fail_parsing;
     }
-    if( active_audio_index == -2 && opt->force_audio_index >= -1 )
+    if( active_audio_index == -2 && opt->force_audio_index != -2 )
         goto fail_parsing;
     vdhp->codec_id             = AV_CODEC_ID_NONE;
     adhp->codec_id             = AV_CODEC_ID_NONE;
