@@ -325,7 +325,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         direct_rendering        = args[7].AsBool( false ) ? 1 : 0;
     int         fps_num                 = args[8].AsInt( 0 );
     int         fps_den                 = args[9].AsInt( 1 );
-    int         apply_repeat_flag       = args[10].AsBool( false ) ? 1 : 0;
+    int         apply_repeat_flag       = args[10].AsBool( true ) ? 1 : 0;
     int         field_dominance         = args[11].AsInt( 0 );
     enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[12].AsString( nullptr ) );
     const char *preferred_decoder_names = args[13].AsString( nullptr );

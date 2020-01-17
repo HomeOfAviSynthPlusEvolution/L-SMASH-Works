@@ -119,7 +119,7 @@
         [LWLibavSource]
             LWLibavSource(string source, int stream_index = -1, int threads = 0, int cache = 1, string cachefile = source + ".lwi",
                           int seek_mode = 0, int seek_threshold = 10, int dr = 0, int fpsnum = 0, int fpsden = 1, 
-                          int variable = 0, string format = "", int repeat = 0, int dominance = 0, string decoder = "", int prefer_hw = 0, int ff_loglevel = 0)
+                          int variable = 0, string format = "", int repeat = 1, int dominance = 0, string decoder = "", int prefer_hw = 0, int ff_loglevel = 0)
                 * This function uses libavcodec as video decoder and libavformat as demuxer.
             [Arguments]
                 + source
@@ -149,7 +149,7 @@
                     Same as 'variable' of LibavSMASHSource().
                 + format (default : "")
                     Same as 'format' of LibavSMASHSource().
-                + repeat (default : 0)
+                + repeat (default : 1)
                     Reconstruct frames by the flags specified in video stream and then treat all frames as interlaced if set to 1 and usable.
                     Note that this option is ignored when VFR->CFR conversion is enabled.
                 + dominance : (default : 0)
