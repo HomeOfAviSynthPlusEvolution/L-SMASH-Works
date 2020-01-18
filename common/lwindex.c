@@ -2320,7 +2320,10 @@ static void create_index
                 if( pkt_ctx->codec_id == AV_CODEC_ID_VP8 && check_vp8_invisible_frame( &pkt ) )
                 {
                     /* VPx invisible altref frame. */
-                    info->flags |= LW_VFRAME_FLAG_INVISIBLE;
+                    info->pts         = AV_NOPTS_VALUE;
+                    info->dts         = AV_NOPTS_VALUE;
+                    info->file_offset = -1;
+                    info->flags      |= LW_VFRAME_FLAG_INVISIBLE;
                     ++invisible_count;
                     /* backward compatible hack for the index */
                     pkt.pts = AV_NOPTS_VALUE;
