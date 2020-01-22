@@ -33,7 +33,12 @@ extern "C"
 #include "decode.h"
 #include "qsv.h"
 
-static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_decoder, AVCodecParameters *codecpar )
+static AVCodec *select_hw_decoder
+(
+    const char              *codec_name,
+    const int                prefer_hw_decoder,
+    const AVCodecParameters *codecpar
+)
 {
     char hw_decoder_name[32] = { 0 };
     const size_t codec_name_length = strlen( codec_name );
@@ -59,10 +64,10 @@ static AVCodec *select_hw_decoder( const char *codec_name, const int prefer_hw_d
 
 const AVCodec *find_decoder
 (
-    enum AVCodecID     codec_id,
-    AVCodecParameters *codecpar,
-    const char       **preferred_decoder_names,
-    const int          prefer_hw_decoder
+    enum AVCodecID           codec_id,
+    const AVCodecParameters *codecpar,
+    const char             **preferred_decoder_names,
+    const int                prefer_hw_decoder
 )
 {
     AVCodec *codec = avcodec_find_decoder( codec_id );
