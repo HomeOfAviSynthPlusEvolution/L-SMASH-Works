@@ -45,11 +45,11 @@ void lwlibav_flush_buffers
     lwlibav_decode_handler_t *dhp
 )
 {
-    const AVStream *stream       = dhp->format->streams[ dhp->stream_index ];
-    const AVCodec  *codec        = dhp->ctx->codec;
-    void           *app_specific = dhp->ctx->opaque;
+    const AVCodecParameters *codecpar     = dhp->format->streams[ dhp->stream_index ]->codecpar;
+    const AVCodec           *codec        = dhp->ctx->codec;
+    void                    *app_specific = dhp->ctx->opaque;
     AVCodecContext *ctx = NULL;
-    if( open_decoder( &ctx, stream, codec, dhp->ctx->thread_count ) < 0 )
+    if( open_decoder( &ctx, codecpar, codec, dhp->ctx->thread_count ) < 0 )
     {
         avcodec_flush_buffers( dhp->ctx );
         dhp->error = 1;
@@ -84,7 +84,6 @@ void lwlibav_update_configuration
         return;
     }
     char error_string[96] = { 0 };
-    AVStream          *stream            = dhp->format->streams[ dhp->stream_index ];
     AVCodecParameters *codecpar          = dhp->format->streams[ dhp->stream_index ]->codecpar;
     void              *app_specific      = dhp->ctx->opaque;
     const int          thread_count      = dhp->ctx->thread_count;
@@ -123,7 +122,7 @@ void lwlibav_update_configuration
     codecpar->codec_tag = entry->codec_tag;
     /* Open an appropriate decoder.
      * Here, we force single threaded decoding since some decoder doesn't do its proper initialization with multi-threaded decoding. */
-    if( open_decoder( &dhp->ctx, stream, codec, 1 ) < 0 )
+    if( open_decoder( &dhp->ctx, codecpar, codec, 1 ) < 0 )
     {
         strcpy( error_string, "Failed to open decoder.\n" );
         goto fail;

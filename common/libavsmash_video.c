@@ -403,7 +403,8 @@ int libavsmash_video_initialize_decoder_configuration
         goto fail;
     }
     /* libavcodec */
-    if( libavsmash_find_and_open_decoder( &vdhp->config, format_ctx->streams[i], threads ) < 0 )
+    AVCodecParameters *codecpar = format_ctx->streams[i]->codecpar;
+    if( libavsmash_find_and_open_decoder( &vdhp->config, codecpar, threads ) < 0 )
     {
         strcpy( error_string, "Failed to find and open the video decoder.\n" );
         goto fail;

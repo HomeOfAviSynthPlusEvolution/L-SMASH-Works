@@ -129,11 +129,11 @@ static inline int read_av_frame
 
 int find_and_open_decoder
 (
-    AVCodecContext **ctx,
-    const AVStream  *stream,
-    const char     **preferred_decoder_names,
-    const int        prefer_hw_decoder,
-    const int        thread_count
+    AVCodecContext         **ctx,
+    const AVCodecParameters *codecpar,
+    const char             **preferred_decoder_names,
+    const int                prefer_hw_decoder,
+    const int                thread_count
 );
 
 void lwlibav_flush_buffers
