@@ -237,7 +237,7 @@
                 + fpsden (default : 1)
                     Same as 'fpsden' of LSMASHVideoSource().
                 + repeat (default : true)
-                    Reconstruct frames by the flags specified in video stream and then treat all frames as interlaced if set to true and usable.
+                    Reconstruct frames by the flags specified in video stream if set to true and usable.
                     Note that this option is ignored when VFR->CFR conversion is enabled.
                 + dominance : (default : 0)
                     Which field, top or bottom, is displayed first.
