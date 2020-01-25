@@ -168,7 +168,8 @@ void lwlibav_video_setup_timestamp_info
     lwlibav_video_decode_handler_t *vdhp,
     lwlibav_video_output_handler_t *vohp,
     int64_t                        *framerate_num,
-    int64_t                        *framerate_den
+    int64_t                        *framerate_den,
+    int                             apply_repeat_flag
 );
 
 void lwlibav_video_set_initial_input_format

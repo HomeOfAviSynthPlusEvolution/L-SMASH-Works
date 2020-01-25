@@ -299,7 +299,8 @@ void lwlibav_video_setup_timestamp_info
     lwlibav_video_decode_handler_t *vdhp,
     lwlibav_video_output_handler_t *vohp,
     int64_t                        *framerate_num,
-    int64_t                        *framerate_den
+    int64_t                        *framerate_den,
+    int                             apply_repeat_flag
 )
 {
     AVStream *stream = vdhp->format->streams[ vdhp->stream_index ];
@@ -315,8 +316,8 @@ void lwlibav_video_setup_timestamp_info
      || vdhp->actual_time_base.den == 0
      || ((lwhp->format_flags & AVFMT_TS_DISCONT) && !(vdhp->lw_seek_flags & SEEK_DTS_BASED))
      || !(vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED))
-     || (stream->avg_frame_rate.num && stream->avg_frame_rate.den) )
-        goto use_avg_frame_rate;
+     || (apply_repeat_flag && ((stream->avg_frame_rate.num && stream->avg_frame_rate.den) || (stream->r_frame_rate.num && stream->r_frame_rate.den))) )
+        goto use_lavf_frame_rate;
     uint64_t stream_timebase  = vdhp->actual_time_base.num;
     uint64_t stream_timescale = vdhp->actual_time_base.den;
     uint64_t reduce = reduce_fraction( &stream_timescale, &stream_timebase );
@@ -326,7 +327,7 @@ void lwlibav_video_setup_timestamp_info
     if( vdhp->strict_cfr || !lw_try_rational_framerate( stream_framerate, framerate_num, framerate_den, stream_timebase ) )
     {
         if( stream_timebase > INT_MAX || (uint64_t)(stream_framerate * stream_timebase + 0.5) > INT_MAX )
-            goto use_avg_frame_rate;
+            goto use_lavf_frame_rate;
         uint64_t num = (uint64_t)(stream_framerate * stream_timebase + 0.5);
         uint64_t den = stream_timebase;
         if( num && den )
@@ -338,14 +339,23 @@ void lwlibav_video_setup_timestamp_info
             den = 1;
         }
         else
-            goto use_avg_frame_rate;
+            goto use_lavf_frame_rate;
         *framerate_num = (int64_t)num;
         *framerate_den = (int64_t)den;
     }
     return;
-use_avg_frame_rate:
-    *framerate_num = (int64_t)stream->avg_frame_rate.num;
-    *framerate_den = (int64_t)stream->avg_frame_rate.den;
+use_lavf_frame_rate:
+    if( !(stream->avg_frame_rate.num && stream->avg_frame_rate.den)
+     || (stream->avg_frame_rate.den != 1 && stream->avg_frame_rate.den != 1001 && (stream->r_frame_rate.den == 1 || stream->r_frame_rate.den == 1001)) )
+    {
+        *framerate_num = (int64_t)stream->r_frame_rate.num;
+        *framerate_den = (int64_t)stream->r_frame_rate.den;
+    }
+    else
+    {
+        *framerate_num = (int64_t)stream->avg_frame_rate.num;
+        *framerate_den = (int64_t)stream->avg_frame_rate.den;
+    }
     return;
 }
 

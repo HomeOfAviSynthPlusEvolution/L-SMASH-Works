@@ -393,7 +393,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     hp->vi.numFrames = vohp->frame_count;
     hp->vi.fpsNum    = 25;
     hp->vi.fpsDen    = 1;
-    lwlibav_video_setup_timestamp_info( lwhp, vdhp, vohp, &hp->vi.fpsNum, &hp->vi.fpsDen );
+    lwlibav_video_setup_timestamp_info( lwhp, vdhp, vohp, &hp->vi.fpsNum, &hp->vi.fpsDen, opt.apply_repeat_flag );
     /* Set up decoders for this stream. */
     if( prepare_video_decoding( hp, out, core, vsapi ) < 0 )
     {
