@@ -2028,6 +2028,7 @@ static void create_index
     /*
         # Structure of Libav reader index file
         <LibavReaderIndexFile=16>
+        <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
         <FileHash=0x1234abcd>
         <LibavReaderIndex=0x00000208,0,marumoska>
@@ -2050,7 +2051,7 @@ static void create_index
         </LibavReaderIndexFile>
      */
     FILE *index;
-    if( opt->index_file_path && *opt->index_file_path )
+    if( opt->index_file_path )
         index = !opt->no_create_index ? lw_fopen( opt->index_file_path, "wb" ) : NULL;
     else
     {
@@ -2085,6 +2086,7 @@ static void create_index
         fprintf( index, "<LSMASHWorksIndexVersion=%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 ">\n",
                  lwindex_version[0], lwindex_version[1], lwindex_version[2], lwindex_version[3] );
         fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
+        fprintf( index, "<InputFilePath>%s</InputFilePath>\n", lwhp->file_path );
 #ifdef _WIN32
         wchar_t *wname;
         struct _stat64 file_stat;
@@ -2792,6 +2794,32 @@ static int parse_index
     FILE                           *index
 )
 {
+    /* Test to open the target file. */
+    char file_path[512] = { 0 };
+    int32_t current_pos = ftell( index );
+    if( fscanf( index, "<InputFilePath>%[^\n<]</InputFilePath>\n", file_path ) != 1 )
+        fseek( index, current_pos, SEEK_SET ); /* temporary hack for existing index file, will be removed eventually */
+    size_t file_path_length = strlen( opt->file_path );
+    const char *ext = file_path_length >= 5 ? &opt->file_path[file_path_length - 4] : NULL;
+    if( ext && !strncmp( ext, ".lwi", strlen( ".lwi" ) ) )
+    {
+        FILE *target = lw_fopen( file_path, "rb" );
+        if( !target )
+            return -1;
+        fclose( target );
+        file_path_length = strlen( file_path );
+        lwhp->file_path = (char *)lw_malloc_zero( file_path_length + 1 );
+        if( !lwhp->file_path )
+            return -1;
+        memcpy( lwhp->file_path, file_path, file_path_length );
+    }
+    else
+    {
+        lwhp->file_path = (char *)lw_malloc_zero( file_path_length + 1 );
+        if( !lwhp->file_path )
+            return -1;
+        memcpy( lwhp->file_path, opt->file_path, file_path_length );
+    }
     /* Parse the index file. */
     int64_t file_size;
     unsigned file_hash;
@@ -3346,16 +3374,16 @@ int lwlibav_construct_index
 {
     /* Try to open the index file. */
     size_t file_path_length = strlen( opt->file_path );
-    lwhp->file_path = (char *)lw_malloc_zero( file_path_length + 1 );
-    if( !lwhp->file_path )
-        goto fail;
-    memcpy( lwhp->file_path, opt->file_path, file_path_length );
+    const char *ext = file_path_length >= 5 ? &opt->file_path[file_path_length - 4] : NULL;
+    int has_lwi_ext = ext && !strncmp( ext, ".lwi", strlen( ".lwi" ) );
     FILE *index;
-    if( opt->index_file_path && *opt->index_file_path )
+    if( has_lwi_ext )
+        index = lw_fopen( opt->file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
+    else if( opt->index_file_path )
         index = lw_fopen( opt->index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
     else
     {
-        char *index_file_path = (char *)lw_malloc_zero(file_path_length + 5);
+        char *index_file_path = (char *)lw_malloc_zero( file_path_length + 5 );
         if( !index_file_path )
             return -1;
         memcpy( index_file_path, opt->file_path, file_path_length );
@@ -3383,6 +3411,15 @@ int lwlibav_construct_index
         fclose( index );
     }
     /* Open file. */
+    if( !lwhp->file_path )
+    {
+        lwhp->file_path = (char *)lw_malloc_zero( file_path_length + 1 );
+        if( !lwhp->file_path )
+            goto fail;
+        memcpy( lwhp->file_path, opt->file_path, file_path_length );
+        if( has_lwi_ext )
+            lwhp->file_path[file_path_length - 4] = '\0';
+    }
     AVFormatContext *format_ctx = NULL;
     if( lavf_open_file( &format_ctx, lwhp->file_path, lhp ) )
     {
