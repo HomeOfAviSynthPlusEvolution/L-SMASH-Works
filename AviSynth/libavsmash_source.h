@@ -33,7 +33,7 @@ private:
 protected:
     lsmash_file_parameters_t file_param;
     std::unique_ptr< AVFormatContext, decltype( free_format_ctx ) > format_ctx;
-    LibavSMASHSource() : format_ctx{ nullptr, free_format_ctx } {}
+    LibavSMASHSource() : file_param{}, format_ctx{ nullptr, free_format_ctx } {}
     ~LibavSMASHSource() = default;
     LibavSMASHSource( const LibavSMASHSource & ) = delete;
     LibavSMASHSource & operator= ( const LibavSMASHSource & ) = delete;
