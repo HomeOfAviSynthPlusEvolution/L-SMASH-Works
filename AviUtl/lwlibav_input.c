@@ -128,7 +128,7 @@ static int prepare_video_decoding( lsmash_handler_t *h, video_option_t *opt )
     hp->uType = MB_OK;
     int64_t fps_num = 25;
     int64_t fps_den = 1;
-    lwlibav_video_setup_timestamp_info( &hp->lwh, vdhp, vohp, &fps_num, &fps_den );
+    lwlibav_video_setup_timestamp_info( &hp->lwh, vdhp, vohp, &fps_num, &fps_den, opt->apply_repeat_flag );
     h->framerate_num      = (int)fps_num;
     h->framerate_den      = (int)fps_den;
     h->video_sample_count = vohp->frame_count;
