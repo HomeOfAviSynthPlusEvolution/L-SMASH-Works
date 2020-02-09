@@ -331,7 +331,7 @@ static void get_settings( void )
         video_opt->seek_mode              = 0;
         video_opt->forward_seek_threshold = 10;
         video_opt->scaler                 = 0;
-        video_opt->apply_repeat_flag      = 0;
+        video_opt->apply_repeat_flag      = 1;
         video_opt->field_dominance        = 0;
         video_opt->vfr2cfr.active         = 0;
         video_opt->vfr2cfr.framerate_num  = 60000;
