@@ -119,7 +119,7 @@ int au_setup_audio_rendering
     swr_ctx = swr_alloc();
     if( !swr_ctx )
     {
-        DEBUG_AUDIO_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to avresample_alloc_context." );
+        DEBUG_AUDIO_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to swr_alloc." );
         return -1;
     }
     aohp->swr_ctx = swr_ctx;

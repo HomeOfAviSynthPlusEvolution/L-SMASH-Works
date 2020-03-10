@@ -57,7 +57,7 @@ static void get_plugin_information( void )
              "L-SMASH Works File Reader r%s\n"
              "    libavutil %s: %s / libavcodec %s: %s\n"
              "    libavformat %s: %s / libswscale %s: %s\n"
-             "    libavresample %s: %s",
+             "    libswresample %s: %s",
              LSMASHWORKS_REV,
              AV_STRINGIFY( LIBAVUTIL_VERSION     ), avutil_license    (),
              AV_STRINGIFY( LIBAVCODEC_VERSION    ), avcodec_license   (),
