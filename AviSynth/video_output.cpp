@@ -21,6 +21,13 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#ifdef _MSC_VER
+#include <string.h>
+#define strcasecmp _stricmp
+#else
+#include <strings.h>
+#endif
+
 #include "lsmashsource.h"
 
 #if _MSC_VER >= 1700
@@ -294,7 +301,7 @@ enum AVPixelFormat get_av_output_pixel_format
             { NULL,        AV_PIX_FMT_NONE        }
         };
     for( int i = 0; format_table[i].format_name; i++ )
-        if( _stricmp( format_name, format_table[i].format_name ) == 0 )
+        if( strcasecmp( format_name, format_table[i].format_name ) == 0 )
             return format_table[i].av_output_pixel_format;
     return AV_PIX_FMT_NONE;
 }

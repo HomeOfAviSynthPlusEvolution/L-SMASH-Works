@@ -42,7 +42,9 @@ extern "C"
 #include "audio_output.h"
 #include "lwlibav_source.h"
 
+#ifdef _MSC_VER
 #pragma warning( disable:4996 )
+#endif
 
 static int update_indicator( progress_handler_t *php, const char *message, int percent )
 {
@@ -279,7 +281,7 @@ int LWLibavAudioSource::delay_audio( int64_t *start, int64_t wanted_length )
     return 1;
 }
 
-void __stdcall LWLibavAudioSource::GetAudio( void *buf, __int64 start, __int64 wanted_length, IScriptEnvironment *env )
+void __stdcall LWLibavAudioSource::GetAudio( void *buf, int64_t start, int64_t wanted_length, IScriptEnvironment *env )
 {
     lwlibav_audio_decode_handler_t *adhp = this->adhp.get();
     lwlibav_audio_output_handler_t *aohp = this->aohp.get();

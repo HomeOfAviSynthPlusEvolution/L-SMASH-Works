@@ -77,7 +77,7 @@ void LSMASHVideoSource::get_video_track
     libavsmash_video_decode_handler_t *vdhp = this->vdhp.get();
     uint32_t number_of_tracks = open_file( source, env );
     if( track_number && track_number > number_of_tracks )
-        env->ThrowError( "LSMASHVideoSource: the number of tracks equals %I32u.", number_of_tracks );
+        env->ThrowError( "LSMASHVideoSource: the number of tracks equals %u.", number_of_tracks );
     (void)libavsmash_video_get_track( vdhp, track_number );
 }
 
@@ -239,7 +239,7 @@ void LSMASHAudioSource::get_audio_track( const char *source, uint32_t track_numb
     libavsmash_audio_decode_handler_t *adhp = this->adhp.get();
     uint32_t number_of_tracks = open_file( source, env );
     if( track_number && track_number > number_of_tracks )
-        env->ThrowError( "LSMASHAudioSource: the number of tracks equals %I32u.", number_of_tracks );
+        env->ThrowError( "LSMASHAudioSource: the number of tracks equals %u.", number_of_tracks );
     /* L-SMASH */
     (void)libavsmash_audio_get_track( adhp, track_number );
 }
@@ -293,7 +293,7 @@ static void count_output_audio_samples
             uint32_t priming_samples;
             uint32_t padding;
             uint64_t duration;
-            if( 12 != sscanf( value, " %x %x %x %llx %x %x %x %x %x %x %x %x",
+            if( 12 != sscanf( value, " %x %x %x %" SCNx64 " %x %x %x %x %x %x %x %x",
                               &dummy[0], &priming_samples, &padding, &duration, &dummy[1], &dummy[2],
                               &dummy[3], &dummy[4], &dummy[5], &dummy[6], &dummy[7], &dummy[8] ) )
             {
@@ -377,7 +377,7 @@ LSMASHAudioSource::~LSMASHAudioSource()
     lsmash_destroy_root( root );
 }
 
-void __stdcall LSMASHAudioSource::GetAudio( void *buf, __int64 start, __int64 wanted_length, IScriptEnvironment *env )
+void __stdcall LSMASHAudioSource::GetAudio( void *buf, int64_t start, int64_t wanted_length, IScriptEnvironment *env )
 {
     libavsmash_audio_decode_handler_t *adhp = this->adhp.get();
     libavsmash_audio_output_handler_t *aohp = this->aohp.get();

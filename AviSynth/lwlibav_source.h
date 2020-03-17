@@ -70,7 +70,7 @@ public:
     ~LWLibavVideoSource();
     PVideoFrame __stdcall GetFrame( int n, IScriptEnvironment *env );
     bool __stdcall GetParity( int n );
-    void __stdcall GetAudio( void *buf, __int64 start, __int64 count, IScriptEnvironment *env ) {}
+    void __stdcall GetAudio( void *buf, int64_t start, int64_t count, IScriptEnvironment *env ) {}
 };
 
 class LWLibavAudioSource : public LWLibavSource
@@ -90,5 +90,5 @@ public:
     ~LWLibavAudioSource();
     PVideoFrame __stdcall GetFrame( int n, IScriptEnvironment *env ) { return NULL; }
     bool __stdcall GetParity( int n ) { return false; }
-    void __stdcall GetAudio( void *buf, __int64 start, __int64 wanted_length, IScriptEnvironment *env );
+    void __stdcall GetAudio( void *buf, int64_t start, int64_t wanted_length, IScriptEnvironment *env );
 };
