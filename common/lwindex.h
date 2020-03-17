@@ -50,6 +50,11 @@ typedef struct
     } vfr2cfr;
 } lwlibav_option_t;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 int lwlibav_construct_index
 (
     lwlibav_file_handler_t         *lwhp,
@@ -67,3 +72,7 @@ int lwlibav_import_av_index_entry
 (
     lwlibav_decode_handler_t *dhp
 );
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */

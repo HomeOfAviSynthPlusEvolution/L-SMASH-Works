@@ -24,18 +24,11 @@
 /* L-SMASH (ISC) */
 #include <lsmash.h>                 /* Demuxer */
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
 /* Libav (LGPL or GPL) */
 #include <libavformat/avformat.h>       /* Codec specific info importer */
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libswscale/swscale.h>         /* Colorspace converter */
 #include <libavutil/imgutils.h>
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
 
 #include "lsmashsource.h"
 #include "video_output.h"

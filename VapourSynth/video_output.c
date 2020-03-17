@@ -27,10 +27,6 @@
 #include <strings.h>
 #endif
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
 /* Libav */
 #include <libavformat/avformat.h>       /* Demuxer */
 #include <libavcodec/avcodec.h>         /* Decoder */
@@ -38,9 +34,6 @@ extern "C"
 #include <libavutil/imgutils.h>
 #include <libavutil/mem.h>
 #include <libavutil/mastering_display_metadata.h>
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
 
 #include "lsmashsource.h"
 #include "video_output.h"
@@ -706,7 +699,7 @@ static VSFrameRef *new_output_video_frame
     if( vs_vohp->variable_info )
     {
         if( !av_frame->opaque
-         && determine_colorspace_conversion( vs_vohp, (enum AVPixelFormat)av_frame->format, output_pixel_format ) < 0 )
+         && determine_colorspace_conversion( vs_vohp, av_frame->format, output_pixel_format ) < 0 )
             goto fail;
         const VSFormat *vs_format = vsapi->getFormatPreset( vs_vohp->vs_output_pixel_format, core );
         return vsapi->newVideoFrame( vs_format, av_frame->width, av_frame->height, NULL, core );
@@ -715,7 +708,7 @@ static VSFrameRef *new_output_video_frame
     {
         if( !av_frame->opaque
          && input_pix_fmt_change
-         && determine_colorspace_conversion( vs_vohp, (enum AVPixelFormat)av_frame->format, output_pixel_format ) < 0 )
+         && determine_colorspace_conversion( vs_vohp, av_frame->format, output_pixel_format ) < 0 )
             goto fail;
         return vsapi->copyFrame( vs_vohp->background_frame, core );
     }
@@ -873,7 +866,7 @@ static int vs_video_get_buffer
     av_frame->opaque = NULL;
     lw_video_output_handler_t *lw_vohp = (lw_video_output_handler_t *)ctx->opaque;
     vs_video_output_handler_t *vs_vohp = (vs_video_output_handler_t *)lw_vohp->private_handler;
-    enum AVPixelFormat pix_fmt = (enum AVPixelFormat)av_frame->format;
+    enum AVPixelFormat pix_fmt = av_frame->format;
     avoid_yuv_scale_conversion( &pix_fmt );
     av_frame->format = pix_fmt; /* Don't use AV_PIX_FMT_YUVJ*. */
     if( (!vs_vohp->variable_info && lw_vohp->scaler.output_pixel_format != pix_fmt)

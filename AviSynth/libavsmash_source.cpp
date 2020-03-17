@@ -21,7 +21,7 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
-#include "lsmashsource.h"
+#include "../common/cpp_compat.h"
 
 extern "C"
 {
@@ -39,6 +39,7 @@ extern "C"
 #include <libavutil/opt.h>
 }
 
+#include "lsmashsource.h"
 #include "video_output.h"
 #include "audio_output.h"
 #include "libavsmash_source.h"

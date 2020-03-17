@@ -30,7 +30,16 @@
 #define LW_FORCEINLINE __forceinline
 #endif
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 int lw_check_sse2();
 int lw_check_ssse3();
 int lw_check_sse41();
 int lw_check_avx2();
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */

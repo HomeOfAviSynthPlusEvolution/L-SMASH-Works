@@ -70,6 +70,11 @@ typedef struct
     } queue;
 } codec_configuration_t;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 lsmash_root_t *libavsmash_open_file
 (
     AVFormatContext          **p_format_ctx,
@@ -133,3 +138,7 @@ void cleanup_configuration
 (
     codec_configuration_t *config
 );
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */

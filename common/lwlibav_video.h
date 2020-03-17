@@ -38,6 +38,11 @@ typedef enum lw_field_info
     LW_FIELD_INFO_BOTTOM,       /* bottom field first or bottom field coded */
 } lw_field_info_t;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 /*****************************************************************************
  * Allocators / Deallocators
  *****************************************************************************/
@@ -201,3 +206,7 @@ enum lw_field_info lwlibav_video_get_field_info
     lwlibav_video_decode_handler_t *vdhp,
     uint32_t                        frame_number
 );
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */

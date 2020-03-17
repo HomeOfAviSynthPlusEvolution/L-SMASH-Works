@@ -53,6 +53,11 @@ struct lw_log_handler_tag
     void (*show_log)( lw_log_handler_t *, lw_log_level, const char *message );
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 void *lw_malloc_zero
 (
     size_t size
@@ -135,3 +140,7 @@ int lw_try_rational_framerate
     int64_t *framerate_den,
     uint64_t timebase
 );
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */

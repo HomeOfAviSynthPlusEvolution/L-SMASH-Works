@@ -21,6 +21,8 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#include "../common/cpp_compat.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>

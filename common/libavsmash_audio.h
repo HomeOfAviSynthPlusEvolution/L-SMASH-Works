@@ -27,6 +27,11 @@ typedef lw_audio_output_handler_t libavsmash_audio_output_handler_t;
 
 typedef struct libavsmash_audio_decode_handler_tag libavsmash_audio_decode_handler_t;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 /*****************************************************************************
  * Allocators / Deallocators
  *****************************************************************************/
@@ -217,3 +222,7 @@ uint64_t libavsmash_audio_get_pcm_samples
     int64_t                            start,
     int64_t                            wanted_length
 );
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */

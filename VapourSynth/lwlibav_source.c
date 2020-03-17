@@ -23,20 +23,15 @@
 
 #define NO_PROGRESS_HANDLER
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
 /* Libav (LGPL or GPL) */
 #include <libavformat/avformat.h>       /* Codec specific info importer */
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libswscale/swscale.h>         /* Colorspace converter */
 #include <libswresample/swresample.h>   /* Audio resampler */
 #include <libavutil/imgutils.h>
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
 
+#include "../common/audio_output.h"
+#ifndef _MSC_VER
 /* Dummy definitions.
  * Audio resampler/buffer is NOT used at all in this filter. */
 typedef void AVAudioResampleContext;
@@ -47,8 +42,6 @@ int update_resampler_configuration( AVAudioResampleContext *avr,
                                     uint64_t  in_channel_layout, int  in_sample_rate, enum AVSampleFormat  in_sample_fmt,
                                     int *input_planes, int *input_block_align ){ return 0; }
 int resample_audio( AVAudioResampleContext *avr, audio_samples_t *out, audio_samples_t *in ){ return 0; }
-#include "../common/audio_output.h"
-#ifndef _MSC_VER
 uint64_t output_pcm_samples_from_buffer
 (
     lw_audio_output_handler_t *aohp,

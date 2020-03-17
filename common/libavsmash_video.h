@@ -28,6 +28,11 @@ typedef lw_video_output_handler_t libavsmash_video_output_handler_t;
 
 typedef struct libavsmash_video_decode_handler_tag libavsmash_video_decode_handler_t;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 /*****************************************************************************
  * Allocators / Deallocators
  *****************************************************************************/
@@ -280,3 +285,7 @@ int libavsmash_video_is_keyframe
     libavsmash_video_output_handler_t *vohp,
     uint32_t                           sample_number
 );
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */

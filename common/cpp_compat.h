@@ -23,6 +23,11 @@
 #ifndef LW_CPP_COMPAT_H
 #define LW_CPP_COMPAT_H
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#pragma warning( disable:4996 )
+#endif
+
 #ifdef __cplusplus
 #   ifndef __STDC_CONSTANT_MACROS
 #       define __STDC_CONSTANT_MACROS
@@ -32,10 +37,6 @@
 #   endif
 #   ifndef __STDC_FORMAT_MACROS
 #       define __STDC_FORMAT_MACROS
-#   endif
-#   ifdef _MSC_VER
-#       define _CRT_SECURE_NO_WARNINGS
-#       pragma warning( disable:4996 )
 #   endif
 #endif  /* __cplusplus */
 

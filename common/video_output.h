@@ -69,6 +69,11 @@ typedef struct
     void (*free_private_handler)( void *private_handler );
 } lw_video_output_handler_t;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif  /* __cplusplus */
+
 int avoid_yuv_scale_conversion( enum AVPixelFormat *pixel_format );
 
 void setup_video_rendering
@@ -96,3 +101,7 @@ void lw_cleanup_video_output_handler
 (
     lw_video_output_handler_t *vohp
 );
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */
