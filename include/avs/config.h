@@ -61,9 +61,14 @@
 #if defined(__clang__)
 // Check clang first. clang-cl also defines __MSC_VER
 // We set MSVC because they are mostly compatible
-#   define MSVC
 #   define CLANG
+#if defined(_MSC_VER)
+#   define MSVC
 #   define AVS_FORCEINLINE __attribute__((always_inline))
+#else
+#   define GCC
+#   define AVS_FORCEINLINE __attribute__((always_inline)) inline
+#endif
 #elif   defined(_MSC_VER)
 #   define MSVC
 #   define MSVC_PURE
@@ -76,6 +81,25 @@
 #   define AVS_FORCEINLINE inline
 #   undef __forceinline
 #   define __forceinline inline
+#endif
+
+#if defined(_WIN32)
+#   define AVS_WINDOWS
+#elif defined(__linux__)
+#   define AVS_LINUX
+#   define AVS_POSIX
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+#   define AVS_BSD
+#   define AVS_POSIX
+#elif defined(__APPLE__)
+#   define AVS_MACOS
+#   define AVS_POSIX
+#else
+#   error Operating system unsupported.
+#endif
+
+#if defined(AVS_POSIX)
+#define NEW_AVSVALUE
 #endif
 
 #endif //AVS_CONFIG_H

@@ -34,7 +34,8 @@
 #define AVS_TYPES_H
 
 // Define all types necessary for interfacing with avisynth.dll
-
+#include <stdint.h>
+#include <stdbool.h>
 #ifdef __cplusplus
   #include <cstddef>
 #else
@@ -42,16 +43,10 @@
 #endif
 
 // Raster types used by VirtualDub & Avisynth
-typedef unsigned int    Pixel32;
-typedef unsigned char   BYTE;
+typedef uint32_t Pixel32;
+typedef uint8_t  BYTE;
 
 // Audio Sample information
 typedef float SFLOAT;
-
-#ifdef __GNUC__
-typedef long long int INT64;
-#else
-typedef __int64 INT64;
-#endif
 
 #endif //AVS_TYPES_H

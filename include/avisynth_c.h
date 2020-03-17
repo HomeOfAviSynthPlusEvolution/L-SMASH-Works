@@ -54,9 +54,9 @@
 #ifndef __AVISYNTH_C__
 #define __AVISYNTH_C__
 
-#include <avs/config.h>
-#include <avs/capi.h>
-#include <avs/types.h>
+#include "avs/config.h"
+#include "avs/capi.h"
+#include "avs/types.h"
 
 #define AVS_FRAME_ALIGN FRAME_ALIGN
 /////////////////////////////////////////////////////////////////////
@@ -341,7 +341,7 @@ typedef struct AVS_VideoInfo {
 
   int audio_samples_per_second;   // 0 means no audio
   int sample_type;
-  INT64 num_audio_samples;
+  int64_t num_audio_samples;
   int nchannels;
 
   // Image type properties
@@ -444,16 +444,16 @@ AVSC_INLINE int avs_bytes_per_channel_sample(const AVS_VideoInfo * p)
 AVSC_INLINE int avs_bytes_per_audio_sample(const AVS_VideoInfo * p)
         { return p->nchannels*avs_bytes_per_channel_sample(p);}
 
-AVSC_INLINE INT64 avs_audio_samples_from_frames(const AVS_VideoInfo * p, INT64 frames)
-        { return ((INT64)(frames) * p->audio_samples_per_second * p->fps_denominator / p->fps_numerator); }
+AVSC_INLINE int64_t avs_audio_samples_from_frames(const AVS_VideoInfo * p, int64_t frames)
+        { return ((int64_t)(frames) * p->audio_samples_per_second * p->fps_denominator / p->fps_numerator); }
 
-AVSC_INLINE int avs_frames_from_audio_samples(const AVS_VideoInfo * p, INT64 samples)
-        { return (int)(samples * (INT64)p->fps_numerator / (INT64)p->fps_denominator / (INT64)p->audio_samples_per_second); }
+AVSC_INLINE int avs_frames_from_audio_samples(const AVS_VideoInfo * p, int64_t samples)
+        { return (int)(samples * (int64_t)p->fps_numerator / (int64_t)p->fps_denominator / (int64_t)p->audio_samples_per_second); }
 
-AVSC_INLINE INT64 avs_audio_samples_from_bytes(const AVS_VideoInfo * p, INT64 bytes)
+AVSC_INLINE int64_t avs_audio_samples_from_bytes(const AVS_VideoInfo * p, int64_t bytes)
         { return bytes / avs_bytes_per_audio_sample(p); }
 
-AVSC_INLINE INT64 avs_bytes_from_audio_samples(const AVS_VideoInfo * p, INT64 samples)
+AVSC_INLINE int64_t avs_bytes_from_audio_samples(const AVS_VideoInfo * p, int64_t samples)
         { return samples * avs_bytes_per_audio_sample(p); }
 
 AVSC_INLINE int avs_audio_channels(const AVS_VideoInfo * p)
@@ -764,7 +764,7 @@ AVSC_API(int, avs_get_parity)(AVS_Clip *, int n);
 // return field parity if field_based, else parity of first field in frame
 
 AVSC_API(int, avs_get_audio)(AVS_Clip *, void * buf,
-                             INT64 start, INT64 count);
+                             int64_t start, int64_t count);
 // start and count are in samples
 
 AVSC_API(int, avs_set_cache_hints)(AVS_Clip *,
@@ -784,7 +784,7 @@ struct AVS_FilterInfo
   AVS_VideoFrame * (AVSC_CC * get_frame)(AVS_FilterInfo *, int n);
   int (AVSC_CC * get_parity)(AVS_FilterInfo *, int n);
   int (AVSC_CC * get_audio)(AVS_FilterInfo *, void * buf,
-                                  INT64 start, INT64 count);
+                                  int64_t start, int64_t count);
   int (AVSC_CC * set_cache_hints)(AVS_FilterInfo *, int cachehints,
                                         int frame_range);
   void (AVSC_CC * free_filter)(AVS_FilterInfo *);
@@ -933,6 +933,8 @@ AVSC_API(void, avs_delete_script_environment)(AVS_ScriptEnvironment *);
 AVSC_API(AVS_VideoFrame *, avs_subframe_planar)(AVS_ScriptEnvironment *, AVS_VideoFrame * src, int rel_offset, int new_pitch, int new_row_size, int new_height, int rel_offsetU, int rel_offsetV, int new_pitchUV);
 // The returned video frame must be be released
 
+#if defined(AVS_WINDOWS)
+// The following stuff is only relevant for Windows DLL handling; Linux does it completely differently.
 #ifdef AVSC_NO_DECLSPEC
 // This part uses LoadLibrary and related functions to dynamically load Avisynth instead of declspec(dllimport)
 // When AVSC_NO_DECLSPEC is defined, you can use avs_load_library to populate API functions into a struct
@@ -944,7 +946,7 @@ AVSC_API(AVS_VideoFrame *, avs_subframe_planar)(AVS_ScriptEnvironment *, AVS_Vid
   void* malloc(size_t)
   void free(void*);
 
-  HMODULE LoadLibrary(const char*);
+  HMODULE LoadLibraryA(const char*);
   void* GetProcAddress(HMODULE, const char*);
   FreeLibrary(HMODULE);
 */
@@ -1096,7 +1098,7 @@ AVSC_INLINE AVS_Library * avs_load_library() {
   AVS_Library *library = (AVS_Library *)malloc(sizeof(AVS_Library));
   if (library == NULL)
     return NULL;
-  library->handle = LoadLibrary("avisynth");
+  library->handle = LoadLibraryA("avisynth");
   if (library->handle == NULL)
     goto fail;
 
@@ -1253,5 +1255,7 @@ AVSC_INLINE void avs_free_library(AVS_Library *library) {
   free(library);
 }
 #endif
+
+#endif // AVS_WINDOWS
 
 #endif
