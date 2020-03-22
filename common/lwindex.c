@@ -1822,6 +1822,8 @@ static int get_audio_frame_length
                 }
                 if( output_audio )
                     frame_length += helper->picture->nb_samples;
+                if( ctx->codec_id == AV_CODEC_ID_WMAV2 )
+                    break;
                 if( !draining )
                 {
                     /* Send the null packet at the next decoding. */
