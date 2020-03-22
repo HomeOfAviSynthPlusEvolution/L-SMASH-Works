@@ -2156,6 +2156,8 @@ static void create_index
                          pkt_ctx->colorspace );
         else
         {
+            if( pkt_ctx->channel_layout == 0 )
+                pkt_ctx->channel_layout = av_get_default_channel_layout( pkt_ctx->channels );
             int bits_per_sample = pkt_ctx->bits_per_raw_sample   > 0 ? pkt_ctx->bits_per_raw_sample
                                 : pkt_ctx->bits_per_coded_sample > 0 ? pkt_ctx->bits_per_coded_sample
                                 : av_get_bytes_per_sample( pkt_ctx->sample_fmt ) << 3;
@@ -2437,8 +2439,6 @@ static void create_index
                         }
                         audio_info = temp;
                     }
-                    if( pkt_ctx->channel_layout == 0 )
-                        pkt_ctx->channel_layout = av_get_default_channel_layout( pkt_ctx->channels );
                     if( av_get_channel_layout_nb_channels( pkt_ctx->channel_layout )
                       > av_get_channel_layout_nb_channels( aohp->output_channel_layout ) )
                         aohp->output_channel_layout = pkt_ctx->channel_layout;
