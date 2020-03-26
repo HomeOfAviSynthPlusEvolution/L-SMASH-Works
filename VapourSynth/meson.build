@@ -36,8 +36,6 @@ sources = [
   '../common/video_output.h'
 ]
 
-includes = include_directories('../include')
-
 vapoursynth_dep = dependency('vapoursynth').partial_dependency(compile_args : true, includes : true)
 
 deps = [
@@ -60,7 +58,6 @@ endif
 
 shared_module('vslsmashsource', sources,
   dependencies : deps,
-  include_directories : includes,
   install : true,
   install_dir : join_paths(vapoursynth_dep.get_pkgconfig_variable('libdir'), 'vapoursynth'),
   gnu_symbol_visibility : 'hidden'
