@@ -25,6 +25,14 @@
 
 #include "lsmashsource.h"
 
+#if defined(_WIN32)
+#   define AVS_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#   define AVS_EXPORT __attribute__((visibility("default")))
+#else
+#   define AVS_EXPORT
+#endif
+
 void throw_error
 (
     lw_log_handler_t *lhp,
@@ -43,7 +51,7 @@ extern AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data
 
 const AVS_Linkage* AVS_linkage = 0;
 
-extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3( IScriptEnvironment* env, const AVS_Linkage* const vectors )
+extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3( IScriptEnvironment* env, const AVS_Linkage* const vectors )
 {
     AVS_linkage = vectors;
 
