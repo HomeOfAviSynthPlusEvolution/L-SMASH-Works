@@ -56,7 +56,10 @@ sources = [
 
 includes = include_directories('../include')
 
+avisynth_dep = dependency('avisynth').partial_dependency(compile_args : true, includes : true)
+
 deps = [
+  avisynth_dep,
   dependency('liblsmash'),
   dependency('libavcodec', version : '>=58.18.0'),
   dependency('libavformat', version : '>=58.12.0'),
@@ -77,6 +80,6 @@ shared_module('lsmashsource', sources,
   dependencies : deps,
   include_directories : includes,
   install : true,
-  install_dir : join_paths(get_option('libdir'), 'avisynth'),
+  install_dir : join_paths(avisynth_dep.get_pkgconfig_variable('libdir'), 'avisynth'),
   gnu_symbol_visibility : 'hidden'
 )
