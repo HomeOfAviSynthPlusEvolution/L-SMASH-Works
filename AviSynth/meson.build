@@ -54,8 +54,6 @@ sources = [
   '../common/video_output.h'
 ]
 
-includes = include_directories('../include')
-
 avisynth_dep = dependency('avisynth').partial_dependency(compile_args : true, includes : true)
 
 deps = [
@@ -78,7 +76,6 @@ endif
 
 shared_module('lsmashsource', sources,
   dependencies : deps,
-  include_directories : includes,
   install : true,
   install_dir : join_paths(avisynth_dep.get_pkgconfig_variable('libdir'), 'avisynth'),
   gnu_symbol_visibility : 'hidden'
