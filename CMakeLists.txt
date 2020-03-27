@@ -192,6 +192,10 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         )
     endif()
 
+    if (BUILD_VS_PLUGIN AND BUILD_AVS_PLUGIN)
+        target_compile_definitions(LSMASHSource PRIVATE BUILD_SINGLE_BINARY)
+    endif()
+
     target_include_directories(LSMASHSource PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
     if (APPLE)
