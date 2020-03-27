@@ -165,7 +165,7 @@ static int make_frame_planar_yuv
     PVideoFrame               &as_frame
 )
 {
-    as_picture_t as_picture = { { { NULL } } };
+    as_picture_t as_picture = { { NULL } };
     as_assign_planar_yuv( as_frame, &as_picture );
     if( vohp->scaler.input_pixel_format == AV_PIX_FMT_P010LE && vohp->scaler.output_pixel_format == AV_PIX_FMT_YUV420P10LE )
     {
@@ -234,7 +234,7 @@ static int make_frame_packed_yuv
     PVideoFrame               &as_frame
 )
 {
-    as_picture_t as_picture = { { { NULL } } };
+    as_picture_t as_picture = { { NULL } };
     as_picture.data    [0] = as_frame->GetWritePtr();
     as_picture.linesize[0] = as_frame->GetPitch   ();
     return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
@@ -248,7 +248,7 @@ static int make_frame_packed_rgb
     PVideoFrame               &as_frame
 )
 {
-    as_picture_t as_picture = { { { NULL } } };
+    as_picture_t as_picture = { { NULL } };
     as_picture.data    [0] = as_frame->GetWritePtr() + as_frame->GetPitch() * (as_frame->GetHeight() - 1);
     as_picture.linesize[0] = -as_frame->GetPitch();
     return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );

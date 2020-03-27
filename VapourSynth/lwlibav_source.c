@@ -31,7 +31,7 @@
 #include <libavutil/imgutils.h>
 
 #include "../common/audio_output.h"
-#ifndef _MSC_VER
+#ifndef BUILD_SINGLE_BINARY
 /* Dummy definitions.
  * Audio resampler/buffer is NOT used at all in this filter. */
 typedef void AVAudioResampleContext;
@@ -67,7 +67,7 @@ uint64_t output_pcm_samples_from_packet
 }
 
 void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ }
-#endif
+#endif // BUILD_SINGLE_BINARY
 
 #include <stdio.h>
 #include <string.h>
