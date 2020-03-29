@@ -55,9 +55,11 @@ static void get_plugin_information( void )
 {
     sprintf( plugin_information,
              "L-SMASH Works File Reader r%s\n"
-             "    libavutil %s: %s / libavcodec %s: %s\n"
-             "    libavformat %s: %s / libswscale %s: %s\n"
-             "    libswresample %s: %s",
+             "    libavutil %s : %s\n"
+             "    libavcodec %s : %s\n"
+             "    libavformat %s : %s\n"
+             "    libswscale %s : %s\n"
+             "    libswresample %s : %s",
              LSMASHWORKS_REV,
              AV_STRINGIFY( LIBAVUTIL_VERSION     ), avutil_license    (),
              AV_STRINGIFY( LIBAVCODEC_VERSION    ), avcodec_license   (),
