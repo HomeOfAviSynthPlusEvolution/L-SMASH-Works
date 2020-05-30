@@ -59,9 +59,6 @@ extern "C"
 #define FFMPEG_HIGH_DEPTH_SUPPORT 0
 #endif
 
-static const int sse2_available = lw_check_sse2();
-static const int avx2_available = VC_HAS_AVX2 && lw_check_avx2();
-
 static inline __m128i _MM_PACKUS_EPI32( const __m128i &low, const __m128i &high )
 {
     const __m128i val_32 = _mm_set1_epi32( 0x8000 );
