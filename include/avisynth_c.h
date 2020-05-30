@@ -1,6 +1,8 @@
 // Avisynth C Interface Version 0.20
 // Copyright 2003 Kevin Atkinson
 
+// Copyright 2020 AviSynth+ project
+
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
@@ -32,8 +34,9 @@
 // export plugins, or graphical user interfaces.
 
 // NOTE: this is a partial update of the Avisynth C interface to recognize
-// new color spaces added in Avisynth 2.60. By no means is this document
-// completely Avisynth 2.60 compliant.
+// new color spaces and interface elements added in Avisynth 2.60 and AviSynth+.
+// This interface is not 100% Avisynth+ CPP interface equivalent.
+
 // 170103: added new CPU constants (FMA4, AVX512xx)
 // 171102: define SIZETMOD. do not use yet, experimental. Offsets are size_t instead of int. Affects x64.
 // 171106: avs_get_row_size calls into avs_get_row_size_p, instead of direct field access
@@ -50,6 +53,24 @@
 //         Example#1: e.g. avs_is_444 will call the existing avs_is_yv24 instead
 //         Example#2: avs_bits_per_component will return 8 for all colorspaces (Classic Avisynth supports only 8 bits/pixel)
 //         Thus the Avisynth+ specific API functions are safely callable even when connected to classic Avisynth DLL
+// 202002xx  non-Windows friendly additions
+// 20200305  avs_vsprintf parameter type change: (void *) to va_list
+// 20200330: (remove test SIZETMOD define for clarity)
+// 20200513: user must use explicite #define AVS26_FALLBACK_SIMULATION for having fallback helpers in dynamic loaded library section
+// 20200513: Follow AviSynth+ V8 interface additions
+//           AVS_VideoFrame struct extended with placeholder for frame property pointer
+//           avs_subframe_planar_a
+//           avs_copy_frame_props
+//           avs_get_frame_props_ro, avs_get_frame_props_rw
+//           avs_prop_num_keys, avs_prop_get_key, avs_prop_num_elements, avs_prop_get_type, avs_prop_get_data_size
+//           avs_prop_get_int, avs_prop_get_float, avs_prop_get_data, avs_prop_get_clip, avs_prop_get_frame, avs_prop_get_int_array, avs_prop_get_float_array
+//           avs_prop_set_int, avs_prop_set_float, avs_prop_set_data, avs_prop_set_clip, avs_prop_set_frame, avs_prop_set_int_array, avs_prop_set_float_array
+//           avs_prop_delete_key, avs_clear_map
+//           avs_new_video_frame_p, avs_new_video_frame_p_a
+//           avs_get_env_property (internal system properties), AVS_AEP_xxx (AvsEnvProperty) enums
+//           avs_get_var_try, avs_get_var_bool, avs_get_var_int, avs_get_var_double, avs_get_var_string, avs_get_var_long
+//           avs_pool_allocate, avs_pool_free
+
 
 #ifndef __AVISYNTH_C__
 #define __AVISYNTH_C__
@@ -64,8 +85,11 @@
 // Constants
 //
 
-#ifndef __AVISYNTH_6_H__
-enum { AVISYNTH_INTERFACE_VERSION = 6 };
+#ifndef __AVISYNTH_8_H__
+enum {
+  AVISYNTH_INTERFACE_CLASSIC_VERSION = 6,
+  AVISYNTH_INTERFACE_VERSION = 8
+};
 #endif
 
 enum {AVS_SAMPLE_INT8  = 1<<0,
@@ -261,56 +285,133 @@ enum {  //SUBTYPES
 
 enum {
   // New 2.6 explicitly defined cache hints.
-  AVS_CACHE_NOTHING=10, // Do not cache video.
-  AVS_CACHE_WINDOW=11, // Hard protect up to X frames within a range of X from the current frame N.
-  AVS_CACHE_GENERIC=12, // LRU cache up to X frames.
-  AVS_CACHE_FORCE_GENERIC=13, // LRU cache up to X frames, override any previous CACHE_WINDOW.
+  AVS_CACHE_NOTHING = 10, // Do not cache video.
+  AVS_CACHE_WINDOW = 11, // Hard protect up to X frames within a range of X from the current frame N.
+  AVS_CACHE_GENERIC = 12, // LRU cache up to X frames.
+  AVS_CACHE_FORCE_GENERIC = 13, // LRU cache up to X frames, override any previous CACHE_WINDOW.
 
-  AVS_CACHE_GET_POLICY=30, // Get the current policy.
-  AVS_CACHE_GET_WINDOW=31, // Get the current window h_span.
-  AVS_CACHE_GET_RANGE=32, // Get the current generic frame range.
+  AVS_CACHE_GET_POLICY = 30, // Get the current policy.
+  AVS_CACHE_GET_WINDOW = 31, // Get the current window h_span.
+  AVS_CACHE_GET_RANGE = 32, // Get the current generic frame range.
 
-  AVS_CACHE_AUDIO=50, // Explicitly do cache audio, X byte cache.
-  AVS_CACHE_AUDIO_NOTHING=51, // Explicitly do not cache audio.
-  AVS_CACHE_AUDIO_NONE=52, // Audio cache off (auto mode), X byte initial cache.
-  AVS_CACHE_AUDIO_AUTO=53, // Audio cache on (auto mode), X byte initial cache.
+  AVS_CACHE_AUDIO = 50, // Explicitly do cache audio, X byte cache.
+  AVS_CACHE_AUDIO_NOTHING = 51, // Explicitly do not cache audio.
+  AVS_CACHE_AUDIO_NONE = 52, // Audio cache off (auto mode), X byte initial cache.
+  AVS_CACHE_AUDIO_AUTO = 53, // Audio cache on (auto mode), X byte initial cache.
 
-  AVS_CACHE_GET_AUDIO_POLICY=70, // Get the current audio policy.
-  AVS_CACHE_GET_AUDIO_SIZE=71, // Get the current audio cache size.
+  AVS_CACHE_GET_AUDIO_POLICY = 70, // Get the current audio policy.
+  AVS_CACHE_GET_AUDIO_SIZE = 71, // Get the current audio cache size.
 
-  AVS_CACHE_PREFETCH_FRAME=100, // Queue request to prefetch frame N.
-  AVS_CACHE_PREFETCH_GO=101, // Action video prefetches.
+  AVS_CACHE_PREFETCH_FRAME = 100, // Queue request to prefetch frame N.
+  AVS_CACHE_PREFETCH_GO = 101, // Action video prefetches.
 
-  AVS_CACHE_PREFETCH_AUDIO_BEGIN=120, // Begin queue request transaction to prefetch audio (take critical section).
-  AVS_CACHE_PREFETCH_AUDIO_STARTLO=121, // Set low 32 bits of start.
-  AVS_CACHE_PREFETCH_AUDIO_STARTHI=122, // Set high 32 bits of start.
-  AVS_CACHE_PREFETCH_AUDIO_COUNT=123, // Set low 32 bits of length.
-  AVS_CACHE_PREFETCH_AUDIO_COMMIT=124, // Enqueue request transaction to prefetch audio (release critical section).
-  AVS_CACHE_PREFETCH_AUDIO_GO=125, // Action audio prefetches.
+  AVS_CACHE_PREFETCH_AUDIO_BEGIN = 120, // Begin queue request transaction to prefetch audio (take critical section).
+  AVS_CACHE_PREFETCH_AUDIO_STARTLO = 121, // Set low 32 bits of start.
+  AVS_CACHE_PREFETCH_AUDIO_STARTHI = 122, // Set high 32 bits of start.
+  AVS_CACHE_PREFETCH_AUDIO_COUNT = 123, // Set low 32 bits of length.
+  AVS_CACHE_PREFETCH_AUDIO_COMMIT = 124, // Enqueue request transaction to prefetch audio (release critical section).
+  AVS_CACHE_PREFETCH_AUDIO_GO = 125, // Action audio prefetches.
 
-  AVS_CACHE_GETCHILD_CACHE_MODE=200, // Cache ask Child for desired video cache mode.
-  AVS_CACHE_GETCHILD_CACHE_SIZE=201, // Cache ask Child for desired video cache size.
-  AVS_CACHE_GETCHILD_AUDIO_MODE=202, // Cache ask Child for desired audio cache mode.
-  AVS_CACHE_GETCHILD_AUDIO_SIZE=203, // Cache ask Child for desired audio cache size.
+  AVS_CACHE_GETCHILD_CACHE_MODE = 200, // Cache ask Child for desired video cache mode.
+  AVS_CACHE_GETCHILD_CACHE_SIZE = 201, // Cache ask Child for desired video cache size.
+  AVS_CACHE_GETCHILD_AUDIO_MODE = 202, // Cache ask Child for desired audio cache mode.
+  AVS_CACHE_GETCHILD_AUDIO_SIZE = 203, // Cache ask Child for desired audio cache size.
 
-  AVS_CACHE_GETCHILD_COST=220, // Cache ask Child for estimated processing cost.
-    AVS_CACHE_COST_ZERO=221, // Child response of zero cost (ptr arithmetic only).
-    AVS_CACHE_COST_UNIT=222, // Child response of unit cost (less than or equal 1 full frame blit).
-    AVS_CACHE_COST_LOW=223, // Child response of light cost. (Fast)
-    AVS_CACHE_COST_MED=224, // Child response of medium cost. (Real time)
-    AVS_CACHE_COST_HI=225, // Child response of heavy cost. (Slow)
+  AVS_CACHE_GETCHILD_COST = 220, // Cache ask Child for estimated processing cost.
+  AVS_CACHE_COST_ZERO = 221, // Child response of zero cost (ptr arithmetic only).
+  AVS_CACHE_COST_UNIT = 222, // Child response of unit cost (less than or equal 1 full frame blit).
+  AVS_CACHE_COST_LOW = 223, // Child response of light cost. (Fast)
+  AVS_CACHE_COST_MED = 224, // Child response of medium cost. (Real time)
+  AVS_CACHE_COST_HI = 225, // Child response of heavy cost. (Slow)
 
-  AVS_CACHE_GETCHILD_THREAD_MODE=240, // Cache ask Child for thread safety.
-    AVS_CACHE_THREAD_UNSAFE=241, // Only 1 thread allowed for all instances. 2.5 filters default!
-    AVS_CACHE_THREAD_CLASS=242, // Only 1 thread allowed for each instance. 2.6 filters default!
-    AVS_CACHE_THREAD_SAFE=243, //  Allow all threads in any instance.
-    AVS_CACHE_THREAD_OWN=244, // Safe but limit to 1 thread, internally threaded.
+  AVS_CACHE_GETCHILD_THREAD_MODE = 240, // Cache ask Child for thread safety.
+  AVS_CACHE_THREAD_UNSAFE = 241, // Only 1 thread allowed for all instances. 2.5 filters default!
+  AVS_CACHE_THREAD_CLASS = 242, // Only 1 thread allowed for each instance. 2.6 filters default!
+  AVS_CACHE_THREAD_SAFE = 243, //  Allow all threads in any instance.
+  AVS_CACHE_THREAD_OWN = 244, // Safe but limit to 1 thread, internally threaded.
 
-  AVS_CACHE_GETCHILD_ACCESS_COST=260, // Cache ask Child for preferred access pattern.
-    AVS_CACHE_ACCESS_RAND=261, // Filter is access order agnostic.
-    AVS_CACHE_ACCESS_SEQ0=262, // Filter prefers sequential access (low cost)
-    AVS_CACHE_ACCESS_SEQ1=263, // Filter needs sequential access (high cost)
-  };
+  AVS_CACHE_GETCHILD_ACCESS_COST = 260, // Cache ask Child for preferred access pattern.
+  AVS_CACHE_ACCESS_RAND = 261, // Filter is access order agnostic.
+  AVS_CACHE_ACCESS_SEQ0 = 262, // Filter prefers sequential access (low cost)
+  AVS_CACHE_ACCESS_SEQ1 = 263, // Filter needs sequential access (high cost)
+
+  AVS_CACHE_AVSPLUS_CONSTANTS = 500,    // Smaller values are reserved for classic Avisynth
+
+  AVS_CACHE_DONT_CACHE_ME = 501,              // Filters that don't need caching (eg. trim, cache etc.) should return 1 to this request
+  AVS_CACHE_SET_MIN_CAPACITY = 502,
+  AVS_CACHE_SET_MAX_CAPACITY = 503,
+  AVS_CACHE_GET_MIN_CAPACITY = 504,
+  AVS_CACHE_GET_MAX_CAPACITY = 505,
+  AVS_CACHE_GET_SIZE = 506,
+  AVS_CACHE_GET_REQUESTED_CAP = 507,
+  AVS_CACHE_GET_CAPACITY = 508,
+  AVS_CACHE_GET_MTMODE = 509,
+
+  AVS_CACHE_IS_CACHE_REQ = 510,
+  AVS_CACHE_IS_CACHE_ANS = 511,
+  AVS_CACHE_IS_MTGUARD_REQ = 512,
+  AVS_CACHE_IS_MTGUARD_ANS = 513,
+
+  AVS_CACHE_AVSPLUS_CUDA_CONSTANTS = 600,
+
+  AVS_CACHE_GET_DEV_TYPE = 601,          // Device types a filter can return
+  AVS_CACHE_GET_CHILD_DEV_TYPE = 602,    // Device types a fitler can receive
+
+  AVS_CACHE_USER_CONSTANTS = 1000       // Smaller values are reserved for the core
+
+};
+
+
+
+// enums for frame property functions
+// AVSPropTypes
+enum {
+  AVS_PROPTYPE_UNSET = 'u',
+  AVS_PROPTYPE_INT = 'i',
+  AVS_PROPTYPE_FLOAT = 'f',
+  AVS_PROPTYPE_DATA = 's',
+  AVS_PROPTYPE_CLIP = 'c',
+  AVS_PROPTYPE_FRAME = 'v'
+};
+
+// AVSGetPropErrors for avs_prop_get_...
+enum {
+  AVS_GETPROPERROR_UNSET = 1,
+  AVS_GETPROPERROR_TYPE = 2,
+  AVS_GETPROPERROR_INDEX = 4
+};
+
+// AVSPropAppendMode for avs_prop_set_...
+enum {
+  AVS_PROPAPPENDMODE_REPLACE = 0,
+  AVS_PROPAPPENDMODE_APPEND = 1,
+  AVS_PROPAPPENDMODE_TOUCH = 2
+};
+
+// AvsEnvProperty for avs_get_env_property
+enum
+{
+  AVS_AEP_PHYSICAL_CPUS = 1,
+  AVS_AEP_LOGICAL_CPUS = 2,
+  AVS_AEP_THREADPOOL_THREADS = 3,
+  AVS_AEP_FILTERCHAIN_THREADS = 4,
+  AVS_AEP_THREAD_ID = 5,
+  AVS_AEP_VERSION = 6,
+
+  // Neo additionals
+  AVS_AEP_NUM_DEVICES = 901,
+  AVS_AEP_FRAME_ALIGN = 902,
+  AVS_AEP_PLANE_ALIGN = 903,
+
+  AVS_AEP_SUPPRESS_THREAD = 921,
+  AVS_AEP_GETFRAME_RECURSIVE = 922
+};
+
+// enum AvsAllocType for avs_allocate
+enum {
+  AVS_ALLOCTYPE_NORMAL_ALLOC = 1,
+  AVS_ALLOCTYPE_POOLED_ALLOC = 2
+};
 
 #ifdef BUILDING_AVSCORE
 AVSValue create_c_video_filter(AVSValue args, void * user_data, IScriptEnvironment * e0);
@@ -463,6 +564,7 @@ AVSC_INLINE int avs_sample_type(const AVS_VideoInfo * p)
         { return p->sample_type;}
 
 // useful mutator
+// Note: these are video format properties, neither frame properties, nor system properties
 AVSC_INLINE void avs_set_property(AVS_VideoInfo * p, int property)
         { p->image_type|=property; }
 
@@ -491,26 +593,19 @@ AVSC_INLINE int avs_is_same_colorspace(const AVS_VideoInfo * x, const AVS_VideoI
 }
 #endif
 
-// Avisynth+ extensions
+// AviSynth+ extensions
 AVSC_API(int, avs_is_rgb48)(const AVS_VideoInfo * p);
 
 AVSC_API(int, avs_is_rgb64)(const AVS_VideoInfo * p);
 
-AVSC_API(int, avs_is_yuv444p16)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv444
-
-AVSC_API(int, avs_is_yuv422p16)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv422
-
-AVSC_API(int, avs_is_yuv420p16)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv420
-
-AVSC_API(int, avs_is_y16)(const AVS_VideoInfo * p); // obsolete, use avs_is_y
-
-AVSC_API(int, avs_is_yuv444ps)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv444
-
-AVSC_API(int, avs_is_yuv422ps)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv422
-
-AVSC_API(int, avs_is_yuv420ps)(const AVS_VideoInfo * p); // obsolete, use avs_is_yuv420
-
-AVSC_API(int, avs_is_y32)(const AVS_VideoInfo * p); // obsolete, use avs_is_y
+AVSC_API(int, avs_is_yuv444p16)(const AVS_VideoInfo * p); // deprecated, use avs_is_yuv444
+AVSC_API(int, avs_is_yuv422p16)(const AVS_VideoInfo * p); // deprecated, use avs_is_yuv422
+AVSC_API(int, avs_is_yuv420p16)(const AVS_VideoInfo * p); // deprecated, use avs_is_yuv420
+AVSC_API(int, avs_is_y16)(const AVS_VideoInfo * p); // deprecated, use avs_is_y
+AVSC_API(int, avs_is_yuv444ps)(const AVS_VideoInfo * p); // deprecated, use avs_is_yuv444
+AVSC_API(int, avs_is_yuv422ps)(const AVS_VideoInfo * p); // deprecated, use avs_is_yuv422
+AVSC_API(int, avs_is_yuv420ps)(const AVS_VideoInfo * p); // deprecated, use avs_is_yuv420
+AVSC_API(int, avs_is_y32)(const AVS_VideoInfo * p); // deprecated, use avs_is_y
 
 AVSC_API(int, avs_is_444)(const AVS_VideoInfo * p);
 
@@ -531,6 +626,7 @@ AVSC_API(int, avs_num_components)(const AVS_VideoInfo * p);
 AVSC_API(int, avs_component_size)(const AVS_VideoInfo * p);
 
 AVSC_API(int, avs_bits_per_component)(const AVS_VideoInfo * p);
+
 // end of Avisynth+ specific
 
 /////////////////////////////////////////////////////////////////////
@@ -548,16 +644,14 @@ AVSC_API(int, avs_bits_per_component)(const AVS_VideoInfo * p);
 // DO NOT USE THIS STRUCTURE DIRECTLY
 typedef struct AVS_VideoFrameBuffer {
   BYTE * data;
-#ifdef SIZETMOD
-  size_t data_size;
-#else
   int data_size;
-#endif
   // sequence_number is incremented every time the buffer is changed, so
   // that stale views can tell they're no longer valid.
   volatile long sequence_number;
 
   volatile long refcount;
+
+  void* device; // avs+
 } AVS_VideoFrameBuffer;
 
 // VideoFrame holds a "window" into a VideoFrameBuffer.
@@ -567,28 +661,17 @@ typedef struct AVS_VideoFrameBuffer {
 typedef struct AVS_VideoFrame {
   volatile long refcount;
   AVS_VideoFrameBuffer * vfb;
-#ifdef SIZETMOD
-  size_t offset;
-#else
   int offset;
-#endif
   int pitch, row_size, height;
-#ifdef SIZETMOD
-  size_t offsetU, offsetV;
-#else
   int offsetU, offsetV;
-#endif
   int pitchUV;  // U&V offsets are from top of picture.
   int row_sizeUV, heightUV; // for Planar RGB offsetU, offsetV is for the 2nd and 3rd Plane.
                             // for Planar RGB pitchUV and row_sizeUV = 0, because when no VideoInfo (MakeWriteable)
                             // the decision on existence of UV is checked by zero pitch
   // AVS+ extension, avisynth.h: class does not break plugins if appended here
-#ifdef SIZETMOD
-  size_t offsetA;
-#else
   int offsetA;
-#endif
   int pitchA, row_sizeA; // 4th alpha plane support, pitch and row_size is 0 is none
+  void* properties; // frame properties
 } AVS_VideoFrame;
 
 // Access functions for AVS_VideoFrame
@@ -654,6 +737,13 @@ AVSC_INLINE AVS_VideoFrame * avs_copy_frame(AVS_VideoFrame * f)
   {return avs_copy_video_frame(f);}
 #endif
 
+// Interface V8: frame properties
+// AVS_Map is just a placeholder for AVSMap
+typedef struct AVS_Map {
+  void* data;
+} AVS_Map;
+
+
 /////////////////////////////////////////////////////////////////////
 //
 // AVS_Value
@@ -670,7 +760,7 @@ AVSC_INLINE AVS_VideoFrame * avs_copy_frame(AVS_VideoFrame * f)
 // AVS_Value is laid out identically to AVSValue
 typedef struct AVS_Value AVS_Value;
 struct AVS_Value {
-  short type;  // 'a'rray, 'c'lip, 'b'ool, 'i'nt, 'f'loat, 's'tring, 'v'oid, or 'l'ong
+  short type;  // 'a'rray, 'c'lip, 'b'ool, 'i'nt, 'f'loat, 's'tring, 'v'oid, or 'l'ong, or fu'n'ction
                // for some function e'rror
   short array_size;
   union {
@@ -680,6 +770,12 @@ struct AVS_Value {
     float floating_pt;
     const char * string;
     const AVS_Value * array;
+    void * function; // not supported on C interface
+#ifdef X86_64
+    // if ever, only x64 will support. It breaks struct size on 32 bit
+    int64_t longlong; // 8 bytes
+    double double_pt; // 8 bytes
+#endif
   } d;
 };
 
@@ -860,8 +956,7 @@ AVSC_API(int, avs_check_version)(AVS_ScriptEnvironment *, int version);
 AVSC_API(char *, avs_save_string)(AVS_ScriptEnvironment *, const char* s, int length);
 AVSC_API(char *, avs_sprintf)(AVS_ScriptEnvironment *, const char * fmt, ...);
 
-AVSC_API(char *, avs_vsprintf)(AVS_ScriptEnvironment *, const char * fmt, void* val);
- // note: val is really a va_list; I hope everyone typedefs va_list to a pointer
+AVSC_API(char *, avs_vsprintf)(AVS_ScriptEnvironment *, const char * fmt, va_list val);
 
 AVSC_API(int, avs_add_function)(AVS_ScriptEnvironment *,
                                 const char * name, const char * params,
@@ -883,6 +978,7 @@ AVSC_API(int, avs_set_global_var)(AVS_ScriptEnvironment *, const char* name, con
 //void avs_push_context(AVS_ScriptEnvironment *, int level=0);
 //void avs_pop_context(AVS_ScriptEnvironment *);
 
+// partially deprecated, from V8 use avs_new_video_frame_p_a (frame property copy)
 AVSC_API(AVS_VideoFrame *, avs_new_video_frame_a)(AVS_ScriptEnvironment *,
                                           const AVS_VideoInfo * vi, int align);
 // align should be at least 16 for classic Avisynth
@@ -890,6 +986,7 @@ AVSC_API(AVS_VideoFrame *, avs_new_video_frame_a)(AVS_ScriptEnvironment *,
 
 // no API for these, inline helper functions
 #ifndef AVSC_NO_DECLSPEC
+// partially deprecated, from V8 use avs_new_video_frame_p (frame property copy)
 // this inline function is calling an API function
 AVSC_INLINE AVS_VideoFrame * avs_new_video_frame(AVS_ScriptEnvironment * env,
                                      const AVS_VideoInfo * vi)
@@ -912,6 +1009,9 @@ AVSC_API(void, avs_at_exit)(AVS_ScriptEnvironment *, AVS_ShutdownFunc function, 
 
 AVSC_API(AVS_VideoFrame *, avs_subframe)(AVS_ScriptEnvironment *, AVS_VideoFrame * src, int rel_offset, int new_pitch, int new_row_size, int new_height);
 // The returned video frame must be be released
+AVSC_API(AVS_VideoFrame*, avs_subframe_planar)(AVS_ScriptEnvironment*, AVS_VideoFrame* src, int rel_offset, int new_pitch, int new_row_size, int new_height, int rel_offsetU, int rel_offsetV, int new_pitchUV);
+// The returned video frame must be be released
+// see also avs_subframe_planar_a in interface V8
 
 AVSC_API(int, avs_set_memory_max)(AVS_ScriptEnvironment *, int mem);
 
@@ -929,9 +1029,78 @@ const char * AVSC_CC avisynth_c_plugin_init(AVS_ScriptEnvironment* env);
 
 AVSC_API(void, avs_delete_script_environment)(AVS_ScriptEnvironment *);
 
+///////////////////////////////////////////////////////////////////////////////
+//
+// Avisynth+ V8 interface elements
+//
 
-AVSC_API(AVS_VideoFrame *, avs_subframe_planar)(AVS_ScriptEnvironment *, AVS_VideoFrame * src, int rel_offset, int new_pitch, int new_row_size, int new_height, int rel_offsetU, int rel_offsetV, int new_pitchUV);
+AVSC_API(AVS_VideoFrame*, avs_subframe_planar_a)(AVS_ScriptEnvironment*, AVS_VideoFrame* src, int rel_offset, int new_pitch, int new_row_size, int new_height, int rel_offsetU, int rel_offsetV, int new_pitchUV, int rel_offsetA);
 // The returned video frame must be be released
+
+AVSC_API(void, avs_copy_frame_props)(AVS_ScriptEnvironment* p, const AVS_VideoFrame* src, AVS_VideoFrame* dst);
+AVSC_API(const AVS_Map*, avs_get_frame_props_ro)(AVS_ScriptEnvironment* p, const AVS_VideoFrame* frame);
+AVSC_API(AVS_Map*, avs_get_frame_props_rw)(AVS_ScriptEnvironment* p, AVS_VideoFrame* frame);
+AVSC_API(int, avs_prop_num_keys)(AVS_ScriptEnvironment* p, const AVS_Map* map);
+AVSC_API(const char*, avs_prop_get_key)(AVS_ScriptEnvironment* p, const AVS_Map* map, int index);
+AVSC_API(int, avs_prop_num_elements)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key);
+
+// see AVS_PROPTYPE_... enums
+AVSC_API(char, avs_prop_get_type)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key);
+
+// see AVS_GETPROPERROR_... enums
+AVSC_API(int64_t, avs_prop_get_int)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int index, int* error);
+AVSC_API(double, avs_prop_get_float)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int index, int* error);
+AVSC_API(const char*, avs_prop_get_data)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int index, int* error);
+AVSC_API(int, avs_prop_get_data_size)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int index, int* error);
+AVSC_API(AVS_Clip*, avs_prop_get_clip)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int index, int* error);
+AVSC_API(const AVS_VideoFrame*, avs_prop_get_frame)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int index, int* error);
+
+AVSC_API(int, avs_prop_delete_key)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key);
+
+// see AVS_PROPAPPENDMODE_... enums
+AVSC_API(int, avs_prop_set_int)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key, int64_t i, int append);
+AVSC_API(int, avs_prop_set_float)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key, double d, int append);
+AVSC_API(int, avs_prop_set_data)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key, const char* d, int length, int append);
+AVSC_API(int, avs_prop_set_clip)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key, AVS_Clip* clip, int append);
+AVSC_API(int, avs_prop_set_frame)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key, const AVS_VideoFrame* frame, int append);
+
+AVSC_API(const int64_t*, avs_prop_get_int_array)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int* error);
+AVSC_API(const double*, avs_prop_get_float_array)(AVS_ScriptEnvironment* p, const AVS_Map* map, const char* key, int* error);
+AVSC_API(int, avs_prop_set_int_array)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key, const int64_t* i, int size);
+AVSC_API(int, avs_prop_set_float_array)(AVS_ScriptEnvironment* p, AVS_Map* map, const char* key, const double* d, int size);
+
+AVSC_API(void, avs_clear_map)(AVS_ScriptEnvironment* p, AVS_Map* map);
+
+// with frame property source
+AVSC_API(AVS_VideoFrame*, avs_new_video_frame_p)(AVS_ScriptEnvironment*,
+  const AVS_VideoInfo* vi, AVS_VideoFrame* propSrc);
+
+// with frame property source
+AVSC_API(AVS_VideoFrame*, avs_new_video_frame_p_a)(AVS_ScriptEnvironment*,
+  const AVS_VideoInfo* vi, AVS_VideoFrame* propSrc, int align);
+
+// Generic query to ask for various system properties, see AVS_AEP_xxx enums
+AVSC_API(size_t, avs_get_env_property)(AVS_ScriptEnvironment*, int avs_aep_prop);
+
+// buffer pool, see AVS_ALLOCTYPE enums
+AVSC_API(void *, avs_pool_allocate)(AVS_ScriptEnvironment*, size_t nBytes, size_t alignment, int avs_alloc_type);
+AVSC_API(void, avs_pool_free)(AVS_ScriptEnvironment*, void *ptr);
+
+// Interface V8
+// Returns TRUE (1) and the requested variable. If the method fails, returns 0 (FALSE) and does not touch 'val'.
+// The returned AVS_Value *val value must be be released with avs_release_value only on success
+// AVS_Value *val is not caller allocated
+AVSC_API(int, avs_get_var_try)(AVS_ScriptEnvironment*, const char* name, AVS_Value* val);
+
+// Interface V8
+// Return the value of the requested variable.
+// If the variable was not found or had the wrong type,
+// return the supplied default value.
+AVSC_API(int, avs_get_var_bool)(AVS_ScriptEnvironment*, const char* name, int def);
+AVSC_API(int, avs_get_var_int)(AVS_ScriptEnvironment*, const char* name, int def);
+AVSC_API(double, avs_get_var_double)(AVS_ScriptEnvironment*, const char* name, double def);
+AVSC_API(const char*, avs_get_var_string)(AVS_ScriptEnvironment*, const char* name, const char* def);
+AVSC_API(int64_t, avs_get_var_long)(AVS_ScriptEnvironment*, const char* name, int64_t def);
 
 #if defined(AVS_WINDOWS)
 // The following stuff is only relevant for Windows DLL handling; Linux does it completely differently.
@@ -1048,12 +1217,60 @@ struct AVS_Library {
   AVSC_DECLARE_FUNC(avs_num_components);
   AVSC_DECLARE_FUNC(avs_component_size);
   AVSC_DECLARE_FUNC(avs_bits_per_component);
-  // end of Avisynth+ specific
 
+  ///////////////////////////////////////////////////////////////////////////////
+  // Avisynth+ new interface elements from interface version 8
+  // avs_subframe_planar with alpha support
+  AVSC_DECLARE_FUNC(avs_subframe_planar_a);
+
+  // frame properties
+  AVSC_DECLARE_FUNC(avs_copy_frame_props);
+  AVSC_DECLARE_FUNC(avs_get_frame_props_ro);
+  AVSC_DECLARE_FUNC(avs_get_frame_props_rw);
+  AVSC_DECLARE_FUNC(avs_prop_num_keys);
+  AVSC_DECLARE_FUNC(avs_prop_get_key);
+  AVSC_DECLARE_FUNC(avs_prop_num_elements);
+  AVSC_DECLARE_FUNC(avs_prop_get_type);
+  AVSC_DECLARE_FUNC(avs_prop_get_int);
+  AVSC_DECLARE_FUNC(avs_prop_get_float);
+  AVSC_DECLARE_FUNC(avs_prop_get_data);
+  AVSC_DECLARE_FUNC(avs_prop_get_data_size);
+  AVSC_DECLARE_FUNC(avs_prop_get_clip);
+  AVSC_DECLARE_FUNC(avs_prop_get_frame);
+  AVSC_DECLARE_FUNC(avs_prop_delete_key);
+  AVSC_DECLARE_FUNC(avs_prop_set_int);
+  AVSC_DECLARE_FUNC(avs_prop_set_float);
+  AVSC_DECLARE_FUNC(avs_prop_set_data);
+  AVSC_DECLARE_FUNC(avs_prop_set_clip);
+  AVSC_DECLARE_FUNC(avs_prop_set_frame);
+
+  AVSC_DECLARE_FUNC(avs_prop_get_int_array);
+  AVSC_DECLARE_FUNC(avs_prop_get_float_array);
+  AVSC_DECLARE_FUNC(avs_prop_set_int_array);
+  AVSC_DECLARE_FUNC(avs_prop_set_float_array);
+
+  AVSC_DECLARE_FUNC(avs_clear_map);
+
+  // NewVideoFrame with frame properties
+  AVSC_DECLARE_FUNC(avs_new_video_frame_p);
+  AVSC_DECLARE_FUNC(avs_new_video_frame_p_a);
+
+  AVSC_DECLARE_FUNC(avs_get_env_property);
+
+  AVSC_DECLARE_FUNC(avs_get_var_try);
+  AVSC_DECLARE_FUNC(avs_get_var_bool);
+  AVSC_DECLARE_FUNC(avs_get_var_int);
+  AVSC_DECLARE_FUNC(avs_get_var_double);
+  AVSC_DECLARE_FUNC(avs_get_var_string);
+  AVSC_DECLARE_FUNC(avs_get_var_long);
+
+  AVSC_DECLARE_FUNC(avs_pool_allocate);
+  AVSC_DECLARE_FUNC(avs_pool_free);
 };
 
 #undef AVSC_DECLARE_FUNC
 
+#ifdef AVS26_FALLBACK_SIMULATION
 // Helper functions for fallback simulation
 // Avisynth+ extensions do not exist in classic Avisynth so they are simulated
 AVSC_INLINE int avs_is_xx_fallback_return_false(const AVS_VideoInfo * p)
@@ -1089,6 +1306,7 @@ AVSC_INLINE int avs_bits_per_component_fallback(const AVS_VideoInfo * p)
   return 8;
 }
 // End of helper functions for fallback simulation
+#endif // AVS26_FALLBACK_SIMULATION
 
 // avs_load_library() allocates an array for API procedure entries
 // reads and fills the entries with live procedure addresses.
@@ -1110,20 +1328,13 @@ AVSC_INLINE AVS_Library * avs_load_library() {
     goto fail;\
 }
 
+#ifdef AVS26_FALLBACK_SIMULATION
 // When an API function is not loadable, let's try a replacement
 // Missing Avisynth+ functions will be substituted with classic Avisynth compatible methods
 /*
 Avisynth+                 When method is missing (classic Avisynth)
 avs_is_rgb48              constant false
 avs_is_rgb64              constant false
-avs_is_yuv444p16          constant false
-avs_is_yuv422p16          constant false
-avs_is_yuv420p16          constant false
-avs_is_y16                constant false
-avs_is_yuv444ps           constant false
-avs_is_yuv422ps           constant false
-avs_is_yuv420ps           constant false
-avs_is_y32                constant false
 avs_is_444                avs_is_yv24
 avs_is_422                avs_is_yv16
 avs_is_420                avs_is_yv12
@@ -1153,6 +1364,7 @@ avs_bits_per_component    constant 8 (8 bits/component)
   if (library->name == NULL)\
     goto fail;\
 }
+#endif // AVS26_FALLBACK_SIMULATION
 
   AVSC_LOAD_FUNC(avs_add_function);
   AVSC_LOAD_FUNC(avs_at_exit);
@@ -1176,6 +1388,9 @@ avs_bits_per_component    constant 8 (8 bits/component)
   AVSC_LOAD_FUNC(avs_make_writable);
   AVSC_LOAD_FUNC(avs_new_c_filter);
   AVSC_LOAD_FUNC(avs_new_video_frame_a);
+
+
+
   AVSC_LOAD_FUNC(avs_release_clip);
   AVSC_LOAD_FUNC(avs_release_value);
   AVSC_LOAD_FUNC(avs_release_video_frame);
@@ -1213,17 +1428,11 @@ avs_bits_per_component    constant 8 (8 bits/component)
   AVSC_LOAD_FUNC(avs_is_writable);
   AVSC_LOAD_FUNC(avs_get_write_ptr_p);
 
-  // Avisynth+ specific but made them callable for classic Avisynth hosts
+  // Avisynth+ specific
+#ifdef AVS26_FALLBACK_SIMULATION
+  // replace with fallback fn when does not exist
   AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_rgb48, avs_is_xx_fallback_return_false);
   AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_rgb64, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv444p16, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv422p16, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv420p16, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_y16, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv444ps, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv422ps, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_yuv420ps, avs_is_xx_fallback_return_false);
-  AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_is_y32, avs_is_xx_fallback_return_false);
   AVSC_LOAD_FUNC_FALLBACK(avs_is_444, avs_is_yv24);
   AVSC_LOAD_FUNC_FALLBACK(avs_is_422, avs_is_yv16);
   AVSC_LOAD_FUNC_FALLBACK(avs_is_420, avs_is_yv12);
@@ -1234,6 +1443,66 @@ avs_bits_per_component    constant 8 (8 bits/component)
   AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_num_components, avs_num_components_fallback);
   AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_component_size, avs_component_size_fallback);
   AVSC_LOAD_FUNC_FALLBACK_SIMULATED(avs_bits_per_component, avs_bits_per_component_fallback);
+#else
+  // Avisynth+ specific
+  AVSC_LOAD_FUNC(avs_is_rgb48);
+  AVSC_LOAD_FUNC(avs_is_rgb64);
+  AVSC_LOAD_FUNC(avs_is_444, avs_is_yv24);
+  AVSC_LOAD_FUNC(avs_is_422, avs_is_yv16);
+  AVSC_LOAD_FUNC(avs_is_420, avs_is_yv12);
+  AVSC_LOAD_FUNC(avs_is_y, avs_is_y8);
+  AVSC_LOAD_FUNC(avs_is_yuva);
+  AVSC_LOAD_FUNC(avs_is_planar_rgb);
+  AVSC_LOAD_FUNC(avs_is_planar_rgba);
+  AVSC_LOAD_FUNC(avs_num_components);
+  AVSC_LOAD_FUNC(avs_component_size);
+  AVSC_LOAD_FUNC(avs_bits_per_component);
+#endif
+  // Avisynth+ interface V8, no backward compatible simulation
+  AVSC_LOAD_FUNC(avs_subframe_planar_a);
+  // frame properties
+  AVSC_LOAD_FUNC(avs_copy_frame_props);
+  AVSC_LOAD_FUNC(avs_get_frame_props_ro);
+  AVSC_LOAD_FUNC(avs_get_frame_props_rw);
+  AVSC_LOAD_FUNC(avs_prop_num_keys);
+  AVSC_LOAD_FUNC(avs_prop_get_key);
+  AVSC_LOAD_FUNC(avs_prop_num_elements);
+  AVSC_LOAD_FUNC(avs_prop_get_type);
+  AVSC_LOAD_FUNC(avs_prop_get_int);
+  AVSC_LOAD_FUNC(avs_prop_get_float);
+  AVSC_LOAD_FUNC(avs_prop_get_data);
+  AVSC_LOAD_FUNC(avs_prop_get_data_size);
+  AVSC_LOAD_FUNC(avs_prop_get_clip);
+  AVSC_LOAD_FUNC(avs_prop_get_frame);
+  AVSC_LOAD_FUNC(avs_prop_delete_key);
+  AVSC_LOAD_FUNC(avs_prop_set_int);
+  AVSC_LOAD_FUNC(avs_prop_set_float);
+  AVSC_LOAD_FUNC(avs_prop_set_data);
+  AVSC_LOAD_FUNC(avs_prop_set_clip);
+  AVSC_LOAD_FUNC(avs_prop_set_frame);
+
+  AVSC_LOAD_FUNC(avs_prop_get_int_array);
+  AVSC_LOAD_FUNC(avs_prop_get_float_array);
+  AVSC_LOAD_FUNC(avs_prop_set_int_array);
+  AVSC_LOAD_FUNC(avs_prop_set_float_array);
+
+  AVSC_LOAD_FUNC(avs_clear_map);
+
+  // NewVideoFrame with frame properties
+  AVSC_LOAD_FUNC(avs_new_video_frame_p);
+  AVSC_LOAD_FUNC(avs_new_video_frame_p_a);
+
+  AVSC_LOAD_FUNC(avs_get_env_property);
+
+  AVSC_LOAD_FUNC(avs_get_var_try);
+  AVSC_LOAD_FUNC(avs_get_var_bool);
+  AVSC_LOAD_FUNC(avs_get_var_int);
+  AVSC_LOAD_FUNC(avs_get_var_double);
+  AVSC_LOAD_FUNC(avs_get_var_string);
+  AVSC_LOAD_FUNC(avs_get_var_long);
+
+  AVSC_LOAD_FUNC(avs_pool_allocate);
+  AVSC_LOAD_FUNC(avs_pool_free);
 
 #undef __AVSC_STRINGIFY
 #undef AVSC_STRINGIFY
