@@ -1334,7 +1334,7 @@ public:
 #undef AVS_BakedCode
 
 
-#include <avs/cpuid.h>
+#include "avs/cpuid.h"
 
 // IScriptEnvironment GetEnvProperty
 enum AvsEnvProperty

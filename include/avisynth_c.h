@@ -1447,10 +1447,10 @@ avs_bits_per_component    constant 8 (8 bits/component)
   // Avisynth+ specific
   AVSC_LOAD_FUNC(avs_is_rgb48);
   AVSC_LOAD_FUNC(avs_is_rgb64);
-  AVSC_LOAD_FUNC(avs_is_444, avs_is_yv24);
-  AVSC_LOAD_FUNC(avs_is_422, avs_is_yv16);
-  AVSC_LOAD_FUNC(avs_is_420, avs_is_yv12);
-  AVSC_LOAD_FUNC(avs_is_y, avs_is_y8);
+  AVSC_LOAD_FUNC(avs_is_444);
+  AVSC_LOAD_FUNC(avs_is_422);
+  AVSC_LOAD_FUNC(avs_is_420);
+  AVSC_LOAD_FUNC(avs_is_y);
   AVSC_LOAD_FUNC(avs_is_yuva);
   AVSC_LOAD_FUNC(avs_is_planar_rgb);
   AVSC_LOAD_FUNC(avs_is_planar_rgba);
