@@ -138,4 +138,11 @@
 #define NEW_AVSVALUE
 #endif
 
+#if defined(AVS_WINDOWS)
+// Windows XP does not have proper initialization for
+// thread local variables.
+// Use workaround instead __declspec(thread)
+#define XP_TLS
+#endif
+
 #endif //AVS_CONFIG_H
