@@ -83,7 +83,7 @@ void lw_cleanup_audio_output_handler( lw_audio_output_handler_t *aohp ){ }
 
 typedef struct
 {
-    VSVideoInfo                     vi;
+    VSVideoInfo                     vi[2];
     lwlibav_file_handler_t          lwh;
     lwlibav_video_decode_handler_t *vdhp;
     lwlibav_video_output_handler_t *vohp;
@@ -150,7 +150,8 @@ static void close_indicator( progress_handler_t *php )
 static void VS_CC vs_filter_init( VSMap *in, VSMap *out, void **instance_data, VSNode *node, VSCore *core, const VSAPI *vsapi )
 {
     lwlibav_handler_t *hp = (lwlibav_handler_t *)*instance_data;
-    vsapi->setVideoInfo( &hp->vi, 1, node );
+    AVCodecContext *ctx = lwlibav_video_get_codec_context( hp->vdhp );
+    vsapi->setVideoInfo( hp->vi, (av_pix_fmt_desc_get( ctx->pix_fmt )->flags & AV_PIX_FMT_FLAG_ALPHA) ? 2 : 1, node );
 }
 
 static void set_frame_properties
@@ -178,7 +179,7 @@ static int prepare_video_decoding
 {
     lwlibav_video_decode_handler_t *vdhp = hp->vdhp;
     lwlibav_video_output_handler_t *vohp = hp->vohp;
-    VSVideoInfo                    *vi   = &hp->vi;
+    VSVideoInfo                    *vi   = &hp->vi[0];
     /* Import AVIndexEntrys. */
     if( lwlibav_import_av_index_entry( (lwlibav_decode_handler_t *)vdhp ) < 0 )
         return -1;
@@ -200,6 +201,18 @@ static int prepare_video_decoding
         set_error_on_init( out, vsapi, "lsmas: failed to allocate the first valid video frame." );
         return -1;
     }
+    if( (av_pix_fmt_desc_get( ctx->pix_fmt )->flags & AV_PIX_FMT_FLAG_ALPHA)
+     && hp->vi[0].format )
+    {
+        hp->vi[1] = hp->vi[0];
+        hp->vi[1].format = vsapi->registerFormat( cmGray, hp->vi[0].format->sampleType, hp->vi[0].format->bitsPerSample, 0, 0, core );
+        vs_vohp->background_frame[1] = vsapi->newVideoFrame( hp->vi[1].format, hp->vi[1].width, hp->vi[1].height, NULL, core );
+        if( !vs_vohp->background_frame[1] )
+        {
+            set_error_on_init( out, vsapi, "lsmas: failed to allocate memory for the alpha frame data." );
+            return -1;
+        }
+    }
     /* Force seeking at the first reading. */
     lwlibav_video_force_seek( vdhp );
     return 0;
@@ -210,7 +223,7 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
     if( activation_reason != arInitial )
         return NULL;
     lwlibav_handler_t *hp = (lwlibav_handler_t *)*instance_data;
-    VSVideoInfo       *vi = &hp->vi;
+    VSVideoInfo       *vi = &hp->vi[0];
     uint32_t frame_number = MIN( n + 1, vi->numFrames );    /* frame_number is 1-origin. */
     lwlibav_video_decode_handler_t *vdhp = hp->vdhp;
     lwlibav_video_output_handler_t *vohp = hp->vohp;
@@ -239,7 +252,8 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
     }
     /* Output the video frame. */
     AVFrame    *av_frame = lwlibav_video_get_frame_buffer( vdhp );
-    VSFrameRef *vs_frame = make_frame( vohp, av_frame );
+    int output_index = vsapi->getOutputIndex( frame_ctx );
+    VSFrameRef *vs_frame = make_frame( vohp, av_frame, output_index );
     if( !vs_frame )
     {
         vsapi->setFilterError( "lsmas: failed to output a video frame.", frame_ctx );
@@ -383,10 +397,10 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
         return;
     }
     /* Set average framerate. */
-    hp->vi.numFrames = vohp->frame_count;
-    hp->vi.fpsNum    = 25;
-    hp->vi.fpsDen    = 1;
-    lwlibav_video_setup_timestamp_info( lwhp, vdhp, vohp, &hp->vi.fpsNum, &hp->vi.fpsDen, opt.apply_repeat_flag );
+    hp->vi[0].numFrames = vohp->frame_count;
+    hp->vi[0].fpsNum    = 25;
+    hp->vi[0].fpsDen    = 1;
+    lwlibav_video_setup_timestamp_info( lwhp, vdhp, vohp, &hp->vi[0].fpsNum, &hp->vi[0].fpsDen, opt.apply_repeat_flag );
     /* Set up decoders for this stream. */
     if( prepare_video_decoding( hp, out, core, vsapi ) < 0 )
     {

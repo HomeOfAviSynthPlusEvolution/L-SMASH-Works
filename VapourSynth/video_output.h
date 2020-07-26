@@ -44,11 +44,11 @@ typedef struct
 {
     int                         variable_info;
     int                         direct_rendering;
-    const component_reorder_t  *component_reorder;
+    const component_reorder_t  *component_reorder[2];
     VSPresetFormat              vs_output_pixel_format;
-    VSFrameRef                 *background_frame;
-    func_make_black_background *make_black_background;
-    func_make_frame            *make_frame;
+    VSFrameRef                 *background_frame[2];
+    func_make_black_background *make_black_background[2];
+    func_make_frame            *make_frame[2];
     VSFrameContext             *frame_ctx;
     VSCore                     *core;
     const VSAPI                *vsapi;
@@ -59,7 +59,8 @@ VSPresetFormat get_vs_output_pixel_format( const char *format_name );
 VSFrameRef *make_frame
 (
     lw_video_output_handler_t *vohp,
-    AVFrame                   *av_frame
+    AVFrame                   *av_frame,
+    int                        output_index
 );
 
 int vs_setup_video_rendering
