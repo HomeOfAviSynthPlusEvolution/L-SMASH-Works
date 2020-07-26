@@ -53,12 +53,6 @@ extern "C"
 
 #include "video_output.h"
 
-#if (LIBAVUTIL_VERSION_MICRO >= 100) && (LIBSWSCALE_VERSION_MICRO >= 100)
-#define FFMPEG_HIGH_DEPTH_SUPPORT 1
-#else
-#define FFMPEG_HIGH_DEPTH_SUPPORT 0
-#endif
-
 static inline __m128i _MM_PACKUS_EPI32( const __m128i &low, const __m128i &high )
 {
     const __m128i val_32 = _mm_set1_epi32( 0x8000 );
@@ -79,6 +73,18 @@ static void make_black_background_planar_yuv
     memset( frame->GetWritePtr( PLANAR_V ), 0x80<<bitdepth_minus_8, frame->GetPitch( PLANAR_V ) * frame->GetHeight( PLANAR_V ) );
 }
 
+static void make_black_background_planar_yuva
+(
+    PVideoFrame &frame,
+    int          bitdepth_minus_8
+)
+{
+    memset( frame->GetWritePtr( PLANAR_Y ), 0x00,                   frame->GetPitch( PLANAR_Y ) * frame->GetHeight( PLANAR_Y ) );
+    memset( frame->GetWritePtr( PLANAR_U ), 0x80<<bitdepth_minus_8, frame->GetPitch( PLANAR_U ) * frame->GetHeight( PLANAR_U ) );
+    memset( frame->GetWritePtr( PLANAR_V ), 0x80<<bitdepth_minus_8, frame->GetPitch( PLANAR_V ) * frame->GetHeight( PLANAR_V ) );
+    memset( frame->GetWritePtr( PLANAR_A ), 0xff,                   frame->GetPitch( PLANAR_A ) * frame->GetHeight( PLANAR_A ) );
+}
+
 static void make_black_background_planar_yuv_interleaved
 (
     PVideoFrame &frame,
@@ -86,6 +92,29 @@ static void make_black_background_planar_yuv_interleaved
 )
 {
     memset( frame->GetWritePtr( PLANAR_Y ), 0x00, frame->GetPitch( PLANAR_Y ) * frame->GetHeight( PLANAR_Y ) );
+    uint8_t msb  = (uint8_t)((0x80U << bitdepth_minus_8) >> 8);
+    int     size = frame->GetPitch( PLANAR_U ) * frame->GetHeight( PLANAR_U );
+    for( int i = 0; i < size; i++ )
+        if( i & 1 )
+        {
+            *(frame->GetWritePtr( PLANAR_U ) + i) = msb;
+            *(frame->GetWritePtr( PLANAR_V ) + i) = msb;
+        }
+        else
+        {
+            *(frame->GetWritePtr( PLANAR_U ) + i) = 0x00;
+            *(frame->GetWritePtr( PLANAR_V ) + i) = 0x00;
+        }
+}
+
+static void make_black_background_planar_yuva_interleaved
+(
+    PVideoFrame &frame,
+    int          bitdepth_minus_8
+)
+{
+    memset( frame->GetWritePtr( PLANAR_Y ), 0x00, frame->GetPitch( PLANAR_Y ) * frame->GetHeight( PLANAR_Y ) );
+    memset( frame->GetWritePtr( PLANAR_A ), 0xff, frame->GetPitch( PLANAR_A ) * frame->GetHeight( PLANAR_A ) );
     uint8_t msb  = (uint8_t)((0x80U << bitdepth_minus_8) >> 8);
     int     size = frame->GetPitch( PLANAR_U ) * frame->GetHeight( PLANAR_U );
     for( int i = 0; i < size; i++ )
@@ -122,6 +151,29 @@ static void make_black_background_packed_all_zero
     memset( frame->GetWritePtr(), 0x00, frame->GetPitch() * frame->GetHeight() );
 }
 
+static void make_black_background_planar_rgb
+(
+    PVideoFrame &frame,
+    int          bitdepth_minus_8
+)
+{
+    memset( frame->GetWritePtr( PLANAR_G ), 0x00, frame->GetPitch( PLANAR_G ) * frame->GetHeight( PLANAR_G ) );
+    memset( frame->GetWritePtr( PLANAR_B ), 0x00, frame->GetPitch( PLANAR_B ) * frame->GetHeight( PLANAR_B ) );
+    memset( frame->GetWritePtr( PLANAR_R ), 0x00, frame->GetPitch( PLANAR_R ) * frame->GetHeight( PLANAR_R ) );
+}
+
+static void make_black_background_planar_rgba
+(
+    PVideoFrame &frame,
+    int          bitdepth_minus_8
+)
+{
+    memset( frame->GetWritePtr( PLANAR_G ), 0x00, frame->GetPitch( PLANAR_G ) * frame->GetHeight( PLANAR_G ) );
+    memset( frame->GetWritePtr( PLANAR_B ), 0x00, frame->GetPitch( PLANAR_B ) * frame->GetHeight( PLANAR_B ) );
+    memset( frame->GetWritePtr( PLANAR_R ), 0x00, frame->GetPitch( PLANAR_R ) * frame->GetHeight( PLANAR_R ) );
+    memset( frame->GetWritePtr( PLANAR_A ), 0xff, frame->GetPitch( PLANAR_A ) * frame->GetHeight( PLANAR_A ) );
+}
+
 /* This source filter always uses lines aligned to an address dividable by 32.
  * Furthermore it seems Avisynth bulit-in BitBlt is slow.
  * So, I think it's OK that we always use swscale instead. */
@@ -140,20 +192,6 @@ static inline int convert_av_pixel_format
     return ret > 0 ? ret : -1;
 }
 
-static inline void as_assign_planar_yuv
-(
-    PVideoFrame  &as_frame,
-    as_picture_t *as_picture
-)
-{
-    as_picture->data    [0] = as_frame->GetWritePtr( PLANAR_Y );
-    as_picture->data    [1] = as_frame->GetWritePtr( PLANAR_U );
-    as_picture->data    [2] = as_frame->GetWritePtr( PLANAR_V );
-    as_picture->linesize[0] = as_frame->GetPitch   ( PLANAR_Y );
-    as_picture->linesize[1] = as_frame->GetPitch   ( PLANAR_U );
-    as_picture->linesize[2] = as_frame->GetPitch   ( PLANAR_V );
-}
-
 static int make_frame_planar_yuv
 (
     lw_video_output_handler_t *vohp,
@@ -163,7 +201,12 @@ static int make_frame_planar_yuv
 )
 {
     as_picture_t as_picture = { { NULL } };
-    as_assign_planar_yuv( as_frame, &as_picture );
+    as_picture.data    [0] = as_frame->GetWritePtr( PLANAR_Y );
+    as_picture.data    [1] = as_frame->GetWritePtr( PLANAR_U );
+    as_picture.data    [2] = as_frame->GetWritePtr( PLANAR_V );
+    as_picture.linesize[0] = as_frame->GetPitch   ( PLANAR_Y );
+    as_picture.linesize[1] = as_frame->GetPitch   ( PLANAR_U );
+    as_picture.linesize[2] = as_frame->GetPitch   ( PLANAR_V );
     if( vohp->scaler.input_pixel_format == AV_PIX_FMT_P010LE && vohp->scaler.output_pixel_format == AV_PIX_FMT_YUV420P10LE )
     {
         const int width_y       = as_frame->GetRowSize( PLANAR_Y ) / sizeof( uint16_t );
@@ -223,6 +266,26 @@ static int make_frame_planar_yuv
         return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
 }
 
+static int make_frame_planar_yuva
+(
+    lw_video_output_handler_t *vohp,
+    int                        height,
+    AVFrame                   *av_frame,
+    PVideoFrame               &as_frame
+)
+{
+    as_picture_t as_picture = { { NULL } };
+    as_picture.data    [0] = as_frame->GetWritePtr( PLANAR_Y );
+    as_picture.data    [1] = as_frame->GetWritePtr( PLANAR_U );
+    as_picture.data    [2] = as_frame->GetWritePtr( PLANAR_V );
+    as_picture.data    [3] = as_frame->GetWritePtr( PLANAR_A );
+    as_picture.linesize[0] = as_frame->GetPitch   ( PLANAR_Y );
+    as_picture.linesize[1] = as_frame->GetPitch   ( PLANAR_U );
+    as_picture.linesize[2] = as_frame->GetPitch   ( PLANAR_V );
+    as_picture.linesize[3] = as_frame->GetPitch   ( PLANAR_A );
+    return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
+}
+
 static int make_frame_packed_yuv
 (
     lw_video_output_handler_t *vohp,
@@ -251,6 +314,44 @@ static int make_frame_packed_rgb
     return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
 }
 
+static int make_frame_planar_rgb
+(
+    lw_video_output_handler_t *vohp,
+    int                        height,
+    AVFrame                   *av_frame,
+    PVideoFrame               &as_frame
+)
+{
+    as_picture_t as_picture = { { NULL } };
+    as_picture.data    [0] = as_frame->GetWritePtr( PLANAR_G );
+    as_picture.data    [1] = as_frame->GetWritePtr( PLANAR_B );
+    as_picture.data    [2] = as_frame->GetWritePtr( PLANAR_R );
+    as_picture.linesize[0] = as_frame->GetPitch   ( PLANAR_G );
+    as_picture.linesize[1] = as_frame->GetPitch   ( PLANAR_B );
+    as_picture.linesize[2] = as_frame->GetPitch   ( PLANAR_R );
+    return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
+}
+
+static int make_frame_planar_rgba
+(
+    lw_video_output_handler_t *vohp,
+    int                        height,
+    AVFrame                   *av_frame,
+    PVideoFrame               &as_frame
+)
+{
+    as_picture_t as_picture = { { NULL } };
+    as_picture.data    [0] = as_frame->GetWritePtr( PLANAR_G );
+    as_picture.data    [1] = as_frame->GetWritePtr( PLANAR_B );
+    as_picture.data    [2] = as_frame->GetWritePtr( PLANAR_R );
+    as_picture.data    [3] = as_frame->GetWritePtr( PLANAR_A );
+    as_picture.linesize[0] = as_frame->GetPitch   ( PLANAR_G );
+    as_picture.linesize[1] = as_frame->GetPitch   ( PLANAR_B );
+    as_picture.linesize[2] = as_frame->GetPitch   ( PLANAR_R );
+    as_picture.linesize[3] = as_frame->GetPitch   ( PLANAR_A );
+    return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
+}
+
 enum AVPixelFormat get_av_output_pixel_format
 (
     const char *format_name
@@ -264,38 +365,57 @@ enum AVPixelFormat get_av_output_pixel_format
         enum AVPixelFormat av_output_pixel_format;
     } format_table[] =
         {
-            { "YUV420P8",  AV_PIX_FMT_YUV420P     },
-            { "YUV422P8",  AV_PIX_FMT_YUV422P     },
-            { "YUV444P8",  AV_PIX_FMT_YUV444P     },
-            { "YUV410P8",  AV_PIX_FMT_YUV410P     },
-            { "YUV411P8",  AV_PIX_FMT_YUV411P     },
-            { "YUV440P8",  AV_PIX_FMT_YUV440P     },
-            { "YUV420P9",  AV_PIX_FMT_YUV420P9LE  },
-            { "YUV422P9",  AV_PIX_FMT_YUV422P9LE  },
-            { "YUV444P9",  AV_PIX_FMT_YUV444P9LE  },
-            { "YUV420P10", AV_PIX_FMT_YUV420P10LE },
-            { "YUV422P10", AV_PIX_FMT_YUV422P10LE },
-            { "YUV444P10", AV_PIX_FMT_YUV444P10LE },
-            { "YUV420P16", AV_PIX_FMT_YUV420P16LE },
-            { "YUV422P16", AV_PIX_FMT_YUV422P16LE },
-            { "YUV444P16", AV_PIX_FMT_YUV444P16LE },
-            { "YUY2",      AV_PIX_FMT_YUYV422     },
-            { "Y8",        AV_PIX_FMT_GRAY8       },
-            { "Y12",       AV_PIX_FMT_GRAY12LE    },
-            { "Y16",       AV_PIX_FMT_GRAY16LE    },
-            { "RGB24",     AV_PIX_FMT_BGR24       },
-            { "RGB32",     AV_PIX_FMT_BGRA        },
-            { "RGB48",     AV_PIX_FMT_BGR48LE     },
-#if FFMPEG_HIGH_DEPTH_SUPPORT
-            { "YUV420P12", AV_PIX_FMT_YUV420P12LE },
-            { "YUV420P14", AV_PIX_FMT_YUV420P14LE },
-            { "YUV422P12", AV_PIX_FMT_YUV422P12LE },
-            { "YUV422P14", AV_PIX_FMT_YUV422P14LE },
-            { "YUV444P12", AV_PIX_FMT_YUV444P12LE },
-            { "YUV444P14", AV_PIX_FMT_YUV444P14LE },
-            { "Y10",       AV_PIX_FMT_GRAY10LE    },
-#endif
-            { NULL,        AV_PIX_FMT_NONE        }
+            { "YUV420P8",   AV_PIX_FMT_YUV420P      },
+            { "YUV422P8",   AV_PIX_FMT_YUV422P      },
+            { "YUV444P8",   AV_PIX_FMT_YUV444P      },
+            { "YUV410P8",   AV_PIX_FMT_YUV410P      },
+            { "YUV411P8",   AV_PIX_FMT_YUV411P      },
+            { "YUV420P9",   AV_PIX_FMT_YUV420P9LE   },
+            { "YUV422P9",   AV_PIX_FMT_YUV422P9LE   },
+            { "YUV444P9",   AV_PIX_FMT_YUV444P9LE   },
+            { "YUV420P10",  AV_PIX_FMT_YUV420P10LE  },
+            { "YUV422P10",  AV_PIX_FMT_YUV422P10LE  },
+            { "YUV444P10",  AV_PIX_FMT_YUV444P10LE  },
+            { "YUV420P12",  AV_PIX_FMT_YUV420P12LE  },
+            { "YUV422P12",  AV_PIX_FMT_YUV422P12LE  },
+            { "YUV444P12",  AV_PIX_FMT_YUV444P12LE  },
+            { "YUV420P14",  AV_PIX_FMT_YUV420P14LE  },
+            { "YUV422P14",  AV_PIX_FMT_YUV422P14LE  },
+            { "YUV444P14",  AV_PIX_FMT_YUV444P14LE  },
+            { "YUV420P16",  AV_PIX_FMT_YUV420P16LE  },
+            { "YUV422P16",  AV_PIX_FMT_YUV422P16LE  },
+            { "YUV444P16",  AV_PIX_FMT_YUV444P16LE  },
+            { "YUVA420P8",  AV_PIX_FMT_YUVA420P     },
+            { "YUVA422P8",  AV_PIX_FMT_YUVA422P     },
+            { "YUVA444P8",  AV_PIX_FMT_YUVA444P     },
+            { "YUVA420P10", AV_PIX_FMT_YUVA420P10LE },
+            { "YUVA422P10", AV_PIX_FMT_YUVA422P10LE },
+            { "YUVA444P10", AV_PIX_FMT_YUVA444P10LE },
+            { "YUVA422P12", AV_PIX_FMT_YUVA422P12LE },
+            { "YUVA444P12", AV_PIX_FMT_YUVA444P12LE },
+            { "YUVA420P16", AV_PIX_FMT_YUVA420P16LE },
+            { "YUVA422P16", AV_PIX_FMT_YUVA422P16LE },
+            { "YUVA444P16", AV_PIX_FMT_YUVA444P16LE },
+            { "YUY2",       AV_PIX_FMT_YUYV422      },
+            { "Y8",         AV_PIX_FMT_GRAY8        },
+            { "Y10",        AV_PIX_FMT_GRAY10LE     },
+            { "Y12",        AV_PIX_FMT_GRAY12LE     },
+            { "Y14",        AV_PIX_FMT_GRAY14LE     },
+            { "Y16",        AV_PIX_FMT_GRAY16LE     },
+            { "RGB24",      AV_PIX_FMT_BGR24        },
+            { "RGB32",      AV_PIX_FMT_BGRA         },
+            { "RGB48",      AV_PIX_FMT_BGR48LE      },
+            { "RGB64",      AV_PIX_FMT_BGRA64LE     },
+            { "GBRP8",      AV_PIX_FMT_GBRP         },
+            { "GBRP10",     AV_PIX_FMT_GBRP10LE     },
+            { "GBRP12",     AV_PIX_FMT_GBRP12LE     },
+            { "GBRP14",     AV_PIX_FMT_GBRP14LE     },
+            { "GBRP16",     AV_PIX_FMT_GBRP16LE     },
+            { "GBRAP8",     AV_PIX_FMT_GBRAP        },
+            { "GBRAP10",    AV_PIX_FMT_GBRAP10LE    },
+            { "GBRAP12",    AV_PIX_FMT_GBRAP12LE    },
+            { "GBRAP16",    AV_PIX_FMT_GBRAP16LE    },
+            { NULL,         AV_PIX_FMT_NONE         }
         };
     for( int i = 0; format_table[i].format_name; i++ )
         if( strcasecmp( format_name, format_table[i].format_name ) == 0 )
@@ -322,75 +442,127 @@ static int determine_colorspace_conversion
         int                output_sub_height;
     } conversion_table[] =
         {
-            { AV_PIX_FMT_YUV420P,     AV_PIX_FMT_YUV420P,     VideoInfo::CS_I420,      0, 1, 1 },
-            { AV_PIX_FMT_NV12,        AV_PIX_FMT_YUV420P,     VideoInfo::CS_I420,      0, 1, 1 },
-            { AV_PIX_FMT_NV21,        AV_PIX_FMT_YUV420P,     VideoInfo::CS_I420,      0, 1, 1 },
-            { AV_PIX_FMT_YUV420P9LE,  AV_PIX_FMT_YUV420P10LE, VideoInfo::CS_YUV420P10, 2, 1, 1 },
-            { AV_PIX_FMT_YUV420P9BE,  AV_PIX_FMT_YUV420P10LE, VideoInfo::CS_YUV420P10, 2, 1, 1 },
-            { AV_PIX_FMT_YUV420P10LE, AV_PIX_FMT_YUV420P10LE, VideoInfo::CS_YUV420P10, 2, 1, 1 },
-            { AV_PIX_FMT_YUV420P10BE, AV_PIX_FMT_YUV420P10LE, VideoInfo::CS_YUV420P10, 2, 1, 1 },
-            { AV_PIX_FMT_P010LE,      AV_PIX_FMT_YUV420P10LE, VideoInfo::CS_YUV420P10, 2, 1, 1 },
-            { AV_PIX_FMT_P010BE,      AV_PIX_FMT_YUV420P10LE, VideoInfo::CS_YUV420P10, 2, 1, 1 },
-            { AV_PIX_FMT_YUV420P16LE, AV_PIX_FMT_YUV420P16LE, VideoInfo::CS_YUV420P16, 8, 1, 1 },
-            { AV_PIX_FMT_YUV420P16BE, AV_PIX_FMT_YUV420P16LE, VideoInfo::CS_YUV420P16, 8, 1, 1 },
-            { AV_PIX_FMT_P016LE,      AV_PIX_FMT_YUV420P16LE, VideoInfo::CS_YUV420P16, 8, 1, 1 },
-            { AV_PIX_FMT_P016BE,      AV_PIX_FMT_YUV420P16LE, VideoInfo::CS_YUV420P16, 8, 1, 1 },
-            { AV_PIX_FMT_YUYV422,     AV_PIX_FMT_YUYV422,     VideoInfo::CS_YUY2,      0, 1, 0 },
-            { AV_PIX_FMT_YUV422P,     AV_PIX_FMT_YUYV422,     VideoInfo::CS_YUY2,      0, 1, 0 },
-            { AV_PIX_FMT_UYVY422,     AV_PIX_FMT_YUYV422,     VideoInfo::CS_YUY2,      0, 1, 0 },
-            { AV_PIX_FMT_YUV422P,     AV_PIX_FMT_YUV422P,     VideoInfo::CS_YV16,      0, 1, 0 },
-            { AV_PIX_FMT_YUV422P9LE,  AV_PIX_FMT_YUV422P10LE, VideoInfo::CS_YUV422P10, 2, 1, 0 },
-            { AV_PIX_FMT_YUV422P9BE,  AV_PIX_FMT_YUV422P10LE, VideoInfo::CS_YUV422P10, 2, 1, 0 },
-            { AV_PIX_FMT_YUV422P10LE, AV_PIX_FMT_YUV422P10LE, VideoInfo::CS_YUV422P10, 2, 1, 0 },
-            { AV_PIX_FMT_YUV422P10BE, AV_PIX_FMT_YUV422P10LE, VideoInfo::CS_YUV422P10, 2, 1, 0 },
-            { AV_PIX_FMT_YUV422P16LE, AV_PIX_FMT_YUV422P16LE, VideoInfo::CS_YUV422P16, 8, 1, 0 },
-            { AV_PIX_FMT_YUV422P16BE, AV_PIX_FMT_YUV422P16LE, VideoInfo::CS_YUV422P16, 8, 1, 0 },
-            { AV_PIX_FMT_YUV444P,     AV_PIX_FMT_YUV444P,     VideoInfo::CS_YV24,      0, 0, 0 },
-            { AV_PIX_FMT_YUV444P9LE,  AV_PIX_FMT_YUV444P10LE, VideoInfo::CS_YUV444P10, 2, 0, 0 },
-            { AV_PIX_FMT_YUV444P9BE,  AV_PIX_FMT_YUV444P10LE, VideoInfo::CS_YUV444P10, 2, 0, 0 },
-            { AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUV444P10LE, VideoInfo::CS_YUV444P10, 2, 0, 0 },
-            { AV_PIX_FMT_YUV444P10BE, AV_PIX_FMT_YUV444P10LE, VideoInfo::CS_YUV444P10, 2, 0, 0 },
-            { AV_PIX_FMT_YUV444P16LE, AV_PIX_FMT_YUV444P16LE, VideoInfo::CS_YUV444P16, 8, 0, 0 },
-            { AV_PIX_FMT_YUV444P16BE, AV_PIX_FMT_YUV444P16LE, VideoInfo::CS_YUV444P16, 8, 0, 0 },
-            { AV_PIX_FMT_YUV410P,     AV_PIX_FMT_YUV410P,     VideoInfo::CS_YUV9,      0, 2, 2 },
-            { AV_PIX_FMT_YUV411P,     AV_PIX_FMT_YUV411P,     VideoInfo::CS_YV411,     0, 2, 0 },
-            { AV_PIX_FMT_UYYVYY411,   AV_PIX_FMT_YUV411P,     VideoInfo::CS_YV411,     0, 2, 0 },
-            { AV_PIX_FMT_GRAY8,       AV_PIX_FMT_GRAY8,       VideoInfo::CS_Y8,        0, 0, 0 },
-            { AV_PIX_FMT_GRAY12LE,    AV_PIX_FMT_GRAY12LE,    VideoInfo::CS_Y12,       4, 0, 0 },
-            { AV_PIX_FMT_GRAY12BE,    AV_PIX_FMT_GRAY12LE,    VideoInfo::CS_Y12,       4, 0, 0 },
-            { AV_PIX_FMT_GRAY16LE,    AV_PIX_FMT_GRAY16LE,    VideoInfo::CS_Y16,       8, 0, 0 },
-            { AV_PIX_FMT_GRAY16BE,    AV_PIX_FMT_GRAY16LE,    VideoInfo::CS_Y16,       8, 0, 0 },
-            { AV_PIX_FMT_RGB24,       AV_PIX_FMT_BGR24,       VideoInfo::CS_BGR24,     0, 0, 0 },
-            { AV_PIX_FMT_BGR24,       AV_PIX_FMT_BGR24,       VideoInfo::CS_BGR24,     0, 0, 0 },
-            { AV_PIX_FMT_ARGB,        AV_PIX_FMT_BGRA,        VideoInfo::CS_BGR32,     0, 0, 0 },
-            { AV_PIX_FMT_RGBA,        AV_PIX_FMT_BGRA,        VideoInfo::CS_BGR32,     0, 0, 0 },
-            { AV_PIX_FMT_ABGR,        AV_PIX_FMT_BGRA,        VideoInfo::CS_BGR32,     0, 0, 0 },
-            { AV_PIX_FMT_BGRA,        AV_PIX_FMT_BGRA,        VideoInfo::CS_BGR32,     0, 0, 0 },
-            { AV_PIX_FMT_RGB48LE,     AV_PIX_FMT_BGR48LE,     VideoInfo::CS_BGR48,     8, 0, 0 },
-            { AV_PIX_FMT_BGR48BE,     AV_PIX_FMT_BGR48LE,     VideoInfo::CS_BGR48,     8, 0, 0 },
-            { AV_PIX_FMT_GBRP,        AV_PIX_FMT_BGR24,       VideoInfo::CS_BGR24,     0, 0, 0 },
-            { AV_PIX_FMT_GBRP9BE,     AV_PIX_FMT_BGR48LE,     VideoInfo::CS_BGR48,     8, 0, 0 },
-            { AV_PIX_FMT_GBRP10LE,    AV_PIX_FMT_BGR48LE,     VideoInfo::CS_BGR48,     8, 0, 0 },
-            { AV_PIX_FMT_GBRP10BE,    AV_PIX_FMT_BGR48LE,     VideoInfo::CS_BGR48,     8, 0, 0 },
-            { AV_PIX_FMT_GBRP16LE,    AV_PIX_FMT_BGR48LE,     VideoInfo::CS_BGR48,     8, 0, 0 },
-            { AV_PIX_FMT_GBRP16BE,    AV_PIX_FMT_BGR48LE,     VideoInfo::CS_BGR48,     8, 0, 0 },
-#if FFMPEG_HIGH_DEPTH_SUPPORT
-            { AV_PIX_FMT_YUV420P12LE, AV_PIX_FMT_YUV420P12LE, VideoInfo::CS_YUV420P12, 4, 1, 1 },
-            { AV_PIX_FMT_YUV420P12BE, AV_PIX_FMT_YUV420P12LE, VideoInfo::CS_YUV420P12, 4, 1, 1 },
-            { AV_PIX_FMT_YUV420P14LE, AV_PIX_FMT_YUV420P14LE, VideoInfo::CS_YUV420P14, 6, 1, 1 },
-            { AV_PIX_FMT_YUV420P14BE, AV_PIX_FMT_YUV420P14LE, VideoInfo::CS_YUV420P14, 6, 1, 1 },
-            { AV_PIX_FMT_YUV422P12LE, AV_PIX_FMT_YUV422P12LE, VideoInfo::CS_YUV422P12, 4, 1, 0 },
-            { AV_PIX_FMT_YUV422P12BE, AV_PIX_FMT_YUV422P12LE, VideoInfo::CS_YUV422P12, 4, 1, 0 },
-            { AV_PIX_FMT_YUV422P14LE, AV_PIX_FMT_YUV422P14LE, VideoInfo::CS_YUV422P14, 6, 1, 0 },
-            { AV_PIX_FMT_YUV422P14BE, AV_PIX_FMT_YUV422P14LE, VideoInfo::CS_YUV422P14, 6, 1, 0 },
-            { AV_PIX_FMT_YUV444P12LE, AV_PIX_FMT_YUV444P12LE, VideoInfo::CS_YUV444P12, 4, 0, 0 },
-            { AV_PIX_FMT_YUV444P12BE, AV_PIX_FMT_YUV444P12LE, VideoInfo::CS_YUV444P12, 4, 0, 0 },
-            { AV_PIX_FMT_YUV444P14LE, AV_PIX_FMT_YUV444P14LE, VideoInfo::CS_YUV444P14, 6, 0, 0 },
-            { AV_PIX_FMT_YUV444P14BE, AV_PIX_FMT_YUV444P14LE, VideoInfo::CS_YUV444P14, 6, 0, 0 },
-            { AV_PIX_FMT_GRAY10LE,    AV_PIX_FMT_GRAY10LE,    VideoInfo::CS_Y10,       2, 0, 0 },
-            { AV_PIX_FMT_GRAY10BE,    AV_PIX_FMT_GRAY10LE,    VideoInfo::CS_Y10,       2, 0, 0 },
-#endif
-            { AV_PIX_FMT_NONE,        AV_PIX_FMT_NONE,        VideoInfo::CS_UNKNOWN,   0, 0, 0 }
+            { AV_PIX_FMT_YUV420P,      AV_PIX_FMT_YUV420P,      VideoInfo::CS_I420,       0, 1, 1 },
+            { AV_PIX_FMT_NV12,         AV_PIX_FMT_YUV420P,      VideoInfo::CS_I420,       0, 1, 1 },
+            { AV_PIX_FMT_NV21,         AV_PIX_FMT_YUV420P,      VideoInfo::CS_I420,       0, 1, 1 },
+            { AV_PIX_FMT_YUV420P9LE,   AV_PIX_FMT_YUV420P10LE,  VideoInfo::CS_YUV420P10,  2, 1, 1 },
+            { AV_PIX_FMT_YUV420P9BE,   AV_PIX_FMT_YUV420P10LE,  VideoInfo::CS_YUV420P10,  2, 1, 1 },
+            { AV_PIX_FMT_YUV420P10LE,  AV_PIX_FMT_YUV420P10LE,  VideoInfo::CS_YUV420P10,  2, 1, 1 },
+            { AV_PIX_FMT_YUV420P10BE,  AV_PIX_FMT_YUV420P10LE,  VideoInfo::CS_YUV420P10,  2, 1, 1 },
+            { AV_PIX_FMT_P010LE,       AV_PIX_FMT_YUV420P10LE,  VideoInfo::CS_YUV420P10,  2, 1, 1 },
+            { AV_PIX_FMT_P010BE,       AV_PIX_FMT_YUV420P10LE,  VideoInfo::CS_YUV420P10,  2, 1, 1 },
+            { AV_PIX_FMT_YUV420P12LE,  AV_PIX_FMT_YUV420P12LE,  VideoInfo::CS_YUV420P12,  4, 1, 1 },
+            { AV_PIX_FMT_YUV420P12BE,  AV_PIX_FMT_YUV420P12LE,  VideoInfo::CS_YUV420P12,  4, 1, 1 },
+            { AV_PIX_FMT_YUV420P14LE,  AV_PIX_FMT_YUV420P14LE,  VideoInfo::CS_YUV420P14,  6, 1, 1 },
+            { AV_PIX_FMT_YUV420P14BE,  AV_PIX_FMT_YUV420P14LE,  VideoInfo::CS_YUV420P14,  6, 1, 1 },
+            { AV_PIX_FMT_YUV420P16LE,  AV_PIX_FMT_YUV420P16LE,  VideoInfo::CS_YUV420P16,  8, 1, 1 },
+            { AV_PIX_FMT_YUV420P16BE,  AV_PIX_FMT_YUV420P16LE,  VideoInfo::CS_YUV420P16,  8, 1, 1 },
+            { AV_PIX_FMT_P016LE,       AV_PIX_FMT_YUV420P16LE,  VideoInfo::CS_YUV420P16,  8, 1, 1 },
+            { AV_PIX_FMT_P016BE,       AV_PIX_FMT_YUV420P16LE,  VideoInfo::CS_YUV420P16,  8, 1, 1 },
+            { AV_PIX_FMT_YUYV422,      AV_PIX_FMT_YUYV422,      VideoInfo::CS_YUY2,       0, 1, 0 },
+            { AV_PIX_FMT_UYVY422,      AV_PIX_FMT_YUYV422,      VideoInfo::CS_YUY2,       0, 1, 0 },
+            { AV_PIX_FMT_YVYU422,      AV_PIX_FMT_YUYV422,      VideoInfo::CS_YUY2,       0, 1, 0 },
+            { AV_PIX_FMT_YUV422P,      AV_PIX_FMT_YUV422P,      VideoInfo::CS_YV16,       0, 1, 0 },
+            { AV_PIX_FMT_NV16,         AV_PIX_FMT_YUV422P,      VideoInfo::CS_YV16,       0, 1, 0 },
+            { AV_PIX_FMT_YUV422P9LE,   AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_YUV422P9BE,   AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_YUV422P10LE,  AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_YUV422P10BE,  AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_NV20LE,       AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_NV20BE,       AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_Y210LE,       AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_Y210BE,       AV_PIX_FMT_YUV422P10LE,  VideoInfo::CS_YUV422P10,  2, 1, 0 },
+            { AV_PIX_FMT_YUV422P12LE,  AV_PIX_FMT_YUV422P12LE,  VideoInfo::CS_YUV422P12,  4, 1, 0 },
+            { AV_PIX_FMT_YUV422P12BE,  AV_PIX_FMT_YUV422P12LE,  VideoInfo::CS_YUV422P12,  4, 1, 0 },
+            { AV_PIX_FMT_YUV422P14LE,  AV_PIX_FMT_YUV422P14LE,  VideoInfo::CS_YUV422P14,  6, 1, 0 },
+            { AV_PIX_FMT_YUV422P14BE,  AV_PIX_FMT_YUV422P14LE,  VideoInfo::CS_YUV422P14,  6, 1, 0 },
+            { AV_PIX_FMT_YUV422P16LE,  AV_PIX_FMT_YUV422P16LE,  VideoInfo::CS_YUV422P16,  8, 1, 0 },
+            { AV_PIX_FMT_YUV422P16BE,  AV_PIX_FMT_YUV422P16LE,  VideoInfo::CS_YUV422P16,  8, 1, 0 },
+            { AV_PIX_FMT_YUV444P,      AV_PIX_FMT_YUV444P,      VideoInfo::CS_YV24,       0, 0, 0 },
+            { AV_PIX_FMT_NV24,         AV_PIX_FMT_YUV444P,      VideoInfo::CS_YV24,       0, 0, 0 },
+            { AV_PIX_FMT_NV42,         AV_PIX_FMT_YUV444P,      VideoInfo::CS_YV24,       0, 0, 0 },
+            { AV_PIX_FMT_YUV444P9LE,   AV_PIX_FMT_YUV444P10LE,  VideoInfo::CS_YUV444P10,  2, 0, 0 },
+            { AV_PIX_FMT_YUV444P9BE,   AV_PIX_FMT_YUV444P10LE,  VideoInfo::CS_YUV444P10,  2, 0, 0 },
+            { AV_PIX_FMT_YUV444P10LE,  AV_PIX_FMT_YUV444P10LE,  VideoInfo::CS_YUV444P10,  2, 0, 0 },
+            { AV_PIX_FMT_YUV444P10BE,  AV_PIX_FMT_YUV444P10LE,  VideoInfo::CS_YUV444P10,  2, 0, 0 },
+            { AV_PIX_FMT_YUV444P12LE,  AV_PIX_FMT_YUV444P12LE,  VideoInfo::CS_YUV444P12,  4, 0, 0 },
+            { AV_PIX_FMT_YUV444P12BE,  AV_PIX_FMT_YUV444P12LE,  VideoInfo::CS_YUV444P12,  4, 0, 0 },
+            { AV_PIX_FMT_YUV444P14LE,  AV_PIX_FMT_YUV444P14LE,  VideoInfo::CS_YUV444P14,  6, 0, 0 },
+            { AV_PIX_FMT_YUV444P14BE,  AV_PIX_FMT_YUV444P14LE,  VideoInfo::CS_YUV444P14,  6, 0, 0 },
+            { AV_PIX_FMT_YUV444P16LE,  AV_PIX_FMT_YUV444P16LE,  VideoInfo::CS_YUV444P16,  8, 0, 0 },
+            { AV_PIX_FMT_YUV444P16BE,  AV_PIX_FMT_YUV444P16LE,  VideoInfo::CS_YUV444P16,  8, 0, 0 },
+            { AV_PIX_FMT_YUV410P,      AV_PIX_FMT_YUV410P,      VideoInfo::CS_YUV9,       0, 2, 2 },
+            { AV_PIX_FMT_YUV411P,      AV_PIX_FMT_YUV411P,      VideoInfo::CS_YV411,      0, 2, 0 },
+            { AV_PIX_FMT_UYYVYY411,    AV_PIX_FMT_YUV411P,      VideoInfo::CS_YV411,      0, 2, 0 },
+            { AV_PIX_FMT_YUVA420P,     AV_PIX_FMT_YUVA420P,     VideoInfo::CS_YUVA420,    0, 1, 1 },
+            { AV_PIX_FMT_YUVA420P9LE,  AV_PIX_FMT_YUVA420P10LE, VideoInfo::CS_YUVA420P10, 2, 1, 1 },
+            { AV_PIX_FMT_YUVA420P9BE,  AV_PIX_FMT_YUVA420P10LE, VideoInfo::CS_YUVA420P10, 2, 1, 1 },
+            { AV_PIX_FMT_YUVA420P10LE, AV_PIX_FMT_YUVA420P10LE, VideoInfo::CS_YUVA420P10, 2, 1, 1 },
+            { AV_PIX_FMT_YUVA420P10BE, AV_PIX_FMT_YUVA420P10LE, VideoInfo::CS_YUVA420P10, 2, 1, 1 },
+            { AV_PIX_FMT_YUVA420P16LE, AV_PIX_FMT_YUVA420P16LE, VideoInfo::CS_YUVA420P16, 8, 1, 1 },
+            { AV_PIX_FMT_YUVA420P16BE, AV_PIX_FMT_YUVA420P16LE, VideoInfo::CS_YUVA420P16, 8, 1, 1 },
+            { AV_PIX_FMT_YUVA422P,     AV_PIX_FMT_YUVA422P,     VideoInfo::CS_YUVA422,    0, 1, 0 },
+            { AV_PIX_FMT_YUVA422P9LE,  AV_PIX_FMT_YUVA422P10LE, VideoInfo::CS_YUVA422P10, 2, 1, 0 },
+            { AV_PIX_FMT_YUVA422P9BE,  AV_PIX_FMT_YUVA422P10LE, VideoInfo::CS_YUVA422P10, 2, 1, 0 },
+            { AV_PIX_FMT_YUVA422P10LE, AV_PIX_FMT_YUVA422P10LE, VideoInfo::CS_YUVA422P10, 2, 1, 0 },
+            { AV_PIX_FMT_YUVA422P10BE, AV_PIX_FMT_YUVA422P10LE, VideoInfo::CS_YUVA422P10, 2, 1, 0 },
+            { AV_PIX_FMT_YUVA422P12LE, AV_PIX_FMT_YUVA422P12LE, VideoInfo::CS_YUVA422P12, 4, 1, 0 },
+            { AV_PIX_FMT_YUVA422P12BE, AV_PIX_FMT_YUVA422P12LE, VideoInfo::CS_YUVA422P12, 4, 1, 0 },
+            { AV_PIX_FMT_YUVA422P16LE, AV_PIX_FMT_YUVA422P16LE, VideoInfo::CS_YUVA422P16, 8, 1, 0 },
+            { AV_PIX_FMT_YUVA422P16BE, AV_PIX_FMT_YUVA422P16LE, VideoInfo::CS_YUVA422P16, 8, 1, 0 },
+            { AV_PIX_FMT_YUVA444P,     AV_PIX_FMT_YUVA444P,     VideoInfo::CS_YUVA444,    0, 0, 0 },
+            { AV_PIX_FMT_YUVA444P9LE,  AV_PIX_FMT_YUVA444P10LE, VideoInfo::CS_YUVA444P10, 2, 0, 0 },
+            { AV_PIX_FMT_YUVA444P9BE,  AV_PIX_FMT_YUVA444P10LE, VideoInfo::CS_YUVA444P10, 2, 0, 0 },
+            { AV_PIX_FMT_YUVA444P10LE, AV_PIX_FMT_YUVA444P10LE, VideoInfo::CS_YUVA444P10, 2, 0, 0 },
+            { AV_PIX_FMT_YUVA444P10BE, AV_PIX_FMT_YUVA444P10LE, VideoInfo::CS_YUVA444P10, 2, 0, 0 },
+            { AV_PIX_FMT_YUVA444P12LE, AV_PIX_FMT_YUVA444P12LE, VideoInfo::CS_YUVA444P12, 4, 0, 0 },
+            { AV_PIX_FMT_YUVA444P12BE, AV_PIX_FMT_YUVA444P12LE, VideoInfo::CS_YUVA444P12, 4, 0, 0 },
+            { AV_PIX_FMT_YUVA444P16LE, AV_PIX_FMT_YUVA444P16LE, VideoInfo::CS_YUVA444P16, 8, 0, 0 },
+            { AV_PIX_FMT_YUVA444P16BE, AV_PIX_FMT_YUVA444P16LE, VideoInfo::CS_YUVA444P16, 8, 0, 0 },
+            { AV_PIX_FMT_GRAY8,        AV_PIX_FMT_GRAY8,        VideoInfo::CS_Y8,         0, 0, 0 },
+            { AV_PIX_FMT_GRAY9LE,      AV_PIX_FMT_GRAY10LE,     VideoInfo::CS_Y10,        2, 0, 0 },
+            { AV_PIX_FMT_GRAY9BE,      AV_PIX_FMT_GRAY10LE,     VideoInfo::CS_Y10,        2, 0, 0 },
+            { AV_PIX_FMT_GRAY10LE,     AV_PIX_FMT_GRAY10LE,     VideoInfo::CS_Y10,        2, 0, 0 },
+            { AV_PIX_FMT_GRAY10BE,     AV_PIX_FMT_GRAY10LE,     VideoInfo::CS_Y10,        2, 0, 0 },
+            { AV_PIX_FMT_GRAY12LE,     AV_PIX_FMT_GRAY12LE,     VideoInfo::CS_Y12,        4, 0, 0 },
+            { AV_PIX_FMT_GRAY12BE,     AV_PIX_FMT_GRAY12LE,     VideoInfo::CS_Y12,        4, 0, 0 },
+            { AV_PIX_FMT_GRAY14LE,     AV_PIX_FMT_GRAY14LE,     VideoInfo::CS_Y14,        6, 0, 0 },
+            { AV_PIX_FMT_GRAY14BE,     AV_PIX_FMT_GRAY14LE,     VideoInfo::CS_Y14,        6, 0, 0 },
+            { AV_PIX_FMT_GRAY16LE,     AV_PIX_FMT_GRAY16LE,     VideoInfo::CS_Y16,        8, 0, 0 },
+            { AV_PIX_FMT_GRAY16BE,     AV_PIX_FMT_GRAY16LE,     VideoInfo::CS_Y16,        8, 0, 0 },
+            { AV_PIX_FMT_RGB24,        AV_PIX_FMT_BGR24,        VideoInfo::CS_BGR24,      0, 0, 0 },
+            { AV_PIX_FMT_BGR24,        AV_PIX_FMT_BGR24,        VideoInfo::CS_BGR24,      0, 0, 0 },
+            { AV_PIX_FMT_ARGB,         AV_PIX_FMT_BGRA,         VideoInfo::CS_BGR32,      0, 0, 0 },
+            { AV_PIX_FMT_RGBA,         AV_PIX_FMT_BGRA,         VideoInfo::CS_BGR32,      0, 0, 0 },
+            { AV_PIX_FMT_ABGR,         AV_PIX_FMT_BGRA,         VideoInfo::CS_BGR32,      0, 0, 0 },
+            { AV_PIX_FMT_BGRA,         AV_PIX_FMT_BGRA,         VideoInfo::CS_BGR32,      0, 0, 0 },
+            { AV_PIX_FMT_RGB48LE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
+            { AV_PIX_FMT_RGB48BE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
+            { AV_PIX_FMT_BGR48LE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
+            { AV_PIX_FMT_BGR48BE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
+            { AV_PIX_FMT_RGBA64LE,     AV_PIX_FMT_BGRA64LE,     VideoInfo::CS_BGR64,      8, 0, 0 },
+            { AV_PIX_FMT_RGBA64BE,     AV_PIX_FMT_BGRA64LE,     VideoInfo::CS_BGR64,      8, 0, 0 },
+            { AV_PIX_FMT_BGRA64LE,     AV_PIX_FMT_BGRA64LE,     VideoInfo::CS_BGR64,      8, 0, 0 },
+            { AV_PIX_FMT_BGRA64BE,     AV_PIX_FMT_BGRA64LE,     VideoInfo::CS_BGR64,      8, 0, 0 },
+            { AV_PIX_FMT_GBRP,         AV_PIX_FMT_GBRP,         VideoInfo::CS_RGBP,       0, 0, 0 },
+            { AV_PIX_FMT_GBRP9LE,      AV_PIX_FMT_GBRP10LE,     VideoInfo::CS_RGBP10,     2, 0, 0 },
+            { AV_PIX_FMT_GBRP9BE,      AV_PIX_FMT_GBRP10LE,     VideoInfo::CS_RGBP10,     2, 0, 0 },
+            { AV_PIX_FMT_GBRP10LE,     AV_PIX_FMT_GBRP10LE,     VideoInfo::CS_RGBP10,     2, 0, 0 },
+            { AV_PIX_FMT_GBRP10BE,     AV_PIX_FMT_GBRP10LE,     VideoInfo::CS_RGBP10,     2, 0, 0 },
+            { AV_PIX_FMT_GBRP12LE,     AV_PIX_FMT_GBRP12LE,     VideoInfo::CS_RGBP12,     4, 0, 0 },
+            { AV_PIX_FMT_GBRP12BE,     AV_PIX_FMT_GBRP12LE,     VideoInfo::CS_RGBP12,     4, 0, 0 },
+            { AV_PIX_FMT_GBRP14LE,     AV_PIX_FMT_GBRP14LE,     VideoInfo::CS_RGBP14,     6, 0, 0 },
+            { AV_PIX_FMT_GBRP14BE,     AV_PIX_FMT_GBRP14LE,     VideoInfo::CS_RGBP14,     6, 0, 0 },
+            { AV_PIX_FMT_GBRP16LE,     AV_PIX_FMT_GBRP16LE,     VideoInfo::CS_RGBP16,     8, 0, 0 },
+            { AV_PIX_FMT_GBRP16BE,     AV_PIX_FMT_GBRP16LE,     VideoInfo::CS_RGBP16,     8, 0, 0 },
+            { AV_PIX_FMT_GBRAP,        AV_PIX_FMT_GBRAP,        VideoInfo::CS_RGBAP,      0, 0, 0 },
+            { AV_PIX_FMT_GBRAP10LE,    AV_PIX_FMT_GBRAP10LE,    VideoInfo::CS_RGBAP10,    2, 0, 0 },
+            { AV_PIX_FMT_GBRAP10BE,    AV_PIX_FMT_GBRAP10LE,    VideoInfo::CS_RGBAP10,    2, 0, 0 },
+            { AV_PIX_FMT_GBRAP12LE,    AV_PIX_FMT_GBRAP12LE,    VideoInfo::CS_RGBAP12,    4, 0, 0 },
+            { AV_PIX_FMT_GBRAP12BE,    AV_PIX_FMT_GBRAP12LE,    VideoInfo::CS_RGBAP12,    4, 0, 0 },
+            { AV_PIX_FMT_GBRAP16LE,    AV_PIX_FMT_GBRAP16LE,    VideoInfo::CS_RGBAP16,    8, 0, 0 },
+            { AV_PIX_FMT_GBRAP16BE,    AV_PIX_FMT_GBRAP16LE,    VideoInfo::CS_RGBAP16,    8, 0, 0 },
+            { AV_PIX_FMT_NONE,         AV_PIX_FMT_NONE,         VideoInfo::CS_UNKNOWN,    0, 0, 0 }
         };
     as_vohp->bitdepth_minus_8 = 0;
     int i = 0;
@@ -415,49 +587,79 @@ static int determine_colorspace_conversion
     as_vohp->sub_height       = conversion_table[i].output_sub_height;
     switch( *output_pixel_format )
     {
-        case AV_PIX_FMT_YUV420P     :   /* planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples) */
-        case AV_PIX_FMT_YUV422P     :   /* planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples) */
-        case AV_PIX_FMT_YUV444P     :   /* planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples) */
-        case AV_PIX_FMT_YUV410P     :   /* planar YUV 4:1:0,  9bpp, (1 Cr & Cb sample per 4x4 Y samples) */
-        case AV_PIX_FMT_YUV411P     :   /* planar YUV 4:1:1, 12bpp, (1 Cr & Cb sample per 4x1 Y samples) */
+        case AV_PIX_FMT_YUV420P:
+        case AV_PIX_FMT_YUV422P:
+        case AV_PIX_FMT_YUV444P:
+        case AV_PIX_FMT_YUV410P:
+        case AV_PIX_FMT_YUV411P:
             as_vohp->make_black_background = make_black_background_planar_yuv;
             as_vohp->make_frame            = make_frame_planar_yuv;
             return 0;
-        case AV_PIX_FMT_YUYV422     :   /* packed YUV 4:2:2, 16bpp */
-            as_vohp->make_black_background = make_black_background_packed_yuv422;
-            as_vohp->make_frame            = make_frame_packed_yuv;
-            return 0;
-        case AV_PIX_FMT_YUV420P10LE :   /* planar YUV 4:2:0, 15bpp, (1 Cr & Cb sample per 2x2 Y samples), little-endian */
-        case AV_PIX_FMT_YUV420P16LE :   /* planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples), little-endian */
-        case AV_PIX_FMT_YUV422P10LE :   /* planar YUV 4:2:2, 20bpp, (1 Cr & Cb sample per 2x1 Y samples), little-endian */
-        case AV_PIX_FMT_YUV422P16LE :   /* planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples), little-endian */
-        case AV_PIX_FMT_YUV444P10LE :   /* planar YUV 4:4:4, 30bpp, (1 Cr & Cb sample per 1x1 Y samples), little-endian */
-        case AV_PIX_FMT_YUV444P16LE :   /* planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples), little-endian */
-#if FFMPEG_HIGH_DEPTH_SUPPORT
-        case AV_PIX_FMT_YUV420P12LE :
-        case AV_PIX_FMT_YUV420P14LE :
-        case AV_PIX_FMT_YUV422P12LE :
-        case AV_PIX_FMT_YUV422P14LE :
-        case AV_PIX_FMT_YUV444P12LE :
-        case AV_PIX_FMT_YUV444P14LE :
-#endif
+        case AV_PIX_FMT_YUV420P10LE:
+        case AV_PIX_FMT_YUV420P12LE:
+        case AV_PIX_FMT_YUV420P14LE:
+        case AV_PIX_FMT_YUV420P16LE:
+        case AV_PIX_FMT_YUV422P10LE:
+        case AV_PIX_FMT_YUV422P12LE:
+        case AV_PIX_FMT_YUV422P14LE:
+        case AV_PIX_FMT_YUV422P16LE:
+        case AV_PIX_FMT_YUV444P10LE:
+        case AV_PIX_FMT_YUV444P12LE:
+        case AV_PIX_FMT_YUV444P14LE:
+        case AV_PIX_FMT_YUV444P16LE:
             as_vohp->make_black_background = make_black_background_planar_yuv_interleaved;
             as_vohp->make_frame            = make_frame_planar_yuv;
             return 0;
-        case AV_PIX_FMT_GRAY8       :   /* Y, 8bpp */
-        case AV_PIX_FMT_GRAY12LE    :   /* Y, 12bpp */
-        case AV_PIX_FMT_GRAY16LE    :   /* Y, 16bpp */
-#if FFMPEG_HIGH_DEPTH_SUPPORT
-        case AV_PIX_FMT_GRAY10LE    :   /* Y, 10bpp */
-#endif
+        case AV_PIX_FMT_YUYV422:
+            as_vohp->make_black_background = make_black_background_packed_yuv422;
+            as_vohp->make_frame            = make_frame_packed_yuv;
+            return 0;
+        case AV_PIX_FMT_YUVA420P:
+        case AV_PIX_FMT_YUVA422P:
+        case AV_PIX_FMT_YUVA444P:
+            as_vohp->make_black_background = make_black_background_planar_yuva;
+            as_vohp->make_frame            = make_frame_planar_yuva;
+            return 0;
+        case AV_PIX_FMT_YUVA420P10LE:
+        case AV_PIX_FMT_YUVA420P16LE:
+        case AV_PIX_FMT_YUVA422P10LE:
+        case AV_PIX_FMT_YUVA422P12LE:
+        case AV_PIX_FMT_YUVA422P16LE:
+        case AV_PIX_FMT_YUVA444P10LE:
+        case AV_PIX_FMT_YUVA444P12LE:
+        case AV_PIX_FMT_YUVA444P16LE:
+            as_vohp->make_black_background = make_black_background_planar_yuva_interleaved;
+            as_vohp->make_frame            = make_frame_planar_yuva;
+            return 0;
+        case AV_PIX_FMT_GRAY8:
+        case AV_PIX_FMT_GRAY10LE:
+        case AV_PIX_FMT_GRAY12LE:
+        case AV_PIX_FMT_GRAY14LE:
+        case AV_PIX_FMT_GRAY16LE:
             as_vohp->make_black_background = make_black_background_packed_all_zero;
             as_vohp->make_frame            = make_frame_packed_yuv;
             return 0;
-        case AV_PIX_FMT_BGR24       :   /* packed RGB 8:8:8, 24bpp, BGRBGR... */
-        case AV_PIX_FMT_BGRA        :   /* packed BGRA 8:8:8:8, 32bpp, BGRABGRA... */
-        case AV_PIX_FMT_BGR48LE     :   /* packed RGB 16:16:16, 48bpp, BGRBGR... */
+        case AV_PIX_FMT_BGR24:
+        case AV_PIX_FMT_BGRA:
+        case AV_PIX_FMT_BGR48LE:
+        case AV_PIX_FMT_BGRA64LE:
             as_vohp->make_black_background = make_black_background_packed_all_zero;
             as_vohp->make_frame            = make_frame_packed_rgb;
+            return 0;
+        case AV_PIX_FMT_GBRP:
+        case AV_PIX_FMT_GBRP10LE:
+        case AV_PIX_FMT_GBRP12LE:
+        case AV_PIX_FMT_GBRP14LE:
+        case AV_PIX_FMT_GBRP16LE:
+            as_vohp->make_black_background = make_black_background_planar_rgb;
+            as_vohp->make_frame            = make_frame_planar_rgb;
+            return 0;
+        case AV_PIX_FMT_GBRAP:
+        case AV_PIX_FMT_GBRAP10LE:
+        case AV_PIX_FMT_GBRAP12LE:
+        case AV_PIX_FMT_GBRAP16LE:
+            as_vohp->make_black_background = make_black_background_planar_rgba;
+            as_vohp->make_frame            = make_frame_planar_rgba;
             return 0;
         default :
             as_vohp->make_black_background = NULL;
@@ -503,14 +705,20 @@ static int as_check_dr_available
         AV_PIX_FMT_YUV420P,
         AV_PIX_FMT_YUV420P9LE,
         AV_PIX_FMT_YUV420P10LE,
+        AV_PIX_FMT_YUV420P12LE,
+        AV_PIX_FMT_YUV420P14LE,
         AV_PIX_FMT_YUV420P16LE,
         AV_PIX_FMT_YUV422P,
         AV_PIX_FMT_YUV422P9LE,
         AV_PIX_FMT_YUV422P10LE,
+        AV_PIX_FMT_YUV422P12LE,
+        AV_PIX_FMT_YUV422P14LE,
         AV_PIX_FMT_YUV422P16LE,
         AV_PIX_FMT_YUV444P,
         AV_PIX_FMT_YUV444P9LE,
         AV_PIX_FMT_YUV444P10LE,
+        AV_PIX_FMT_YUV444P12LE,
+        AV_PIX_FMT_YUV444P14LE,
         AV_PIX_FMT_YUV444P16LE,
         AV_PIX_FMT_YUV410P,
         AV_PIX_FMT_YUV411P,
@@ -518,14 +726,6 @@ static int as_check_dr_available
         AV_PIX_FMT_GRAY8,
         AV_PIX_FMT_BGR24,
         AV_PIX_FMT_BGRA,
-#if FFMPEG_HIGH_DEPTH_SUPPORT
-        AV_PIX_FMT_YUV420P12LE,
-        AV_PIX_FMT_YUV420P14LE,
-        AV_PIX_FMT_YUV422P12LE,
-        AV_PIX_FMT_YUV422P14LE,
-        AV_PIX_FMT_YUV444P12LE,
-        AV_PIX_FMT_YUV444P14LE,
-#endif
         AV_PIX_FMT_NONE
     };
     for( int i = 0; dr_support_pix_fmt[i] != AV_PIX_FMT_NONE; i++ )

@@ -66,23 +66,45 @@
                         "YUV420P10"
                         "YUV422P10"
                         "YUV444P10"
-                        "YUV420P12" (ffmpeg only)
-                        "YUV422P12" (ffmpeg only)
-                        "YUV444P12" (ffmpeg only)
-                        "YUV420P14" (ffmpeg only)
-                        "YUV422P14" (ffmpeg only)
-                        "YUV444P14" (ffmpeg only)
+                        "YUV420P12"
+                        "YUV422P12"
+                        "YUV444P12"
+                        "YUV420P14"
+                        "YUV422P14"
+                        "YUV444P14"
                         "YUV420P16"
                         "YUV422P16"
                         "YUV444P16"
+                        "YUVA420P8"
+                        "YUVA422P8"
+                        "YUVA444P8"
+                        "YUVA420P10"
+                        "YUVA422P10"
+                        "YUVA444P10"
+                        "YUVA422P12"
+                        "YUVA444P12"
+                        "YUVA420P16"
+                        "YUVA422P16"
+                        "YUVA444P16"
                         "YUY2"
                         "Y8"
-                        "Y10"       (ffmpeg only)
+                        "Y10"
                         "Y12"
+                        "Y14"
                         "Y16"
                         "RGB24"
                         "RGB32"
                         "RGB48"
+                        "RGB64"
+                        "GBRP8"
+                        "GBRP10"
+                        "GBRP12"
+                        "GBRP14"
+                        "GBRP16"
+                        "GBRAP8"
+                        "GBRAP10"
+                        "GBRAP12"
+                        "GBRAP16"
                 + decoder (defalut : "")
                     Names of preferred decoder candidates separated by comma.
                     For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
