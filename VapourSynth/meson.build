@@ -55,6 +55,8 @@ endif
 if host_machine.system() == 'windows'
   add_project_arguments('-D__USE_MINGW_ANSI_STDIO', language : 'c')
   if host_machine.cpu_family() == 'x86'
+    add_project_arguments('-static-libgcc', language : 'c')
+    add_global_link_arguments('-static-libgcc', language : 'c')
     add_global_link_arguments('-Wl,--add-stdcall-alias', language : 'c')
   endif
 endif
