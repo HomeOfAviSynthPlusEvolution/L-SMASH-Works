@@ -1,9 +1,9 @@
 project('L-SMASH-Works', 'c', 'cpp',
-  default_options : ['buildtype=release', 'b_ndebug=if-release', 'c_std=c99', 'cpp_std=c++14'],
-  meson_version : '>=0.48.0'
+  default_options: ['buildtype=release', 'b_ndebug=if-release', 'c_std=c99', 'cpp_std=c++14'],
+  meson_version: '>=0.48.0'
 )
 
-add_project_arguments('-Wno-sign-compare', '-ffast-math', '-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', language : ['c', 'cpp'])
+add_project_arguments('-Wno-sign-compare', '-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', language: ['c', 'cpp'])
 
 sources = [
   'audio_output.cpp',
@@ -54,29 +54,29 @@ sources = [
   '../common/video_output.h'
 ]
 
-avisynth_dep = dependency('avisynth').partial_dependency(compile_args : true, includes : true)
+avisynth_dep = dependency('avisynth').partial_dependency(compile_args: true, includes: true)
 
 deps = [
   avisynth_dep,
   dependency('liblsmash'),
-  dependency('libavcodec', version : '>=58.18.0'),
-  dependency('libavformat', version : '>=58.12.0'),
-  dependency('libavutil', version : '>=56.14.0'),
-  dependency('libswresample', version : '>=3.1.0'),
-  dependency('libswscale', version : '>=5.1.0')
+  dependency('libavcodec', version: '>=58.91.0'),
+  dependency('libavformat', version: '>=58.45.0'),
+  dependency('libavutil', version: '>=56.51.0'),
+  dependency('libswresample', version: '>=3.7.0'),
+  dependency('libswscale', version: '>=5.7.0')
 ]
 
 if host_machine.cpu_family().startswith('x86')
-  add_project_arguments('-mfpmath=sse', '-msse2', language : ['c', 'cpp'])
+  add_project_arguments('-mfpmath=sse', '-msse2', language: ['c', 'cpp'])
 endif
 
 if host_machine.system() == 'windows'
-  add_project_arguments('-D__USE_MINGW_ANSI_STDIO', language : ['c', 'cpp'])
+  add_project_arguments('-D__USE_MINGW_ANSI_STDIO', language: ['c', 'cpp'])
 endif
 
 shared_module('lsmashsource', sources,
-  dependencies : deps,
-  install : true,
-  install_dir : join_paths(avisynth_dep.get_pkgconfig_variable('libdir'), 'avisynth'),
-  gnu_symbol_visibility : 'hidden'
+  dependencies: deps,
+  install: true,
+  install_dir: join_paths(avisynth_dep.get_pkgconfig_variable('libdir'), 'avisynth'),
+  gnu_symbol_visibility: 'hidden'
 )
