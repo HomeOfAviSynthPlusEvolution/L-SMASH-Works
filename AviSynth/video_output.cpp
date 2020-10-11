@@ -43,10 +43,12 @@
 
 extern "C"
 {
+#include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/mem.h>
+#include <libavutil/mastering_display_metadata.h>
 }
 
 #include "../common/lwsimd.h"
@@ -879,4 +881,127 @@ void as_setup_video_rendering
     /* Set the dimensions of AviSynth frame buffer. */
     vi->width  = vohp->output_width;
     vi->height = vohp->output_height;
+}
+
+void avs_set_frame_properties
+(
+    AVFrame* av_frame,
+    AVStream* stream,
+    int64_t duration_num,
+    int64_t duration_den,
+    bool rgb,
+    PVideoFrame& avs_frame,
+    IScriptEnvironment* env
+    
+)
+{
+    AVSMap* props = env->getFramePropsRW(avs_frame);
+    /* Sample aspect ratio */
+    env->propSetInt(props, "_SARNum", av_frame->sample_aspect_ratio.num, 0);
+    env->propSetInt(props, "_SARDen", av_frame->sample_aspect_ratio.den, 0);
+    /* Sample duration */
+    env->propSetInt(props, "_DurationNum", duration_num, 0);
+    env->propSetInt(props, "_DurationDen", duration_den, 0);
+    /* Color format
+     * The decoded color format may not match with the output. Set proper properties when
+     * no YUV->RGB conversion is there. */
+    if (!rgb)
+    {
+        if (av_frame->color_range != AVCOL_RANGE_UNSPECIFIED)
+            env->propSetInt(props, "_ColorRange", av_frame->color_range == AVCOL_RANGE_MPEG, 0);
+        env->propSetInt(props, "_Primaries", av_frame->color_primaries, 0);
+        env->propSetInt(props, "_Transfer", av_frame->color_trc, 0);
+        env->propSetInt(props, "_Matrix", av_frame->colorspace, 0);
+        if (av_frame->chroma_location > 0)
+            env->propSetInt(props, "_ChromaLocation", av_frame->chroma_location - 1, 0);
+    }
+    /* Picture type */
+    char pict_type = av_get_picture_type_char(av_frame->pict_type);
+    env->propSetData(props, "_PictType", &pict_type, 1, 0);
+    /* BFF or TFF */
+    int field_based = 0;
+    if (av_frame->interlaced_frame)
+        field_based = av_frame->top_field_first ? 2 : 1;
+    env->propSetInt(props, "_FieldBased", field_based, 0);
+    /* Mastering display color volume */
+    int frame_has_primaries = 0, frame_has_luminance = 0;
+    const AVFrameSideData* mastering_display_side_data = av_frame_get_side_data(av_frame, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA);
+    if (mastering_display_side_data)
+    {
+        const AVMasteringDisplayMetadata* mastering_display = (const AVMasteringDisplayMetadata*)mastering_display_side_data->data;
+        if ((frame_has_primaries = mastering_display->has_primaries))
+        {
+            double display_primaries_x[3], display_primaries_y[3];
+            for (int i = 0; i < 3; ++i)
+            {
+                display_primaries_x[i] = av_q2d(mastering_display->display_primaries[i][0]);
+                display_primaries_y[i] = av_q2d(mastering_display->display_primaries[i][1]);
+            }
+            env->propSetFloatArray(props, "MasteringDisplayPrimariesX", display_primaries_x, 3);
+            env->propSetFloatArray(props, "MasteringDisplayPrimariesY", display_primaries_y, 3);
+            env->propSetFloat(props, "MasteringDisplayWhitePointX", av_q2d(mastering_display->white_point[0]), 0);
+            env->propSetFloat(props, "MasteringDisplayWhitePointY", av_q2d(mastering_display->white_point[1]), 0);
+        }
+        if ((frame_has_luminance = mastering_display->has_luminance))
+        {
+            env->propSetFloat(props, "MasteringDisplayMinLuminance", av_q2d(mastering_display->min_luminance), 0);
+            env->propSetFloat(props, "MasteringDisplayMaxLuminance", av_q2d(mastering_display->max_luminance), 0);
+        }
+    }
+    if (stream && (!frame_has_primaries || !frame_has_luminance))
+    {
+        for (int i = 0; i < stream->nb_side_data; ++i)
+        {
+            if (stream->side_data[i].type == AV_PKT_DATA_MASTERING_DISPLAY_METADATA)
+            {
+                const AVMasteringDisplayMetadata* mastering_display = (const AVMasteringDisplayMetadata*)stream->side_data[i].data;
+                if (mastering_display->has_primaries && !frame_has_primaries)
+                {
+                    double display_primaries_x[3], display_primaries_y[3];
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        display_primaries_x[i] = av_q2d(mastering_display->display_primaries[i][0]);
+                        display_primaries_y[i] = av_q2d(mastering_display->display_primaries[i][1]);
+                    }
+                    env->propSetFloatArray(props, "MasteringDisplayPrimariesX", display_primaries_x, 3);
+                    env->propSetFloatArray(props, "MasteringDisplayPrimariesY", display_primaries_y, 3);
+                    env->propSetFloat(props, "MasteringDisplayWhitePointX", av_q2d(mastering_display->white_point[0]), 0);
+                    env->propSetFloat(props, "MasteringDisplayWhitePointY", av_q2d(mastering_display->white_point[1]), 0);
+                }
+                if (mastering_display->has_luminance && !frame_has_luminance)
+                {
+                    env->propSetFloat(props, "MasteringDisplayMinLuminance", av_q2d(mastering_display->min_luminance), 0);
+                    env->propSetFloat(props, "MasteringDisplayMaxLuminance", av_q2d(mastering_display->max_luminance), 0);
+                }
+                break;
+            }
+        }
+    }
+    int frame_has_light_level = 0;
+    const AVFrameSideData* content_light_side_data = av_frame_get_side_data(av_frame, AV_FRAME_DATA_CONTENT_LIGHT_LEVEL);
+    if (content_light_side_data)
+    {
+        const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)content_light_side_data->data;
+        if ((frame_has_light_level = content_light->MaxCLL || content_light->MaxFALL))
+        {
+            env->propSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, 0);
+            env->propSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, 0);
+        }
+    }
+    if (stream && !frame_has_light_level)
+    {
+        for (int i = 0; i < stream->nb_side_data; ++i)
+        {
+            if (stream->side_data[i].type == AV_PKT_DATA_CONTENT_LIGHT_LEVEL)
+            {
+                const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)stream->side_data[i].data;
+                if (content_light->MaxCLL || content_light->MaxFALL)
+                {
+                    env->propSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, 0);
+                    env->propSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, 0);
+                }
+                break;
+            }
+        }
+    }
 }

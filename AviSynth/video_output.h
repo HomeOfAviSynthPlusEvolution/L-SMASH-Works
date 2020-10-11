@@ -88,3 +88,14 @@ void as_setup_video_rendering
     int                        output_width,
     int                        output_height
 );
+
+void avs_set_frame_properties
+(
+    AVFrame* av_frame,
+    AVStream* stream,
+    int64_t duration_num,
+    int64_t duration_den,
+    bool rgb,
+    PVideoFrame& avs_frame,
+    IScriptEnvironment* env
+);

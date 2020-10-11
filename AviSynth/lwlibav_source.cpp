@@ -34,13 +34,12 @@ extern "C"
 #include <libswscale/swscale.h>         /* Colorspace converter */
 #include <libswresample/swresample.h>   /* Audio resampler */
 #include <libavutil/imgutils.h>
-#include <libavutil/mem.h>
-#include <libavutil/opt.h>
 }
 
 #include "video_output.h"
 #include "audio_output.h"
 #include "lwlibav_source.h"
+#include "../common/lwlibav_video_internal.h"
 
 #ifdef _MSC_VER
 #pragma warning( disable:4996 )
@@ -61,6 +60,22 @@ static int update_indicator( progress_handler_t *php, const char *message, int p
 static void close_indicator( progress_handler_t *php )
 {
     fprintf( stderr, "\n" );
+}
+
+static void set_frame_properties
+(
+    AVFrame* av_frame,
+    AVStream* stream,
+    VideoInfo vi,
+    PVideoFrame& avs_frame,
+    IScriptEnvironment* env
+)
+{
+    /* Variable Frame Rate is not supported yet. */
+    int64_t duration_num = vi.fps_numerator;
+    int64_t duration_den = vi.fps_denominator;
+    bool rgb = vi.IsRGB();
+    avs_set_frame_properties(av_frame, stream, duration_num, duration_den, rgb, avs_frame, env);
 }
 
 static void prepare_video_decoding
@@ -147,6 +162,10 @@ LWLibavVideoSource::LWLibavVideoSource
     vi.num_frames      = vohp->frame_count;
     /* */
     prepare_video_decoding( vdhp, vohp, direct_rendering, pixel_format, env );
+
+    has_at_least_v8 = true;
+    try { env->CheckVersion(8); }
+    catch (const AvisynthError&) { has_at_least_v8 = false; }
 }
 
 LWLibavVideoSource::~LWLibavVideoSource()
@@ -170,6 +189,8 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame( int n, IScriptEnvironment *e
     PVideoFrame as_frame;
     if( make_frame( vohp, av_frame, as_frame, env ) < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to make a frame." );
+    if (has_at_least_v8)
+        set_frame_properties(av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame, env);
     return as_frame;
 }
 
