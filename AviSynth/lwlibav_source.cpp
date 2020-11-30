@@ -157,8 +157,8 @@ LWLibavVideoSource::LWLibavVideoSource
     int64_t fps_num = 25;
     int64_t fps_den = 1;
     lwlibav_video_setup_timestamp_info( &lwh, vdhp, vohp, &fps_num, &fps_den, opt->apply_repeat_flag );
-    vi.fps_numerator   = (unsigned int)fps_num;
-    vi.fps_denominator = (unsigned int)fps_den;
+    vi.fps_numerator   = static_cast<unsigned>(fps_num);
+    vi.fps_denominator = static_cast<unsigned>(fps_den);
     vi.num_frames      = vohp->frame_count;
     /* */
     prepare_video_decoding( vdhp, vohp, direct_rendering, pixel_format, env );
@@ -166,6 +166,14 @@ LWLibavVideoSource::LWLibavVideoSource
     has_at_least_v8 = true;
     try { env->CheckVersion(8); }
     catch (const AvisynthError&) { has_at_least_v8 = false; }
+
+    av_frame = lwlibav_video_get_frame_buffer(vdhp);
+    int num = av_frame->sample_aspect_ratio.num;
+    int den = av_frame->sample_aspect_ratio.den;
+    env->SetVar(env->Sprintf("%s", "FFSAR_NUM"), num);
+    env->SetVar(env->Sprintf("%s", "FFSAR_DEN"), den);
+    if (num > 0 && den > 0)
+        env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
 }
 
 LWLibavVideoSource::~LWLibavVideoSource()
@@ -185,7 +193,6 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame( int n, IScriptEnvironment *e
     if( lwlibav_video_get_error( vdhp )
      || lwlibav_video_get_frame( vdhp, vohp, frame_number ) < 0 )
         return env->NewVideoFrame( vi );
-    AVFrame    *av_frame = lwlibav_video_get_frame_buffer( vdhp );
     PVideoFrame as_frame;
     if( make_frame( vohp, av_frame, as_frame, env ) < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to make a frame." );

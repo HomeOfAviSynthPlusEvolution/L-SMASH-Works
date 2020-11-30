@@ -56,6 +56,7 @@ class LWLibavVideoSource : public LWLibavSource
 private:
     LWLibavVideoSource() = default;
     bool has_at_least_v8;
+    AVFrame* av_frame;
 public:
     LWLibavVideoSource
     (
