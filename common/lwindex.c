@@ -1986,7 +1986,7 @@ static void cleanup_index_helpers( lwindex_indexer_t *indexer, AVFormatContext *
     av_freep( &indexer->helpers );
 }
 
-static unsigned xxhash_file( const char *file_path, int64_t file_size )
+static uint64_t xxhash_file( const char *file_path, int64_t file_size )
 {
     uint8_t *file_buffer = (uint8_t *)lw_malloc_zero( 1 << 21 );
     const size_t read_len = 1 << 20;
@@ -1998,7 +1998,7 @@ static unsigned xxhash_file( const char *file_path, int64_t file_size )
         buffer_len += fread( file_buffer + buffer_len, 1, read_len, fp );
     }
     fclose( fp );
-    unsigned hash = XXH32( file_buffer, buffer_len, 0 );
+    uint64_t hash = XXH3_64bits( file_buffer, buffer_len );
     lw_free( file_buffer );
     return hash;
 }
@@ -2101,7 +2101,7 @@ static void create_index
         stat( lwhp->file_path, &file_stat );
 #endif
         fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
-        fprintf( index, "<FileHash=0x%08x>\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
+        fprintf( index, "<FileHash=0x%08" PRIx64 ">\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
@@ -2849,7 +2849,7 @@ static int parse_index
     if( fscanf( index, "<FileSize=%" SCNd64 ">\n", &file_size ) != 1
      || file_size != file_stat.st_size )
         return -1;
-    if( fscanf( index, "<FileHash=0x%x>\n", &file_hash ) != 1
+    if( fscanf( index, "<FileHash=0x%" SCNx64 ">\n", &file_hash ) != 1
      || file_hash != xxhash_file( lwhp->file_path, file_stat.st_size ) )
         return -1;
     if( fscanf( index, "<LibavReaderIndex=0x%x,%d,%[^>]>\n",
