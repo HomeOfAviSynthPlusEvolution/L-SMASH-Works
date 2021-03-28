@@ -1988,9 +1988,10 @@ static void cleanup_index_helpers( lwindex_indexer_t *indexer, AVFormatContext *
 
 static uint64_t xxhash_file( const char *file_path, int64_t file_size )
 {
+    FILE *fp = lw_fopen( file_path, "rb" );
+    if( !fp ) return 0;
     uint8_t *file_buffer = (uint8_t *)lw_malloc_zero( 1 << 21 );
     const size_t read_len = 1 << 20;
-    FILE *fp = lw_fopen( file_path, "rb" );
     size_t buffer_len = fread( file_buffer, 1, read_len, fp );
     if( file_size > (1 << 21) )
     {
