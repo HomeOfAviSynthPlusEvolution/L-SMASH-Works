@@ -1,0 +1,95 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up NASM
+      uses: ilammy/setup-nasm@v1
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x # Version range or exact version of a Python version to use, using SemVer's version range syntax
+
+    - name: Install meson
+      run: |
+        python -m pip install --upgrade pip
+        pip install meson
+
+    - name: Install ninja-build tool
+      uses: seanmiddleditch/gha-setup-ninja@v3
+      with:
+        version: 1.10.2
+
+    - name: Install FFmpeg
+      run: |
+        git clone https://github.com/FFmpeg/FFmpeg --branch release/4.3 --depth 1
+        pushd FFmpeg
+        ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-autodetect --disable-programs --disable-doc --disable-avdevice --disable-postproc --disable-avfilter --disable-network --disable-encoders --disable-muxers --disable-debug
+        make -j2
+        sudo make install -j2
+        popd
+        rm -rf FFmpeg
+
+    - name: Install l-smash
+      run: |
+        git clone https://github.com/l-smash/l-smash --depth 1
+        pushd l-smash
+        ./configure --disable-static
+        make lib -j2
+        sudo make install-lib -j2
+        popd
+        rm -rf l-smash
+
+    - name: Install AviSynth
+      run: |
+        git clone https://github.com/AviSynth/AviSynthPlus --depth 1 avisynth-build
+        pushd avisynth-build
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release -j 2
+        sudo cmake --install build
+        popd
+        rm -rf avisynth-build
+
+    - name: Build AviSynth plugin
+      run: |
+        pushd AviSynth
+        meson build
+        ninja -C build
+        popd
+
+    - name: Install zimg
+      run: |
+        git clone https://github.com/sekrit-twc/zimg --branch v3.0 --depth 1
+        pushd zimg
+        ./autogen.sh
+        ./configure --disable-static
+        make -j2
+        sudo make install -j2
+        popd
+        rm -rf zimg
+
+    - name: Install VapourSynth
+      run: |
+        git clone https://github.com/vapoursynth/vapoursynth --depth 1 vapoursynth-build
+        pushd vapoursynth-build
+        ./autogen.sh
+        ./configure --disable-static --disable-vsscript --disable-vspipe --disable-python-module --disable-plugins
+        make -j2
+        sudo make install -j2
+        popd
+        rm -rf vapoursynth-build
+
+    - name: Build VapourSynth plugin
+      run: |
+        pushd VapourSynth
+        meson build
+        ninja -C build
+        popd
