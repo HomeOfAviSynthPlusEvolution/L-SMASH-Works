@@ -10,9 +10,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Set up NASM
-      uses: ilammy/setup-nasm@v1
-
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
@@ -32,7 +29,7 @@ jobs:
       run: |
         git clone https://github.com/FFmpeg/FFmpeg --branch release/4.3 --depth 1
         pushd FFmpeg
-        ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-autodetect --disable-programs --disable-doc --disable-avdevice --disable-postproc --disable-avfilter --disable-network --disable-encoders --disable-muxers --disable-debug
+        ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-all --disable-autodetect --enable-avcodec --enable-avformat --enable-swresample --enable-swscale --disable-asm --disable-debug
         make -j2
         sudo make install -j2
         popd
@@ -52,8 +49,8 @@ jobs:
       run: |
         git clone https://github.com/AviSynth/AviSynthPlus --depth 1 avisynth-build
         pushd avisynth-build
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-        cmake --build build --config Release -j 2
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_PLUGINS=OFF -DENABLE_INTEL_SIMD=OFF
+        cmake --build build -j 2
         sudo cmake --install build
         popd
         rm -rf avisynth-build
@@ -70,7 +67,7 @@ jobs:
         git clone https://github.com/sekrit-twc/zimg --branch v3.0 --depth 1
         pushd zimg
         ./autogen.sh
-        ./configure --disable-static
+        ./configure --disable-static --disable-simd
         make -j2
         sudo make install -j2
         popd
@@ -81,7 +78,7 @@ jobs:
         git clone https://github.com/vapoursynth/vapoursynth --depth 1 vapoursynth-build
         pushd vapoursynth-build
         ./autogen.sh
-        ./configure --disable-static --disable-vsscript --disable-vspipe --disable-python-module --disable-plugins
+        ./configure --disable-static --disable-x86-asm --disable-vsscript --disable-vspipe --disable-python-module --disable-plugins
         make -j2
         sudo make install -j2
         popd
