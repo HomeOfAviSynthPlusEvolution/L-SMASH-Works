@@ -62,8 +62,7 @@ int do_qsv_decoder_workaround
      * MFXVideoDECODE_DecodeHeader will return MFX_ERR_MORE_DATA. */
     static const uint8_t fake_idr[] = { 0x00, 0x00, 0x00, 0x01, 0x65 }; /* valid for both start-code and size-field prefixes */
     int ret = -1;
-    AVPacket initializer;
-    av_init_packet( &initializer );
+    AVPacket initializer = { 0 };
     if( ctx->extradata[0] == 1 )
     {
         /* Set up the bitstream filter. */

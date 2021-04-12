@@ -730,7 +730,7 @@ int get_sample
             return 0;
         }
     }
-    av_init_packet( pkt );
+    av_packet_unref( pkt );
     if( config->update_pending || config->queue.delay_count )
     {
         /* Return NULL packet to flush data from the decoder until corresponding decoder configuration is activated. */

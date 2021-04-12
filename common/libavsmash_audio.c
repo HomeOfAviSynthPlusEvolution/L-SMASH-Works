@@ -690,9 +690,7 @@ uint64_t libavsmash_audio_get_pcm_samples
             if( config->delay_count || !(output_flags & AUDIO_OUTPUT_ENOUGH) )
             {
                 /* Null packet */
-                av_init_packet( pkt );
-                pkt->data = NULL;
-                pkt->size = 0;
+                av_packet_unref( pkt );
                 if( config->delay_count )
                     config->delay_count -= 1;
             }

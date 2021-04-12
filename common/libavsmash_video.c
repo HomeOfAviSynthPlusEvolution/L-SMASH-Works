@@ -801,9 +801,6 @@ static int get_picture
         while( current <= goal )
         {
             AVPacket pkt = { 0 };
-            av_init_packet( &pkt );
-            pkt.data = NULL;
-            pkt.size = 0;
             av_frame_unref( picture );
             if( decode_video_packet( config->ctx, picture, &got_picture, &pkt ) < 0 )
             {

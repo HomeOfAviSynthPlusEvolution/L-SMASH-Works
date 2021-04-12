@@ -1285,17 +1285,6 @@ static int make_vc1_ebdu
     return av_packet_ref( out_pkt, &helper->pkt );
 }
 
-/* An alias of av_init_packet().
- * av_packet_copy_props() does not set side_data_elems of dst to 0 at the beginning, it causes an undefined behaviour and
- * side data may be incorrectly copied. This av_init_packet() is a solution to that. */
-static inline void av_init_packet_for_safe
-(
-    AVPacket *pkt
-)
-{
-    av_init_packet( pkt );
-}
-
 static lwindex_helper_t *get_index_helper
 (
     lwindex_indexer_t *indexer,
@@ -1374,13 +1363,11 @@ static lwindex_helper_t *get_index_helper
         {
             /* Initialize the VC-1/WMV3 parser by extradata. */
             int ret;
-            AVPacket parsable_pkt;
-            av_init_packet_for_safe( &parsable_pkt );
+            AVPacket parsable_pkt = { 0 };
             if( codecpar->codec_id == AV_CODEC_ID_WMV3 || codecpar->codec_id == AV_CODEC_ID_WMV3IMAGE )
             {
                 /* Make a sequence header EBDU (0x0000010F). */
-                AVPacket pkt;
-                av_init_packet( &pkt );
+                AVPacket pkt = { 0 };
                 pkt.data = codecpar->extradata;
                 pkt.size = codecpar->extradata_size;
                 ret = make_vc1_ebdu( helper, &pkt, &parsable_pkt, 0x0F, 0 );
@@ -1388,8 +1375,7 @@ static lwindex_helper_t *get_index_helper
             else
             {
                 /* For WVC1, the first byte is its size. */
-                AVPacket pkt;
-                av_init_packet( &pkt );
+                AVPacket pkt = { 0 };
                 pkt.data = codecpar->extradata      + 1;
                 pkt.size = codecpar->extradata_size - 1;
                 ret = av_packet_ref( &parsable_pkt, &pkt );
@@ -1612,10 +1598,7 @@ static int append_extradata_if_new
                 int ret = helper->decode( ctx, helper->picture, &decode_complete, pkt );
                 if( ret > 0 && !decode_complete )
                 {
-                    AVPacket null_pkt;
-                    av_init_packet( &null_pkt );
-                    null_pkt.data = NULL;
-                    null_pkt.size = 0;
+                    AVPacket null_pkt = { 0 };
                     ret = helper->decode( ctx, helper->picture, &decode_complete, &null_pkt );
                     /* Reset the draining state. */
                     avcodec_flush_buffers( ctx );
@@ -1701,7 +1684,6 @@ static int make_packet_parsable
     AVPacket         *in_pkt
 )
 {
-    av_init_packet_for_safe( out_pkt );
     if( helper->vc1_wmv3 == 2 )
         /* Make a frame EBDU (0x0000010D). */
         return make_vc1_ebdu( helper, in_pkt, out_pkt, 0x0D, ctx->codec_id == AV_CODEC_ID_VC1 || ctx->codec_id == AV_CODEC_ID_VC1IMAGE );
@@ -1745,9 +1727,6 @@ static int get_picture_type
         if( !decode_complete )
         {
             AVPacket null_pkt = { 0 };
-            av_init_packet( &null_pkt );
-            null_pkt.data = NULL;
-            null_pkt.size = 0;
             helper->decode( ctx, helper->picture, &decode_complete, &null_pkt );
         }
         if( (enum AVPictureType)helper->picture->pict_type != AV_PICTURE_TYPE_I )
@@ -2110,7 +2089,6 @@ static void create_index
         fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index == -2 ? -2 : -1 );
     }
     AVPacket pkt = { 0 };
-    av_init_packet( &pkt );
     int       pix_fmt_investigated  = 0;
     int       video_resolution      = 0;
     int       is_attached_pic       = 0;
@@ -2517,9 +2495,6 @@ static void create_index
         for( uint32_t i = 1; i <= helper->delay_count; i++ )
         {
             AVPacket null_pkt = { 0 };
-            av_init_packet( &null_pkt );
-            null_pkt.data = NULL;
-            null_pkt.size = 0;
             int decode_complete;
             if( helper->decode( pkt_ctx, helper->picture, &decode_complete, &null_pkt ) >= 0 )
             {

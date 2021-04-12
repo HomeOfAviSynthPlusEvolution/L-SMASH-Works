@@ -161,7 +161,6 @@ int lwlibav_get_av_frame
 )
 {
     av_packet_unref( pkt );
-    av_init_packet( pkt );
     /* Get a packet as the requested frame physically. */
     while( read_av_frame( format_ctx, pkt ) >= 0 )
     {

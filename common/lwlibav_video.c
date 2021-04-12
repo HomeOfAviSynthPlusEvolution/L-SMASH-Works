@@ -886,9 +886,6 @@ static int get_frame
                 }
             }
             AVPacket pkt = { 0 };
-            av_init_packet( &pkt );
-            pkt.data = NULL;
-            pkt.size = 0;
             av_frame_unref( frame );
             if( decode_video_packet( vdhp->ctx, frame, &got_picture, &pkt ) < 0 )
             {
