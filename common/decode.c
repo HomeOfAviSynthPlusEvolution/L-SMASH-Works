@@ -134,6 +134,10 @@ int open_decoder
     if( !strcmp( codec->name, "libdav1d" )
      && (ret = av_opt_set_int( c->priv_data, "framethreads", 1, 0 )) < 0 )
         goto fail;
+    else if( !strcmp( codec->name, "vp9" )
+          && thread_count != 1
+          && av_cpu_count() > 1 )
+        c->thread_count = 2;
     if( codec->id == AV_CODEC_ID_H264
      && c->has_b_frames < 8 )
         c->has_b_frames = 8;
