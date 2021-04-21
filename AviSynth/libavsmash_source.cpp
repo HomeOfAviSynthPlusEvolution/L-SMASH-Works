@@ -35,14 +35,13 @@ extern "C"
 #include <libswscale/swscale.h>         /* Colorspace converter */
 #include <libswresample/swresample.h>   /* Audio resampler */
 #include <libavutil/imgutils.h>
-#include <libavutil/mem.h>
-#include <libavutil/opt.h>
 }
 
 #include "lsmashsource.h"
 #include "video_output.h"
 #include "audio_output.h"
 #include "libavsmash_source.h"
+#include "../common/libavsmash_video_internal.h"
 
 static const char func_name_video_source[] = "LSMASHVideoSource";
 static const char func_name_audio_source[] = "LSMASHAudioSource";
@@ -79,6 +78,77 @@ void LSMASHVideoSource::get_video_track
     if( track_number && track_number > number_of_tracks )
         env->ThrowError( "LSMASHVideoSource: the number of tracks equals %u.", number_of_tracks );
     (void)libavsmash_video_get_track( vdhp, track_number );
+}
+
+static int get_composition_duration
+(
+    libavsmash_video_decode_handler_t* vdhp,
+    uint32_t                           composition_sample_number,
+    uint32_t                           last_sample_number
+)
+{
+    uint32_t coded_sample_number = libavsmash_video_get_coded_sample_number(vdhp, composition_sample_number);
+    if (composition_sample_number == last_sample_number)
+        goto no_composition_duration;
+    {
+        uint32_t next_coded_sample_number = libavsmash_video_get_coded_sample_number(vdhp, composition_sample_number + 1);
+        uint64_t      cts;
+        uint64_t next_cts;
+
+        if (libavsmash_video_get_cts(vdhp, coded_sample_number, &cts) < 0
+            || libavsmash_video_get_cts(vdhp, next_coded_sample_number, &next_cts) < 0)
+            goto no_composition_duration;
+
+        if (next_cts <= cts || (next_cts - cts) > INT_MAX)
+            return 0;
+        return (int)(next_cts - cts);
+    }
+no_composition_duration:;
+    uint32_t sample_duration;
+    if (libavsmash_video_get_sample_duration(vdhp, coded_sample_number, &sample_duration) < 0)
+        return 0;
+    return sample_duration <= INT_MAX ? sample_duration : 0;
+}
+
+static void get_sample_duration
+(
+    libavsmash_video_decode_handler_t* vdhp,
+    VideoInfo vi,
+    uint32_t sample_number,
+    int64_t* duration_num,
+    int64_t* duration_den
+)
+{
+    int sample_duration = get_composition_duration(vdhp, sample_number, vi.num_frames);
+    if (sample_duration == 0)
+    {
+        *duration_num = vi.fps_numerator;
+        *duration_den = vi.fps_denominator;
+    }
+    else
+    {
+        uint32_t media_timescale = libavsmash_video_get_media_timescale(vdhp);
+        *duration_num = media_timescale;
+        *duration_den = sample_duration;
+    }
+}
+
+static void set_frame_properties
+(
+    libavsmash_video_decode_handler_t* vdhp,
+    AVFrame* av_frame,
+    VideoInfo vi,
+    PVideoFrame& avs_frame,
+    uint32_t sample_number,
+    IScriptEnvironment* env
+)
+{
+    /* Variable Frame Rate is not supported yet. */
+    int64_t duration_num;
+    int64_t duration_den;
+    bool rgb = vi.IsRGB();
+    get_sample_duration(vdhp, vi, sample_number, &duration_num, &duration_den);
+    avs_set_frame_properties(av_frame, NULL, duration_num, duration_den, rgb, avs_frame, env);
 }
 
 static void prepare_video_decoding
@@ -163,6 +233,18 @@ LSMASHVideoSource::LSMASHVideoSource
     get_video_track( source, track_number, env );
     prepare_video_decoding( vdhp, vohp, format_ctx.get(), threads, direct_rendering, pixel_format, vi, env );
     lsmash_discard_boxes( libavsmash_video_get_root( vdhp ) );
+
+    has_at_least_v8 = true;
+    try { env->CheckVersion(8); }
+    catch (const AvisynthError&) { has_at_least_v8 = false; }
+
+    av_frame = libavsmash_video_get_frame_buffer(vdhp);
+    int num = av_frame->sample_aspect_ratio.num;
+    int den = av_frame->sample_aspect_ratio.den;
+    env->SetVar(env->Sprintf("%s", "FFSAR_NUM"), num);
+    env->SetVar(env->Sprintf("%s", "FFSAR_DEN"), den);
+    if (num > 0 && den > 0)
+        env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
 }
 
 LSMASHVideoSource::~LSMASHVideoSource()
@@ -184,10 +266,11 @@ PVideoFrame __stdcall LSMASHVideoSource::GetFrame( int n, IScriptEnvironment *en
     if( libavsmash_video_get_error( vdhp )
      || libavsmash_video_get_frame( vdhp, vohp, sample_number ) < 0 )
         return env->NewVideoFrame( vi );
-    AVFrame    *av_frame = libavsmash_video_get_frame_buffer( vdhp );
     PVideoFrame as_frame;
     if( make_frame( vohp, av_frame, as_frame, env ) < 0 )
         env->ThrowError( "LSMASHVideoSource: failed to make a frame." );
+    if (has_at_least_v8)
+        set_frame_properties(vdhp, av_frame,vi, as_frame, sample_number, env);
     return as_frame;
 }
 

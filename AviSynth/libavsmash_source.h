@@ -59,6 +59,8 @@ private:
         uint32_t                           track_number,
         IScriptEnvironment                *env
     );
+    bool has_at_least_v8;
+    AVFrame* av_frame;
 public:
     LSMASHVideoSource
     (
