@@ -2774,9 +2774,8 @@ static int parse_index
 {
     /* Test to open the target file. */
     char file_path[512] = { 0 };
-    int32_t current_pos = ftell( index );
     if( fscanf( index, "<InputFilePath>%[^\n<]</InputFilePath>\n", file_path ) != 1 )
-        fseek( index, current_pos, SEEK_SET ); /* temporary hack for existing index file, will be removed eventually */
+        return -1;
     size_t file_path_length = strlen( opt->file_path );
     const char *ext = file_path_length >= 5 ? &opt->file_path[file_path_length - 4] : NULL;
     if( ext && !strncmp( ext, ".lwi", strlen( ".lwi" ) ) )
