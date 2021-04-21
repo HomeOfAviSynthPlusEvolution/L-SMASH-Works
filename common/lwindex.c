@@ -2012,7 +2012,7 @@ static void create_index
         <LibavReaderIndexFile=16>
         <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
-        <FileHash=0x1234abcd>
+        <FileHash=0x0123456789abcdef>
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
         <ActiveAudioStreamIndex>-0000000001</ActiveAudioStreamIndex>
@@ -2081,7 +2081,7 @@ static void create_index
         stat( lwhp->file_path, &file_stat );
 #endif
         fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
-        fprintf( index, "<FileHash=0x%08" PRIx64 ">\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
+        fprintf( index, "<FileHash=0x%016" PRIx64 ">\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
@@ -2799,7 +2799,7 @@ static int parse_index
     }
     /* Parse the index file. */
     int64_t file_size;
-    unsigned file_hash;
+    uint64_t file_hash;
     char format_name[256];
     int active_video_index;
     int active_audio_index;
