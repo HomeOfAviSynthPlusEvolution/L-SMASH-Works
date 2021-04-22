@@ -72,8 +72,8 @@ static void set_frame_properties
 )
 {
     /* Variable Frame Rate is not supported yet. */
-    int64_t duration_num = vi.fps_numerator;
-    int64_t duration_den = vi.fps_denominator;
+    int64_t duration_num = vi.fps_denominator;
+    int64_t duration_den = vi.fps_numerator;
     bool rgb = vi.IsRGB();
     avs_set_frame_properties(av_frame, stream, duration_num, duration_den, rgb, avs_frame, env);
 }

@@ -101,9 +101,9 @@ static int get_composition_duration
 
         if (next_cts <= cts || (next_cts - cts) > INT_MAX)
             return 0;
-        return (int)(next_cts - cts);
+        return static_cast<int>(next_cts - cts);
     }
-no_composition_duration:;
+no_composition_duration:
     uint32_t sample_duration;
     if (libavsmash_video_get_sample_duration(vdhp, coded_sample_number, &sample_duration) < 0)
         return 0;
@@ -122,14 +122,14 @@ static void get_sample_duration
     int sample_duration = get_composition_duration(vdhp, sample_number, vi.num_frames);
     if (sample_duration == 0)
     {
-        *duration_num = vi.fps_numerator;
-        *duration_den = vi.fps_denominator;
+        *duration_num = vi.fps_denominator;
+        *duration_den = vi.fps_numerator;
     }
     else
     {
         uint32_t media_timescale = libavsmash_video_get_media_timescale(vdhp);
-        *duration_num = media_timescale;
-        *duration_den = sample_duration;
+        *duration_num = sample_duration;
+        *duration_den = media_timescale;
     }
 }
 
