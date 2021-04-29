@@ -4,11 +4,21 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+
+    - name: Install automake
+      if: ${{ matrix.os == 'macos-latest' }}
+      run: |
+        brew update
+        brew install automake
 
     - name: Setup Python
       uses: actions/setup-python@v2
@@ -39,6 +49,9 @@ jobs:
       run: |
         git clone https://github.com/l-smash/l-smash --depth 1
         pushd l-smash
+        mv configure configure.old
+        sed 's/-Wl,--version-script,liblsmash.ver//g' configure.old >configure
+        chmod +x configure
         ./configure --disable-static
         make lib -j2
         sudo make install-lib -j2
