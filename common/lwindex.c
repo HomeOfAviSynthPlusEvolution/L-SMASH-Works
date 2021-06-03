@@ -553,7 +553,13 @@ static int decide_video_seek_method
     }
     /* Construct frame info about timestamp. */
     int no_pts_loss = !!(vdhp->lw_seek_flags & SEEK_PTS_BASED);
-    if( (lwhp->raw_demuxer || ((vdhp->lw_seek_flags & SEEK_DTS_BASED) && !(vdhp->lw_seek_flags & SEEK_PTS_BASED)))
+    /* Assumption: Generating pts from dts for those codecs is always safe.
+     * Previously, there is one additional condtion of the form:
+        (lwhp->raw_demuxer || ((vdhp->lw_seek_flags & SEEK_DTS_BASED) && !(vdhp->lw_seek_flags & SEEK_PTS_BASED)))
+     * However, this is unnecessarily strict. Why only interpolate pts for raw mpeg2 video, but
+     * not video from mpeg2 program stream containers?
+     * To avoid breaking too much, let's additionally allow mpeg2 program streams here. */
+    if ( (lwhp->raw_demuxer || !strcmp( lwhp->format_name, "mpeg" ) || ((vdhp->lw_seek_flags & SEEK_DTS_BASED) && !no_pts_loss))
      && (vdhp->codec_id == AV_CODEC_ID_MPEG1VIDEO || vdhp->codec_id == AV_CODEC_ID_MPEG2VIDEO
       || vdhp->codec_id == AV_CODEC_ID_MPEG4    /* MPEG-4 Video (Part2) */
       || vdhp->codec_id == AV_CODEC_ID_VC1        || vdhp->codec_id == AV_CODEC_ID_WMV3
