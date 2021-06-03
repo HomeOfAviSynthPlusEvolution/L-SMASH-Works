@@ -27,8 +27,10 @@
 #  include <stdio.h>
    FILE *lw_win32_fopen( const char *name, const char *mode );
 #  define lw_fopen lw_win32_fopen
+   char *lw_realpath( const char *path, char *resolved );
 #else
 #  define lw_fopen fopen
+#  define lw_realpath realpath
 #endif
 
 #ifdef _WIN32

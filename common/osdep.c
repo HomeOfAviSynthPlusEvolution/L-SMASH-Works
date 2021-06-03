@@ -65,4 +65,21 @@ FILE *lw_win32_fopen( const char *name, const char *mode )
     return fp;
 }
 
+char *lw_realpath( const char *path, char *resolved )
+{
+    wchar_t *wpath = 0, *wresolved = 0;
+    char *ret = 0;
+    if( lw_string_to_wchar( CP_UTF8, path, &wpath ) ) {
+        wresolved = _wfullpath(0, wpath, _MAX_PATH);
+        lw_string_from_wchar( CP_UTF8, wresolved, &ret);
+    } else
+        ret = _fullpath(0, path, _MAX_PATH);
+    if (resolved) {
+        strcpy(resolved, ret);
+        free(ret);
+        return resolved;
+    }
+    return ret;
+}
+
 #endif
