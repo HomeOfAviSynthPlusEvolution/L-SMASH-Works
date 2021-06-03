@@ -335,6 +335,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     /* Set options. */
     lwlibav_option_t opt;
     opt.file_path         = file_path;
+    opt.cache_dir         = NULL; // TODO
     opt.threads           = threads >= 0 ? threads : 0;
     opt.av_sync           = 0;
     opt.no_create_index   = !cache_index;

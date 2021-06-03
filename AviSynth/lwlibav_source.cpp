@@ -364,6 +364,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
+    opt.cache_dir         = NULL; // TODO: add argument?
     opt.threads           = threads >= 0 ? threads : 0;
     opt.av_sync           = 0;
     opt.no_create_index   = no_create_index;

@@ -32,6 +32,7 @@
 typedef struct
 {
     const char *file_path;
+    const char *cache_dir;
     int         threads;
     int         av_sync;
     int         no_create_index;

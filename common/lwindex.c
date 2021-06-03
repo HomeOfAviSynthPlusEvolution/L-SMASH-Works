@@ -1983,6 +1983,51 @@ static uint64_t xxhash_file( const char *file_path, int64_t file_size )
     return hash;
 }
 
+static char *create_lwi_path
+(
+    lwlibav_option_t *opt
+)
+{
+    if ( !opt ->cache_dir ) {
+        char *buf = lw_malloc_zero ( strlen( opt->file_path ) + 5 );
+        sprintf( buf, "%s.lwi", opt->file_path );
+        return buf;
+    }
+
+    const int max_filename = 254; // be conservative
+    const char *dir = opt->cache_dir ? opt->cache_dir : ".";
+    const char *rpath = lw_realpath( opt->file_path, NULL );
+    char *malloced = NULL;
+    if ( rpath )
+        malloced = (char *)rpath;
+    else // realpath on Unix might fail if the file does not exist.
+        rpath = opt->file_path;
+    const char *suffix = ".lwi";
+    int l = strlen( rpath );
+    const int max_elem_size = max_filename - strlen( suffix );
+
+    // shorten path from the front until it fits into max_filename UTF-8 bytes.
+    const char *p = rpath;
+    while (l > max_elem_size && *p != '\0') {
+        if ((*p & 0x80) == 0) l--, p++;
+        else if ((*p & 0xe0) == 0xc0) l-=2, p+=2;
+        else if ((*p & 0xe0) == 0xe0) l-=3, p+=3;
+        else if ((*p & 0xf8) == 0xf0) l-=4, p+=4;
+        assert(l >= 0);
+    }
+
+    char *buf = (char *)lw_malloc_zero( strlen(dir) + 1 + max_filename + 1 );
+    char *q = strcpy(buf, dir) + strlen(dir);
+    *q++ = '/';
+    for (; *p; p++) {
+        if (*p == '/' || *p == '\\' || *p == ':') *q++ = '_';
+        else *q++ = *p;
+    }
+    strcpy(q, suffix);
+    lw_free( malloced );
+    return buf;
+}
+
 static void create_index
 (
     lwlibav_file_handler_t         *lwhp,
@@ -2032,14 +2077,14 @@ static void create_index
         </ExtraDataList>
         </LibavReaderIndexFile>
      */
-    FILE *index;
+    FILE *index = NULL;
     if( opt->index_file_path )
         index = !opt->no_create_index ? lw_fopen( opt->index_file_path, "wb" ) : NULL;
-    else
+    else if ( !opt->no_create_index )
     {
-        char index_path[512] = { 0 };
-        sprintf( index_path, "%s.lwi", lwhp->file_path );
-        index = !opt->no_create_index ? lw_fopen( index_path, "wb" ) : NULL;
+        char *index_path = create_lwi_path( opt );
+        index = lw_fopen( index_path, "wb" );
+        lw_free( index_path );
     }
     if( !index && !opt->no_create_index )
     {
@@ -3360,12 +3405,9 @@ int lwlibav_construct_index
         index = lw_fopen( opt->index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
     else
     {
-        char *index_file_path = (char *)lw_malloc_zero( file_path_length + 5 );
+        char *index_file_path = create_lwi_path ( opt );
         if( !index_file_path )
             return -1;
-        memcpy( index_file_path, opt->file_path, file_path_length );
-        memcpy( index_file_path + file_path_length, ".lwi", strlen( ".lwi" ) );
-        index_file_path[file_path_length + 4] = '\0';
         index = lw_fopen( index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
         free( index_file_path );
     }
