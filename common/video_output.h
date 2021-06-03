@@ -58,6 +58,7 @@ typedef struct
     uint32_t                  cfr_den;
     /* Repeat control */
     int                       repeat_control;
+    int                       repeat_requested;
     int64_t                   repeat_correction_ts;
     uint32_t                  frame_count;
     uint32_t                  frame_order_count;

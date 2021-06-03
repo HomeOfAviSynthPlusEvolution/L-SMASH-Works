@@ -955,6 +955,13 @@ static void create_video_frame_order_list
     lwlibav_option_t               *opt
 )
 {
+    /* Eliminate guesswork: first determine if repeat is requested in the source. */
+    for( uint32_t i = 1; i <= vdhp->frame_count; i++ )
+    {
+        if ( vdhp->frame_list[i].repeat_pict > 1 )
+            vohp->repeat_requested++;
+    }
+
     if( !(vdhp->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
         goto disable_repeat;
     if( opt->vfr2cfr.active )

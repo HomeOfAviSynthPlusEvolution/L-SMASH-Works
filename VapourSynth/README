@@ -151,7 +151,8 @@
                 + format (default : "")
                     Same as 'format' of LibavSMASHSource().
                 + repeat (default : 1)
-                    Reconstruct frames by the flags specified in video stream if set to 1 and usable.
+                    Reconstruct frames by the flags specified in video stream if set to non-zero value.
+                    Additionally, if set to 1, and source file requested repeat and the filter is unable to obey the request, this filter will fail explicitly to eliminate any guesswork.
                     Note that this option is ignored when VFR->CFR conversion is enabled.
                 + dominance : (default : 0)
                     Which field, top or bottom, is displayed first.

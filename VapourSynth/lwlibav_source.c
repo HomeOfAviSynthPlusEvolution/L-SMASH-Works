@@ -391,6 +391,16 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
         set_error_on_init( out, vsapi, "lsmas: failed to construct index." );
         return;
     }
+    /* Eliminate silent failure: if apply_repeat_flag == 1, then fail if repeat is not applied. */
+    if ( opt.apply_repeat_flag == 1 )
+    {
+        if ( vohp->repeat_requested && !vohp->repeat_control )
+        {
+            free_handler( &hp );
+            set_error_on_init( out, vsapi, "lsmas: repeat requested for %d frames by input video, but unable to obey (try repeat=0 to get a VFR clip).", vohp->repeat_requested );
+            return;
+        }
+    }
     /* Get the desired video track. */
     lwlibav_video_set_log_handler( vdhp, &lh );
     if( lwlibav_video_get_desired_track( lwhp->file_path, vdhp, lwhp->threads ) < 0 )
