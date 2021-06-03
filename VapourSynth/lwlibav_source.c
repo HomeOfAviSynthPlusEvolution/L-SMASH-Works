@@ -315,6 +315,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     const char *index_file_path;
     const char *format;
     const char *preferred_decoder_names;
+    const char *cache_dir;
     set_option_int64 ( &stream_index,           -1,    "stream_index",   in, vsapi );
     set_option_int64 ( &threads,                 0,    "threads",        in, vsapi );
     set_option_int64 ( &cache_index,             1,    "cache",          in, vsapi );
@@ -331,11 +332,12 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
+    set_option_string( &cache_dir,               ".",  "cachedir",       in, vsapi );
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
     /* Set options. */
     lwlibav_option_t opt;
     opt.file_path         = file_path;
-    opt.cache_dir         = NULL; // TODO
+    opt.cache_dir         = cache_dir;
     opt.threads           = threads >= 0 ? threads : 0;
     opt.av_sync           = 0;
     opt.no_create_index   = !cache_index;
