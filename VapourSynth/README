@@ -169,4 +169,4 @@
                 + ff_loglevel (default : 0)
                     Same as 'ff_loglevel' of LibavSMASHSource().
                 + cachedir (default : ".")
-                    Create *.lwi file under this directory with names encoding the full path to avoid collisions.
+                    Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior.

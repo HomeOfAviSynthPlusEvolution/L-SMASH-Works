@@ -2001,7 +2001,7 @@ static char *create_lwi_path
     lwlibav_option_t *opt
 )
 {
-    if ( !opt ->cache_dir ) {
+    if ( !opt->cache_dir || opt->cache_dir[0] == '\0' ) {
         char *buf = lw_malloc_zero ( strlen( opt->file_path ) + 5 );
         sprintf( buf, "%s.lwi", opt->file_path );
         return buf;
