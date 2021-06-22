@@ -3,7 +3,7 @@ project('L-SMASH-Works', 'c',
   meson_version: '>=0.48.0'
 )
 
-add_project_arguments('-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', language: 'c')
+add_project_arguments('-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', '-DDEFAULT_CACHEDIR=' + get_option('cachedir'), language: 'c')
 
 sources = [
   'libavsmash_source.c',

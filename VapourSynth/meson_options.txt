@@ -1,0 +1,7 @@
+# -Dcachedir=val set the default value for the cachedir option. Examples:
+# (1) "": store *.lwi along side the source video file (the previous behavior)
+# (2) ".": store *.lwi at the current directory
+# (3) "/tmp": store *.lwi at /tmp
+# (4) getenv("TMPDIR") [Unix] or getenv("TEMP") [Windows]: store *.lwi at system temporary directory.
+# If unspecified, the default value is "".
+option('cachedir', type: 'string', value: '""', description: 'Default value for cachedir parameter, e.g. "" to store along side the source video file; "." to store at current working directory and getenv("TMPDIR") to use temporary directory')

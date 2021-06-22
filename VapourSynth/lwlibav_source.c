@@ -332,7 +332,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
-    set_option_string( &cache_dir,               ".",  "cachedir",       in, vsapi );
+    set_option_string( &cache_dir,               DEFAULT_CACHEDIR,  "cachedir",       in, vsapi );
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
     /* Set options. */
     lwlibav_option_t opt;
