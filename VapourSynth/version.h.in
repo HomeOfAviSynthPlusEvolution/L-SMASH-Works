@@ -1,0 +1,5 @@
+#define VERSION "@VCS_TAG@"
+
+#define STRINGIFY_(x) #x
+#define STRINGIFY(x) STRINGIFY_(x)
+static const char *config_opts = "-Dcachedir=\"" STRINGIFY(DEFAULT_CACHEDIR) "\"";

@@ -29,6 +29,13 @@
 
 #include "lsmashsource.h"
 
+#include "libavutil/ffversion.h"
+#include "libavcodec/version.h"
+#include "libavformat/version.h"
+#include "libavutil/version.h"
+#include "libswscale/version.h"
+#include "version.h"
+
 void set_error
 (
     lw_log_handler_t *lhp,
@@ -64,6 +71,17 @@ void set_error_on_init
 extern void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi );
 extern void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi );
 
+void VS_CC vs_version_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
+{
+    vsapi->propSetData(out, "version", VERSION, -1, paAppend);
+    vsapi->propSetData(out, "config", config_opts, -1, paAppend);
+    vsapi->propSetData(out, "ffmpeg_version", FFMPEG_VERSION, -1, paAppend);
+    vsapi->propSetData(out, "ffmpeg_version", LIBAVCODEC_IDENT, -1, paAppend);
+    vsapi->propSetData(out, "ffmpeg_version", LIBAVFORMAT_IDENT, -1, paAppend);
+    vsapi->propSetData(out, "ffmpeg_version", LIBAVUTIL_IDENT, -1, paAppend);
+    vsapi->propSetData(out, "ffmpeg_version", LIBSWSCALE_IDENT, -1, paAppend);
+}
+
 VS_EXTERNAL_API(void) VapourSynthPluginInit( VSConfigPlugin config_func, VSRegisterFunction register_func, VSPlugin *plugin )
 {
     config_func
@@ -89,6 +107,14 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit( VSConfigPlugin config_func, VSRegis
         "LWLibavSource",
         "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;" COMMON_OPTS "repeat:int:opt;dominance:int:opt;ff_loglevel:int:opt;cachedir:data:opt;",
         vs_lwlibavsource_create,
+        NULL,
+        plugin
+    );
+    register_func
+    (
+        "Version",
+        "",
+        vs_version_create,
         NULL,
         plugin
     );

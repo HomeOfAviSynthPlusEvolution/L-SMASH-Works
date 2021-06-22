@@ -170,3 +170,11 @@
                     Same as 'ff_loglevel' of LibavSMASHSource().
                 + cachedir (default : DEFAULT_CACHEDIR)
                     Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).
+
+        [Version]
+            Version()
+                * This function returns a dict containing the following keys:
+                    + version: lsmas version
+                    + config: extra configuration options used during meson build.
+                    + ffmpeg_version: the ffmpeg version used.
+

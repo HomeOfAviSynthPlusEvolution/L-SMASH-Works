@@ -3,6 +3,14 @@ project('L-SMASH-Works', 'c',
   meson_version: '>=0.48.0'
 )
 
+version_h = declare_dependency(
+    sources: vcs_tag(
+        command: ['git', 'describe', '--tags', '--long'],
+        input: 'version.h.in',
+        output: 'version.h'
+    )
+)
+
 add_project_arguments('-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', '-DDEFAULT_CACHEDIR=' + get_option('cachedir'), language: 'c')
 
 sources = [
@@ -44,7 +52,8 @@ deps = [
   dependency('libavcodec', version: '>=58.91.0'),
   dependency('libavformat', version: '>=58.45.0'),
   dependency('libavutil', version: '>=56.51.0'),
-  dependency('libswscale', version: '>=5.7.0')
+  dependency('libswscale', version: '>=5.7.0'),
+  version_h
 ]
 
 if host_machine.cpu_family().startswith('x86')
