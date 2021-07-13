@@ -178,3 +178,5 @@
                     + config: extra configuration options used during meson build.
                     + ffmpeg_version: the ffmpeg version used.
 
+Known bugs:
+- No support for Intel libmfx hardware accelerated decoding.
