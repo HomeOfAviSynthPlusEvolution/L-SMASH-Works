@@ -232,7 +232,7 @@
             LWLibavVideoSource(string source, int stream_index = -1, int threads = 0, bool cache = true, string cachefile = source + ".lwi",
                                int seek_mode = 0, int seek_threshold = 10, bool dr = false,
                                int fpsnum = 0, int fpsden = 1, bool repeat = true, int dominance = 0,
-                               string format = "", string decoder = "", int prefer_hw = 0, int ff_loglevel = 0)
+                               string format = "", string decoder = "", int prefer_hw = 0, int ff_loglevel = 0, string cachedir = "")
                 * This function uses libavcodec as video decoder and libavformat as demuxer.
             [Arguments]
                 + source
@@ -277,9 +277,11 @@
                     Same as 'prefer_hw' of LSMASHVideoSource().
                 + ff_loglevel (default : 0)
                     Same as 'ff_loglevel' of LSMASHVideoSource().
+                + cachedir (defalut: "")
+                    Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).
         [LWLibavAudioSource]
             LWLibavAudioSource(string source, int stream_index = -1, bool cache = true, string cachefile = source + ".lwi", bool av_sync = false,
-                               string layout = "", int rate = 0, string decoder = "", int ff_loglevel = 0)
+                               string layout = "", int rate = 0, string decoder = "", int ff_loglevel = 0, string cachedir = "")
                 * This function uses libavcodec as audio decoder and libavformat as demuxer.
                 * If audio stream can be coded as lossy, do pre-roll whenever any seek of audio stream occurs.
             [Arguments]
@@ -302,3 +304,5 @@
                     Same as 'decoder' of LSMASHVideoSource().
                 + ff_loglevel (default : 0)
                     Same as 'ff_loglevel' of LSMASHVideoSource().
+                + cachedir (defalut: "")
+                    Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).

@@ -150,6 +150,12 @@ LWLibavVideoSource::LWLibavVideoSource
     free_audio_output_handler();
     if( ret < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to construct index." );
+    /* Eliminate silent failure: if apply_repeat_flag == 1, then fail if repeat is not applied. */
+    if (opt->apply_repeat_flag == 1)
+    {
+        if (vohp->repeat_requested && !vohp->repeat_control)
+            env->ThrowError("LWLibavVideoSource: repeat requested for %d frames by input video, but unable to obey (try repeat=0 to get a VFR clip).");
+    }
     /* Get the desired video track. */
     if( lwlibav_video_get_desired_track( lwh.file_path, vdhp, lwh.threads ) < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to get the video track." );
@@ -361,10 +367,11 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     const char *preferred_decoder_names = args[13].AsString( nullptr );
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
     int         ff_loglevel             = args[15].AsInt( 0 );
+    const char* cdir                    = args[16].AsString();
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
-    opt.cache_dir         = NULL; // TODO: add argument?
+    opt.cache_dir         = cdir;
     opt.threads           = threads >= 0 ? threads : 0;
     opt.av_sync           = 0;
     opt.no_create_index   = no_create_index;
@@ -398,9 +405,11 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     uint32_t    sample_rate             = args[6].AsInt( 0 );
     const char *preferred_decoder_names = args[7].AsString( nullptr );
     int         ff_loglevel             = args[8].AsInt( 0 );
+    const char* cdir                    = args[9].AsString();
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
+    opt.cache_dir         = cdir;
     opt.threads           = 0;
     opt.av_sync           = av_sync;
     opt.no_create_index   = no_create_index;
