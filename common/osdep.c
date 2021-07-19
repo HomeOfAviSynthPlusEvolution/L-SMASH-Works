@@ -74,6 +74,8 @@ char *lw_realpath( const char *path, char *resolved )
         lw_string_from_wchar( CP_UTF8, wresolved, &ret);
     } else
         ret = _fullpath(0, path, _MAX_PATH);
+    lw_freep( &wpath );
+    lw_freep( &wresolved );
     if (resolved) {
         strcpy(resolved, ret);
         free(ret);
