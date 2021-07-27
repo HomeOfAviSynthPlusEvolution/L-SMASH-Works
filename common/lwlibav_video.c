@@ -595,6 +595,30 @@ static void correct_output_delay
     }
 }
 
+/* Our wrapper of av_seek_frame that adjusts timestamp for m2ts (if flag contains
+ * AVSEEK_FLAG_BYTE)
+ *
+ * See https://github.com/AkarinVS/L-SMASH-Works/issues/6 for why we need such
+ * adjustments.
+ */
+static int lavf_seek_frame
+(
+    AVFormatContext                *s,
+    int                             stream_index,
+    int64_t                         timestamp,
+    int                             flags
+)
+{
+    // mpegts read_packet won't skip the TC code field, and if the TC word happens
+    // to contain a 0x47 sync byte, read_packet might be confused and lock to an
+    // incorrect synchronization point.
+    // https://github.com/FFmpeg/FFmpeg/blob/n4.4/libavformat/mpegts.c#L2898
+    if ((flags & AVSEEK_FLAG_BYTE) && strcmp(s->iformat->name, "mpegts") == 0) {
+        timestamp += 4; // skip the TC header
+    }
+    return av_seek_frame(s, stream_index, timestamp, flags);
+}
+
 static uint32_t seek_video
 (
     lwlibav_video_decode_handler_t *vdhp,
@@ -615,8 +639,8 @@ static uint32_t seek_video
         lwlibav_flush_buffers( (lwlibav_decode_handler_t *)vdhp, 0 );
     if( vdhp->error )
         return 0;
-    if( av_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
-        av_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
+    if( lavf_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
+        lavf_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
     int      got_picture  = 0;
     int      output_ready = 0;
     int64_t  rap_pts = AV_NOPTS_VALUE;
@@ -1399,8 +1423,8 @@ int lwlibav_video_find_first_valid_frame
         uint32_t rap_number;
         find_random_accessible_point( vdhp, 1, 0, &rap_number );
         int64_t rap_pos = get_random_accessible_point_position( vdhp, rap_number );
-        if( av_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
-            av_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
+        if( lavf_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
+            lavf_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
     }
     uint32_t decoder_delay = get_decoder_delay( vdhp->ctx );
     uint32_t thread_delay  = decoder_delay - vdhp->ctx->has_b_frames;
@@ -1497,8 +1521,8 @@ int try_decode_video_frame
     AVFormatContext *format_ctx   = vdhp->format;
     int              stream_index = vdhp->stream_index;
     AVCodecContext  *ctx          = vdhp->ctx;
-    if( av_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
-        av_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
+    if( lavf_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
+        lavf_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
     do
     {
         if( frame_number > vdhp->frame_count )
