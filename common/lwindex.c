@@ -2041,7 +2041,7 @@ static char *create_lwi_path
     return buf;
 }
 
-static void create_index
+static int create_index
 (
     lwlibav_file_handler_t         *lwhp,
     lwlibav_video_decode_handler_t *vdhp,
@@ -2058,12 +2058,12 @@ static void create_index
     uint32_t audio_info_count = 1 << 16;
     video_frame_info_t *video_info = (video_frame_info_t *)lw_malloc_zero( video_info_count * sizeof(video_frame_info_t) );
     if( !video_info )
-        return;
+        return -1;
     audio_frame_info_t *audio_info = (audio_frame_info_t *)lw_malloc_zero( audio_info_count * sizeof(audio_frame_info_t) );
     if( !audio_info )
     {
         free( video_info );
-        return;
+        return -1;
     }
     /*
         # Structure of Libav reader index file
@@ -2097,13 +2097,15 @@ static void create_index
     {
         char *index_path = create_lwi_path( opt );
         index = lw_fopen( index_path, "wb" );
+        if ( !index )
+            fprintf(stderr, "lsmas: unable to create index file %s\n", index_path);
         lw_free( index_path );
     }
     if( !index && !opt->no_create_index )
     {
         free( video_info );
         free( audio_info );
-        return;
+        return -1;
     }
     lwhp->format_name  = (char *)format_ctx->iformat->name;
     lwhp->format_flags = format_ctx->iformat->flags;
@@ -2805,7 +2807,7 @@ static void create_index
         indicator->close( php );
     vdhp->format = NULL;
     adhp->format = NULL;
-    return;
+    return 0;
 fail_index:
     cleanup_index_helpers( &indexer, format_ctx );
     free( video_info );
@@ -2816,7 +2818,7 @@ fail_index:
         indicator->close( php );
     vdhp->format = NULL;
     adhp->format = NULL;
-    return;
+    return -1;
 }
 
 static int parse_index
@@ -3463,13 +3465,13 @@ int lwlibav_construct_index
     vdhp->stream_index = -1;
     adhp->stream_index = ( opt->force_audio_index == -2 ) ? -2 : -1;
     /* Create the index file. */
-    create_index( lwhp, vdhp, vohp, adhp, aohp, format_ctx, opt, indicator, php );
+    int err = create_index( lwhp, vdhp, vohp, adhp, aohp, format_ctx, opt, indicator, php );
     /* Close file.
      * By opening file for video and audio separately, indecent work about frame reading can be avoidable. */
     lavf_close_file( &format_ctx );
     vdhp->ctx = NULL;
     adhp->ctx = NULL;
-    return 0;
+    return err;
 fail:
     if( lwhp->file_path )
         lw_freep( &lwhp->file_path );
