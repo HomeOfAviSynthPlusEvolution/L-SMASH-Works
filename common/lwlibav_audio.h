@@ -74,10 +74,10 @@ void lwlibav_audio_set_preferred_decoder_names
     const char                    **preferred_decoder_names
 );
 
-void lwlibav_audio_set_codec_context
+void lwlibav_audio_set_drc
 (
     lwlibav_audio_decode_handler_t *adhp,
-    AVCodecContext                 *ctx
+    double                          drc
 );
 
 /*****************************************************************************

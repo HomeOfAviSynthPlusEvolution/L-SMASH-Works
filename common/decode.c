@@ -116,7 +116,8 @@ int open_decoder
     AVCodecContext         **ctx,
     const AVCodecParameters *codecpar,
     const AVCodec           *codec,
-    const int                thread_count
+    const int                thread_count,
+    const double             drc
 )
 {
     AVCodecContext *c = avcodec_alloc_context3( codec );
@@ -131,6 +132,9 @@ int open_decoder
                                          * For instance, when stream is encoded as AC-3,
                                          * AVCodecContext.codec_id might have been set to AV_CODEC_ID_EAC3
                                          * while AVCodec.id is set to AV_CODEC_ID_AC3. */
+    if ( codec->id == AV_CODEC_ID_AC3
+        && ( ret = av_opt_set_double(c->priv_data, "drc_scale", drc, 0 )) < 0 )
+        goto fail;
     if( !strcmp( codec->name, "libdav1d" )
      && (ret = av_opt_set_int( c->priv_data, "framethreads", 1, 0 )) < 0 )
         goto fail;
@@ -162,13 +166,14 @@ int find_and_open_decoder
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
     const int                prefer_hw_decoder,
-    const int                thread_count
+    const int                thread_count,
+    const double             drc
 )
 {
     const AVCodec *codec = find_decoder( codecpar->codec_id, codecpar, preferred_decoder_names, prefer_hw_decoder );
     if( !codec )
         return -1;
-    return open_decoder( ctx, codecpar, codec, thread_count );
+    return open_decoder( ctx, codecpar, codec, thread_count, drc );
 }
 
 /* An incomplete simulator of the old libavcodec video decoder API

@@ -41,7 +41,8 @@ int open_decoder
     AVCodecContext         **ctx,
     const AVCodecParameters *codecpar,
     const AVCodec           *codec,
-    const int                thread_count
+    const int                thread_count,
+    const double             drc
 );
 
 int find_and_open_decoder
@@ -50,7 +51,8 @@ int find_and_open_decoder
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
     const int                prefer_hw_decoder,
-    const int                thread_count
+    const int                thread_count,
+    const double             drc
 );
 
 int decode_video_packet

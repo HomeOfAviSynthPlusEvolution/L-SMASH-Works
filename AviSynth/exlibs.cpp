@@ -21,15 +21,15 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
-#pragma comment( lib, "Ws2_32.lib" )
+#pragma comment( lib, "bcrypt.lib" )
 #pragma comment( lib, "liblsmash.lib" )
 #pragma comment( lib, "libavutil.a" )
 #pragma comment( lib, "libavcodec.a" )
 #pragma comment( lib, "libavformat.a" )
 #pragma comment( lib, "libswscale.a" )
-#pragma comment( lib, "libavresample.a" )
+#pragma comment( lib, "libdav1d.a" )
 #pragma comment( lib, "libswresample.a" )
 #pragma comment( lib, "zlib.lib" )
-#pragma comment( lib, "mfx.lib" )
+#pragma comment( lib, "xxhash.lib" )
 
 /* Add more external libraries user-self if needed. */

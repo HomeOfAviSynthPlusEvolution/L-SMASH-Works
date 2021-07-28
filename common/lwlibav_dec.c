@@ -42,14 +42,15 @@ extern "C"
  * Note that this function could reallocate AVCodecContext. */
 void lwlibav_flush_buffers
 (
-    lwlibav_decode_handler_t *dhp
+    lwlibav_decode_handler_t *dhp,
+    double                    drc
 )
 {
     const AVCodecParameters *codecpar     = dhp->format->streams[ dhp->stream_index ]->codecpar;
     const AVCodec           *codec        = dhp->ctx->codec;
     void                    *app_specific = dhp->ctx->opaque;
     AVCodecContext *ctx = NULL;
-    if( open_decoder( &ctx, codecpar, codec, dhp->ctx->thread_count ) < 0 )
+    if( open_decoder( &ctx, codecpar, codec, dhp->ctx->thread_count, drc ) < 0 )
     {
         avcodec_flush_buffers( dhp->ctx );
         dhp->error = 1;
@@ -80,7 +81,7 @@ void lwlibav_update_configuration
     {
         /* No need to update the extradata. */
         exhp->current_index = extradata_index;
-        lwlibav_flush_buffers( dhp );
+        lwlibav_flush_buffers( dhp, dhp->drc );
         return;
     }
     char error_string[96] = { 0 };
@@ -122,7 +123,7 @@ void lwlibav_update_configuration
     codecpar->codec_tag = entry->codec_tag;
     /* Open an appropriate decoder.
      * Here, we force single threaded decoding since some decoder doesn't do its proper initialization with multi-threaded decoding. */
-    if( open_decoder( &dhp->ctx, codecpar, codec, 1 ) < 0 )
+    if( open_decoder( &dhp->ctx, codecpar, codec, 1, dhp->drc ) < 0 )
     {
         strcpy( error_string, "Failed to open decoder.\n" );
         goto fail;
@@ -138,7 +139,7 @@ void lwlibav_update_configuration
     dhp->ctx->thread_count = thread_count;
     int width  = dhp->ctx->width;
     int height = dhp->ctx->height;
-    lwlibav_flush_buffers( dhp );   /* Note that dhp->ctx could change here. */
+    lwlibav_flush_buffers( dhp, dhp->drc );   /* Note that dhp->ctx could change here. */
     dhp->ctx->get_buffer2 = exhp->get_buffer ? exhp->get_buffer : avcodec_default_get_buffer2;
     dhp->ctx->opaque      = app_specific;
     /* avcodec_open2() may have changed resolution unexpectedly. */

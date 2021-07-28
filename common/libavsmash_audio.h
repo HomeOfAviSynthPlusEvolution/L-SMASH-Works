@@ -86,6 +86,12 @@ void libavsmash_audio_set_preferred_decoder_names
     const char                       **preferred_decoder_names
 );
 
+void libavsmash_audio_set_drc
+(
+    libavsmash_audio_decode_handler_t* adhp,
+    double                             src
+);
+
 /*****************************************************************************
  * Getters
  *****************************************************************************/

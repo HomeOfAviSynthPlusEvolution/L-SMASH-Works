@@ -146,6 +146,15 @@ void libavsmash_audio_set_preferred_decoder_names
     adhp->config.preferred_decoder_names = preferred_decoder_names;
 }
 
+void libavsmash_audio_set_drc
+(
+    libavsmash_audio_decode_handler_t* adhp,
+    double                             drc
+)
+{
+    adhp->config.drc = drc;
+}
+
 /*****************************************************************************
  * Getters
  *****************************************************************************/
@@ -344,7 +353,7 @@ int libavsmash_audio_initialize_decoder_configuration
 (
     libavsmash_audio_decode_handler_t *adhp,
     AVFormatContext                   *format_ctx,
-    int                                threads
+    int                                threads   
 )
 {
     char error_string[128] = { 0 };

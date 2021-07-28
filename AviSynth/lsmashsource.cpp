@@ -83,7 +83,7 @@ extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3( IScriptEnvironm
     env->AddFunction
     (
         "LWLibavAudioSource",
-        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s[ff_loglevel]i[cachedir]s",
+        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s[ff_loglevel]i[cachedir]s[drc_scale]f",
         CreateLWLibavAudioSource,
         0
     );

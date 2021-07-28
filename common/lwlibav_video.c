@@ -279,7 +279,7 @@ int lwlibav_video_get_desired_track
      || vdhp->frame_count == 0
      || lavf_open_file( &vdhp->format, file_path, &vdhp->lh ) < 0
      || find_and_open_decoder( &ctx, vdhp->format->streams[ vdhp->stream_index ]->codecpar,
-                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads ) < 0 )
+                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads, 0 ) < 0 )
     {
         av_freep( &vdhp->index_entries );
         lw_freep( &vdhp->frame_list );
@@ -612,7 +612,7 @@ static uint32_t seek_video
         /* Update the decoder configuration. */
         lwlibav_update_configuration( (lwlibav_decode_handler_t *)vdhp, rap_number, extradata_index, rap_pos );
     else
-        lwlibav_flush_buffers( (lwlibav_decode_handler_t *)vdhp );
+        lwlibav_flush_buffers( (lwlibav_decode_handler_t *)vdhp, 0 );
     if( vdhp->error )
         return 0;
     if( av_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
