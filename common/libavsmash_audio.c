@@ -353,7 +353,7 @@ int libavsmash_audio_initialize_decoder_configuration
 (
     libavsmash_audio_decode_handler_t *adhp,
     AVFormatContext                   *format_ctx,
-    int                                threads   
+    int                                threads
 )
 {
     char error_string[128] = { 0 };

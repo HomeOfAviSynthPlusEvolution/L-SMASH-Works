@@ -228,6 +228,11 @@
                     Same as 'decoder' of LSMASHVideoSource().
                 + ff_loglevel (default : 0)
                     Same as 'ff_loglevel' of LSMASHVideoSource().
+                + drc_sclae (defalut: 1.0)
+                    Dynamic Range Scale Factor. The factor to apply to dynamic range values from the AC-3 stream. This factor is applied exponentially.
+                        - 0.0 : DRC disabled. Produces full range audio.
+                        - 0.0 < drc_scale <= 1.0 : DRC enabled. Applies a fraction of the stream DRC value. Audio reproduction is between full range and full compression.
+                        - > 1.0 : DRC enabled. Applies drc_scale asymmetrically. Loud sounds are fully compressed. Soft sounds are enhanced.
         [LWLibavVideoSource]
             LWLibavVideoSource(string source, int stream_index = -1, int threads = 0, bool cache = true, string cachefile = source + ".lwi",
                                int seek_mode = 0, int seek_threshold = 10, bool dr = false,

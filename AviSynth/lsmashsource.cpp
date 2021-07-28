@@ -67,7 +67,7 @@ extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3( IScriptEnvironm
     env->AddFunction
     (
         "LSMASHAudioSource",
-        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s[ff_loglevel]i",
+        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s[ff_loglevel]i[drc_scale]f",
         CreateLSMASHAudioSource,
         0
     );

@@ -438,6 +438,7 @@ LSMASHAudioSource::LSMASHAudioSource
     uint64_t            channel_layout,
     int                 sample_rate,
     const char         *preferred_decoder_names,
+    double              drc,
     IScriptEnvironment *env
 ) : LSMASHAudioSource{}
 {
@@ -446,6 +447,7 @@ LSMASHAudioSource::LSMASHAudioSource
     libavsmash_audio_output_handler_t *aohp = this->aohp.get();
     set_preferred_decoder_names( preferred_decoder_names );
     libavsmash_audio_set_preferred_decoder_names( adhp, tokenize_preferred_decoder_names() );
+    libavsmash_audio_set_drc( adhp, drc );
     get_audio_track( source, track_number, env );
     prepare_audio_decoding( adhp, aohp, format_ctx.get(), channel_layout, sample_rate, skip_priming, vi, env );
     lsmash_discard_boxes( libavsmash_audio_get_root( adhp ) );
@@ -524,8 +526,9 @@ AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScrip
     int         sample_rate             = args[4].AsInt( 0 );
     const char *preferred_decoder_names = args[5].AsString( nullptr );
     int         ff_loglevel             = args[6].AsInt( 0 );
+    double      drc                     = args[7].AsFloatf( 1.0f );
     uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
     set_av_log_level( ff_loglevel );
     return new LSMASHAudioSource( source, track_number, skip_priming,
-                                  channel_layout, sample_rate, preferred_decoder_names, env );
+                                  channel_layout, sample_rate, preferred_decoder_names, drc, env );
 }
