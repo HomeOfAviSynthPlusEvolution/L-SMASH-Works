@@ -306,3 +306,8 @@
                     Same as 'ff_loglevel' of LSMASHVideoSource().
                 + cachedir (defalut: "")
                     Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).
+                + drc_sclae (defalut: 1.0)
+                    Dynamic Range Scale Factor. The factor to apply to dynamic range values from the AC-3 stream. This factor is applied exponentially.
+                        - 0.0 : DRC disabled. Produces full range audio.
+                        - 0.0 < drc_scale <= 1.0 : DRC enabled. Applies a fraction of the stream DRC value. Audio reproduction is between full range and full compression.
+                        - > 1.0 : DRC enabled. Applies drc_scale asymmetrically. Loud sounds are fully compressed. Soft sounds are enhanced.
