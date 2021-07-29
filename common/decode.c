@@ -133,10 +133,13 @@ int open_decoder
                                          * AVCodecContext.codec_id might have been set to AV_CODEC_ID_EAC3
                                          * while AVCodec.id is set to AV_CODEC_ID_AC3. */
     if ( codec->id == AV_CODEC_ID_AC3
-        && ( ret = av_opt_set_double(c->priv_data, "drc_scale", drc, 0 )) < 0 )
+        && ( ret = av_opt_set_double( c->priv_data, "drc_scale", drc, 0 )) < 0 )
+        goto fail;
+    if ( codec->id == AV_CODEC_ID_DNXHD
+        && (ret = av_opt_set_int( c->priv_data, "thread_type", 2, 0 )) < 0)
         goto fail;
     if( !strcmp( codec->name, "libdav1d" )
-     && (ret = av_opt_set_int( c->priv_data, "framethreads", 1, 0 )) < 0 )
+     && ( ret = av_opt_set_int( c->priv_data, "framethreads", 1, 0 )) < 0 )
         goto fail;
     else if( !strcmp( codec->name, "vp9" )
           && thread_count != 1
