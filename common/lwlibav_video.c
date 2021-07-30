@@ -614,7 +614,27 @@ static int lavf_seek_frame
     // incorrect synchronization point.
     // https://github.com/FFmpeg/FFmpeg/blob/n4.4/libavformat/mpegts.c#L2898
     if ((flags & AVSEEK_FLAG_BYTE) && strcmp(s->iformat->name, "mpegts") == 0) {
-        timestamp += 4; // skip the TC header
+        // However, not all mpegts files are BD, e.g. TV ts does not have such a 4B
+        // TP_extra_header.
+        //
+        // There is no easy way to differentiate between the two (using file extension
+        // will be too fragile.) Fortunately, the top 2-bit of TP_extra_header is
+        // the copy permission indication, which all sources seem to set to 0, so
+        // the first byte of TP_extra_header should not be 0x47, and we can use
+        // this to detect these two cases.
+        //
+        // We do the offset compensation only when the 1st byte is not 0x47 and the
+        // 5th byte is 0x47.
+        // This test should not affect the performance much as av_seek_frame is going
+        // to read at least 188 bytes from position timestamp anyway.
+        unsigned char buf[5];
+        const char sync_byte = 0x47;
+        avio_seek(s->pb, timestamp, SEEK_SET);
+        avio_read(s->pb, buf, sizeof buf);
+        if (buf[0] != sync_byte && buf[4] == sync_byte)
+            timestamp += 4; // skip the TC header
+        // There is no need to restore file pointer as we have set AVSEEK_FLAG_BYTE and
+        // so we are going to seek to timestamp anyway.
     }
     return av_seek_frame(s, stream_index, timestamp, flags);
 }
