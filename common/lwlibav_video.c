@@ -639,8 +639,8 @@ static uint32_t seek_video
         lwlibav_flush_buffers( (lwlibav_decode_handler_t *)vdhp, 0 );
     if( vdhp->error )
         return 0;
-    if( av_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
-        av_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
+    if( lavf_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
+        lavf_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
     int      got_picture  = 0;
     int      output_ready = 0;
     int64_t  rap_pts = AV_NOPTS_VALUE;
@@ -650,21 +650,6 @@ static uint32_t seek_video
     uint32_t goal = presentation_picture_number + decoder_delay;
     exhp->delay_count     = 0;
     vdhp->last_half_frame = 0;
-    if (strcmp(vdhp->format->iformat->name, "mpegts") == 0)
-    {
-        uint32_t current_tmp = rap_number;
-        int64_t pkt_pts_tmp;
-        if (decode_video_picture(vdhp, frame, &got_picture, &pkt_pts_tmp, &current_tmp, goal, rap_number) == -2)
-        {
-            if (lavf_seek_frame(vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags) < 0)
-                lavf_seek_frame(vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY);
-        }
-        else
-        {
-            if (av_seek_frame(vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags) < 0)
-                av_seek_frame(vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY);
-        }
-    }
     for( current = rap_number; current <= goal; current++ )
     {
         int64_t pkt_pts;
@@ -1536,8 +1521,8 @@ int try_decode_video_frame
     AVFormatContext *format_ctx   = vdhp->format;
     int              stream_index = vdhp->stream_index;
     AVCodecContext  *ctx          = vdhp->ctx;
-    if( av_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
-        av_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
+    if( lavf_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
+        lavf_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
     do
     {
         if( frame_number > vdhp->frame_count )
