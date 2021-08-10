@@ -67,6 +67,7 @@ public:
         enum AVPixelFormat  pixel_format,
         const char         *preferred_decoder_names,
         int                 prefer_hw_decoder,
+        bool                progress,
         IScriptEnvironment *env
     );
     ~LWLibavVideoSource();
@@ -88,6 +89,7 @@ public:
         int                 sample_rate,
         const char         *preferred_decoder_names,
         double              drc,
+        bool                progress,
         IScriptEnvironment *env
     );
     ~LWLibavAudioSource();

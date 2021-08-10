@@ -115,6 +115,7 @@ LWLibavVideoSource::LWLibavVideoSource
     enum AVPixelFormat  pixel_format,
     const char         *preferred_decoder_names,
     int                 prefer_hw_decoder,
+    bool                progress,
     IScriptEnvironment *env
 ) : LWLibavVideoSource{}
 {
@@ -142,8 +143,8 @@ LWLibavVideoSource::LWLibavVideoSource
     /* Set up progress indicator. */
     progress_indicator_t indicator;
     indicator.open   = NULL;
-    indicator.update = update_indicator;
-    indicator.close  = close_indicator;
+    indicator.update = (progress) ? update_indicator : NULL;
+    indicator.close  = (progress) ? close_indicator : NULL;
     /* Construct index. */
     int ret = lwlibav_construct_index( &lwh, vdhp, vohp, adhp.get(), aohp.get(), lhp, opt, &indicator, NULL );
     free_audio_decode_handler();
@@ -265,6 +266,7 @@ LWLibavAudioSource::LWLibavAudioSource
     int                 sample_rate,
     const char         *preferred_decoder_names,
     double              drc,
+    bool                progress,
     IScriptEnvironment *env
 ) : LWLibavAudioSource{}
 {
@@ -283,8 +285,8 @@ LWLibavAudioSource::LWLibavAudioSource
     /* Set up progress indicator. */
     progress_indicator_t indicator;
     indicator.open   = NULL;
-    indicator.update = update_indicator;
-    indicator.close  = close_indicator;
+    indicator.update = (progress) ? update_indicator : NULL;
+    indicator.close  = (progress) ? close_indicator : NULL;
     /* Construct index. */
     if( lwlibav_construct_index( &lwh, vdhp.get(), vohp.get(), adhp, aohp, lhp, opt, &indicator, NULL ) < 0 )
         env->ThrowError( "LWLibavAudioSource: failed to get construct index." );
@@ -370,6 +372,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
     int         ff_loglevel             = args[15].AsInt( 0 );
     const char* cdir                    = args[16].AsString();
+    const bool  progress                = args[17].AsBool(true);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -393,7 +396,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 3 );
     set_av_log_level( ff_loglevel );
     return new LWLibavVideoSource( &opt, seek_mode, forward_seek_threshold,
-                                   direct_rendering, pixel_format, preferred_decoder_names, prefer_hw_decoder, env );
+                                   direct_rendering, pixel_format, preferred_decoder_names, prefer_hw_decoder, progress, env );
 }
 
 AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )
@@ -409,6 +412,7 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     int         ff_loglevel             = args[8].AsInt( 0 );
     const char* cdir                    = args[9].AsString();
     double      drc                     = args[10].AsFloatf( 1.0f );
+    const bool  progress                = args[11].AsBool(true);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -428,5 +432,5 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.vfr2cfr.fps_den   = 0;
     uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
     set_av_log_level( ff_loglevel );
-    return new LWLibavAudioSource( &opt, channel_layout, sample_rate, preferred_decoder_names, drc, env );
+    return new LWLibavAudioSource( &opt, channel_layout, sample_rate, preferred_decoder_names, drc, progress, env );
 }

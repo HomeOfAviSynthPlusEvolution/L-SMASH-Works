@@ -75,7 +75,7 @@ extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3( IScriptEnvironm
     env->AddFunction
     (
         "LWLibavVideoSource",
-        "[source]s[stream_index]i[threads]i[cache]b[cachefile]s[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[format]s[decoder]s[prefer_hw]i[ff_loglevel]i[cachedir]s",
+        "[source]s[stream_index]i[threads]i[cache]b[cachefile]s[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i[format]s[decoder]s[prefer_hw]i[ff_loglevel]i[cachedir]s[indexingpr]b",
         CreateLWLibavVideoSource,
         0
     );
@@ -83,7 +83,7 @@ extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3( IScriptEnvironm
     env->AddFunction
     (
         "LWLibavAudioSource",
-        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s[ff_loglevel]i[cachedir]s[drc_scale]f",
+        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s[ff_loglevel]i[cachedir]s[drc_scale]f[indexingpr]b",
         CreateLWLibavAudioSource,
         0
     );

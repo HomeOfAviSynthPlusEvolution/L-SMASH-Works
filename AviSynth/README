@@ -284,6 +284,8 @@
                     Same as 'ff_loglevel' of LSMASHVideoSource().
                 + cachedir (defalut: "")
                     Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).
+                + indexingpr (default: true)
+                    Whether to print indexing progress to stderr.
         [LWLibavAudioSource]
             LWLibavAudioSource(string source, int stream_index = -1, bool cache = true, string cachefile = source + ".lwi", bool av_sync = false,
                                string layout = "", int rate = 0, string decoder = "", int ff_loglevel = 0, string cachedir = "")
@@ -316,3 +318,5 @@
                         - 0.0 : DRC disabled. Produces full range audio.
                         - 0.0 < drc_scale <= 1.0 : DRC enabled. Applies a fraction of the stream DRC value. Audio reproduction is between full range and full compression.
                         - > 1.0 : DRC enabled. Applies drc_scale asymmetrically. Loud sounds are fully compressed. Soft sounds are enhanced.
+                + indexingpr (default: true)
+                    Whether to print indexing progress to stderr.
