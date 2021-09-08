@@ -968,10 +968,16 @@ int vs_setup_video_rendering
 {
     vs_video_output_handler_t *vs_vohp = (vs_video_output_handler_t *)lw_vohp->private_handler;
     const VSAPI *vsapi = vs_vohp->vsapi;
-    enum AVPixelFormat output_pixel_format;
+    enum AVPixelFormat output_pixel_format, alpha_pixel_format;
     if( determine_colorspace_conversion( vs_vohp, 0, ctx->pix_fmt, &output_pixel_format ) )
     {
         set_error_on_init( out, vsapi, "lsmas: %s is not supported", av_get_pix_fmt_name( ctx->pix_fmt ) );
+        return -1;
+    }
+    if( av_pix_fmt_desc_get( ctx->pix_fmt )->flags & AV_PIX_FMT_FLAG_ALPHA &&
+        determine_colorspace_conversion( vs_vohp, 1, ctx->pix_fmt, &alpha_pixel_format ) )
+    {
+        set_error_on_init( out, vsapi, "lsmas: %s's alpha format is not supported", av_get_pix_fmt_name( ctx->pix_fmt ) );
         return -1;
     }
     vs_vohp->direct_rendering &= vs_check_dr_available( ctx, ctx->pix_fmt );
