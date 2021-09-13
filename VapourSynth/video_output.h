@@ -23,6 +23,9 @@
 #include "../common/video_output.h"
 
 typedef int component_reorder_t;
+enum { component_reorder_bigendian = 0x80 };
+#define component_reorder_get_order(order) ((order) & ~component_reorder_bigendian)
+#define component_reorder_is_bigendian(order) (!!((order) & component_reorder_bigendian))
 
 typedef void func_make_black_background
 (

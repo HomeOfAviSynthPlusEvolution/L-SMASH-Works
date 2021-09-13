@@ -312,13 +312,14 @@ static void make_frame_planar_alpha16
     int vs_frame_linesize = vsapi->getStride( vs_frame, 0 );
     int vs_pixel_offset   = 0;
     int av_pixel_offset   = 0;
+    const int be = component_reorder_is_bigendian(component_reorder[3]);
     for( int i = 0; i < av_picture->height; i++ )
     {
-        uint16_t *av_pixel = (uint16_t *)(av_picture->data[0] + av_pixel_offset) + component_reorder[3];
+        uint16_t *av_pixel = (uint16_t *)(av_picture->data[0] + av_pixel_offset) + component_reorder_get_order(component_reorder[3]);
         uint16_t *vs_pixel = (uint16_t *)(vs_frame_data + vs_pixel_offset);
         for( int j = 0; j < av_picture->width; j++ )
         {
-            *(vs_pixel++) = *av_pixel;
+            *(vs_pixel++) = be ? ((*av_pixel >> 8) | ((*av_pixel & 0xff) << 8)) : *av_pixel;
             av_pixel += 4;
         }
         av_pixel_offset += av_picture->linesize[0];
@@ -479,7 +480,7 @@ static const component_reorder_t *get_component_reorder( enum AVPixelFormat av_o
             { AV_PIX_FMT_BGR48LE,      {  2,  1,  0, -1 } },
             { AV_PIX_FMT_RGBA64LE,     {  0,  1,  2,  3 } },
             { AV_PIX_FMT_BGRA64LE,     {  2,  1,  0,  3 } },
-            { AV_PIX_FMT_RGBA64BE,     {  0,  1,  2,  3 } },
+            { AV_PIX_FMT_RGBA64BE,     {  0,  1,  2,  3 | component_reorder_bigendian } },
             { AV_PIX_FMT_NONE,         {  0,  1,  2,  3 } }
         };
     int i = 0;
