@@ -259,7 +259,21 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->setFilterError( "lsmas: failed to output a video frame.", frame_ctx );
         return NULL;
     }
-    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, vsapi );
+    AVCodecContext *ctx = lwlibav_video_get_codec_context( vdhp );
+    if ( output_index == 0 && ( av_pix_fmt_desc_get( ctx->pix_fmt )->flags & AV_PIX_FMT_FLAG_ALPHA ) )
+    {
+        /* api4 compat: save alpha clip into the _Alpha property */
+        VSFrameRef *vs_frame2 = make_frame( vohp, av_frame, 1 );
+        if( !vs_frame2 )
+        {
+            vsapi->setFilterError( "lsmas: failed to output an alpha video frame.", frame_ctx );
+            return NULL;
+        }
+        VSMap *props = vsapi->getFramePropsRW( vs_frame );
+        vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
+        vsapi->freeFrame( vs_frame2 );
+    }
+    set_frame_properties( n, vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, vsapi );
     return vs_frame;
 }
 
