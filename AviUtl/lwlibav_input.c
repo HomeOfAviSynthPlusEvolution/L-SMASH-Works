@@ -200,6 +200,7 @@ static void *open_file( char *file_path, reader_option_t *opt )
     /* Set options. */
     lwlibav_option_t lwlibav_opt;
     lwlibav_opt.file_path         = file_path;
+    lwlibav_opt.cache_dir         = NULL;
     lwlibav_opt.threads           = opt->threads;
     lwlibav_opt.av_sync           = opt->av_sync;
     lwlibav_opt.no_create_index   = opt->no_create_index;
