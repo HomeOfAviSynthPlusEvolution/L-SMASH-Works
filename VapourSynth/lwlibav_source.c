@@ -269,7 +269,9 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
             vsapi->setFilterError( "lsmas: failed to output an alpha video frame.", frame_ctx );
             return NULL;
         }
-        VSMap *props = vsapi->getFramePropsRW( vs_frame );
+        VSMap *props = vsapi->getFramePropsRW( vs_frame2 );
+        vsapi->propSetFrame( props, "_ColorRange", 0, paReplace ); // alpha clip always full range
+        props = vsapi->getFramePropsRW( vs_frame );
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
     }
