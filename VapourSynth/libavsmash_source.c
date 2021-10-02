@@ -283,7 +283,7 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
             return NULL;
         }
         VSMap *props = vsapi->getFramePropsRW( vs_frame2 );
-        vsapi->propSetFrame( props, "_ColorRange", 0, paReplace ); // alpha clip always full range
+        vsapi->propSetInt( props, "_ColorRange", 0, paReplace ); // alpha clip always full range
         props = vsapi->getFramePropsRW( vs_frame );
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
