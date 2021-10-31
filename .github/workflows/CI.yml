@@ -1,21 +1,29 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master-optimize-znver3
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+  avisynth-build:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout
       uses: actions/checkout@v2
 
+    - name: Install gcc10 and required packages
+      run: |
+        sudo add-apt-repository 'deb https://mirrors.kernel.org/ubuntu hirsute main universe'
+        sudo apt-get update
+        sudo apt install nasm mingw-w64 meson ninja-build pkg-config p7zip-full
+        sudo apt install gcc g++
+
+    - name: Create symbolic link
+      run: sudo ln -s /usr/bin/pkg-config /usr/bin/x86_64-w64-mingw32-pkg-config
+
     - name: Install automake
-      if: ${{ matrix.os == 'macos-latest' }}
       run: |
         brew update
         brew install automake
@@ -35,40 +43,144 @@ jobs:
       with:
         version: 1.10.2
 
+    - name: Install zlib
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
+      run: |
+        git clone https://github.com/madler/zlib.git
+        pushd zlib
+        ./configure --static
+        make -j$(nproc)
+        sudo make install
+        popd
+
+    - name: Install dav1d
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
+      run: |
+        git clone https://code.videolan.org/videolan/dav1d.git
+        pushd dav1d
+        git checkout refs/tags/0.9.2
+        mkdir build && cd build
+        meson --cross-file=../package/crossfiles/x86_64-w64-mingw32.meson --buildtype release --default-library=static ..
+        ninja
+        sudo ninja install
+        popd
+
+    - name: Install libvpx
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
+      run: |
+        git clone https://github.com/webmproject/libvpx.git --depth 1
+        mkdir libvpx/builds && pushd libvpx/builds
+        ../configure --target=x86_64-win64-gcc --enable-vp9_highbitdepth --disable-docs --disable-tools --disable-examples --disable-webm_io --disable-vp8-encoder --disable-vp9-encoder --disable-avx512
+        make -j$(nproc)
+        sudo make install
+        popd
+
+    - name: Install nv-codec-headers
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
+      run: |
+        git clone https://github.com/FFmpeg/nv-codec-headers.git --depth 1
+        pushd nv-codec-headers
+        sudo make install
+        popd
+
+    - name: Install mfx_dispatch
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
+      run: |
+        git clone https://github.com/lu-zero/mfx_dispatch.git
+        pushd mfx_dispatch
+        git checkout refs/tags/1.35
+        autoreconf -i
+        ./configure --host=x86_64-w64-mingw32
+        make -j$(nproc)
+        sudo make install
+        popd
+
+
     - name: Install FFmpeg
+      shell: bash
+      env:
+        CFLAGS: -O2 -march=znver3 -fno-tree-vectorize
+        CXXFLAGS: -O2 -march=znver3 -fno-tree-vectorize
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
       run: |
         git clone https://github.com/FFmpeg/FFmpeg --branch release/4.4 --depth 1
         pushd FFmpeg
-        ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-all --disable-autodetect --enable-avcodec --enable-avformat --enable-swresample --enable-swscale --disable-asm --disable-debug
-        make -j2
-        sudo make install -j2
+        ./configure --arch=x86_64 --cpu=x86_64 --target-os=mingw64 --cross-prefix=x86_64-w64-mingw32- --enable-gpl --enable-version3 --disable-all --disable-autodetect --disable-asm --disable-debug --enable-avcodec --enable-avformat --enable-swresample --enable-swscale --enable-avcodec --enable-libdav1d --enable-libvpx --enable-libmfx --extra-libs="-lpthread"
+        cat ffbuild/config.log
+        make -j$(nproc)
+        sudo make install -j$(nproc)
         popd
-        rm -rf FFmpeg
+        #rm -rf FFmpeg
 
     - name: Install l-smash
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
       run: |
         git clone https://github.com/l-smash/l-smash --depth 1
         pushd l-smash
         mv configure configure.old
         sed 's/-Wl,--version-script,liblsmash.ver//g' configure.old >configure
         chmod +x configure
-        ./configure --disable-static
-        make lib -j2
-        sudo make install-lib -j2
+        ./configure --target-os=mingw64 --cross-prefix=x86_64-w64-mingw32-
+        make lib -j$(nproc)
+        sudo make install-lib -j$(nproc)
         popd
-        rm -rf l-smash
+        #rm -rf l-smash
 
     - name: Install AviSynth
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
       run: |
         git clone https://github.com/AviSynth/AviSynthPlus --depth 1 avisynth-build
         pushd avisynth-build
-        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_PLUGINS=OFF -DENABLE_INTEL_SIMD=OFF
-        cmake --build build -j 2
+        #cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_PLUGINS=OFF -DENABLE_INTEL_SIMD=OFF
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_PLUGINS=OFF -DENABLE_INTEL_SIMD=OFF -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_PROCESSOR=x64 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres
+        cmake --build build -j$(nproc)
         sudo cmake --install build
         popd
-        rm -rf avisynth-build
+        #rm -rf avisynth-build
 
     - name: Build AviSynth plugin
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
       run: |
         pushd AviSynth
         meson build
@@ -76,30 +188,92 @@ jobs:
         popd
 
     - name: Install zimg
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
       run: |
         git clone https://github.com/sekrit-twc/zimg --branch v3.0 --depth 1
         pushd zimg
         ./autogen.sh
-        ./configure --disable-static --disable-simd
-        make -j2
-        sudo make install -j2
+        ./configure --arch=x86_64 --cpu=x86_64 --target-os=mingw64 --cross-prefix=x86_64-w64-mingw32- #--disable-static --disable-simd
+        make -j$(nproc)
+        sudo make install -j$(nproc)
         popd
-        rm -rf zimg
+        #rm -rf zimg
 
     - name: Install VapourSynth
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
       run: |
         git clone https://github.com/vapoursynth/vapoursynth --depth 1 vapoursynth-build
         pushd vapoursynth-build
         ./autogen.sh
-        ./configure --disable-static --disable-x86-asm --disable-vsscript --disable-vspipe --disable-python-module --disable-plugins
-        make -j2
-        sudo make install -j2
+        ./configure --arch=x86_64 --cpu=x86_64 --target-os=mingw64 --cross-prefix=x86_64-w64-mingw32- --disable-x86-asm --disable-vsscript --disable-vspipe --disable-python-module --disable-plugins #--disable-static
+        make -j$(nproc)
+        sudo make install -j$(nproc)
         popd
-        rm -rf vapoursynth-build
+        #rm -rf vapoursynth-build
 
     - name: Build VapourSynth plugin
+      shell: bash
+      env:
+        CFLAGS: -O3 -march=znver3
+        CXXFLAGS: -O3 -march=znver3
+        CROSS_PREFIX: x86_64-w64-mingw32-
+        CROSS: x86_64-w64-mingw32-
       run: |
         pushd VapourSynth
         meson build
         ninja -C build
         popd
+
+    - name: archive
+      run: |
+        # testing
+        7za a test-all.7z .
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: L-SMASH-Works
+        path: test-all.7z
+
+
+  create_release:
+    name: Create release
+    needs: avisynth-build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - uses: actions/download-artifact@v2
+      with:
+        name: L-SMASH-Works
+        path: artifacts
+
+    - name: Get Date
+      id: get_date
+      run: |
+        DATE_TIME="$(TZ=Asia/Tokyo date +'%Y-%m-%d-%H-%M-%S')"
+        echo "::set-output name=DATE_TIME::${DATE_TIME}"
+
+    - name: Create a Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        RELEASE_NAME=Build-${{ steps.get_date.outputs.DATE_TIME }}
+        TAG_NAME=build-${{ steps.get_date.outputs.DATE_TIME }}
+        assets=()
+        for asset in ${{ github.workspace }}/artifacts/*.zip; do
+          assets+=("-a" "$asset")
+        done
+        hub release create "${assets[@]}" -m "$RELEASE_NAME" "$TAG_NAME"
+
