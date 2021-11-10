@@ -404,7 +404,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     if( ret < 0 )
     {
         free_handler( &hp );
-        set_error_on_init( out, vsapi, "lsmas: failed to construct index." );
+        set_error_on_init( out, vsapi, "lsmas: failed to construct index for %s.", opt.file_path );
         return;
     }
     /* Eliminate silent failure: if apply_repeat_flag == 1, then fail if repeat is not applied. */

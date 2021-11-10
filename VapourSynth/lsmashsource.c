@@ -60,10 +60,10 @@ void set_error_on_init
     ...
 )
 {
-    char message[256];
+    char message[4096];
     va_list args;
     va_start( args, format );
-    vsprintf( message, format, args );
+    vsnprintf( message, sizeof message, format, args );
     va_end( args );
     vsapi->setError( out, message );
 }
