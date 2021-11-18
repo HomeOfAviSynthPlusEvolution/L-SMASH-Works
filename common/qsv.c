@@ -29,6 +29,7 @@ extern "C"
 {
 #endif  /* __cplusplus */
 #include <libavcodec/avcodec.h>
+#include <libavcodec/bsf.h>
 #include <libavutil/mem.h>
 #ifdef __cplusplus
 }
