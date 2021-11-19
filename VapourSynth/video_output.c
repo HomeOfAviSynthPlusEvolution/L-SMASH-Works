@@ -1161,4 +1161,13 @@ void vs_set_frame_properties
             }
         }
     }
+
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 9, 100)
+    // Dobly RPU
+    const AVFrameSideData *rpu_side_data = av_frame_get_side_data( av_frame, AV_FRAME_DATA_DOVI_RPU_BUFFER );
+    if ( rpu_side_data && rpu_side_data->size > 0 )
+    {
+        vsapi->propSetData( props, "DolbyVisionRPU", (const char *)rpu_side_data->data, rpu_side_data->size, paReplace );
+    }
+#endif
 }
