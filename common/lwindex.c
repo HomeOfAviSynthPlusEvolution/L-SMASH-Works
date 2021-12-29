@@ -2083,10 +2083,10 @@ static int create_index
 {
     uint32_t video_info_count = 1 << 16;
     uint32_t audio_info_count = 1 << 16;
-    video_frame_info_t *video_info = (video_frame_info_t *)lw_malloc_zero( video_info_count * sizeof(video_frame_info_t) );
+    video_frame_info_t *video_info = (video_frame_info_t *)malloc( video_info_count * sizeof(video_frame_info_t) );
     if( !video_info )
         return -1;
-    audio_frame_info_t *audio_info = (audio_frame_info_t *)lw_malloc_zero( audio_info_count * sizeof(audio_frame_info_t) );
+    audio_frame_info_t *audio_info = (audio_frame_info_t *)malloc( audio_info_count * sizeof(audio_frame_info_t) );
     if( !audio_info )
     {
         free( video_info );
@@ -2369,6 +2369,7 @@ static int create_index
             {
                 ++video_sample_count;
                 video_frame_info_t *info = &video_info[video_sample_count];
+                memset( info, 0, sizeof(video_frame_info_t) );
                 info->pts             = pkt.pts;
                 info->dts             = pkt.dts;
                 info->file_offset     = pkt.pos;
@@ -2481,6 +2482,7 @@ static int create_index
                     /* Set up audio frame info. */
                     ++audio_sample_count;
                     audio_frame_info_t *info = &audio_info[audio_sample_count];
+                    memset( info, 0, sizeof(audio_frame_info_t) );
                     info->pts             = pkt.pts;
                     info->dts             = pkt.dts;
                     info->file_offset     = pkt.pos;
@@ -2953,13 +2955,13 @@ static int parse_index
     lwindex_stream_info_t *stream_info = NULL;
     if( vdhp->stream_index >= 0 )
     {
-        video_info = (video_frame_info_t *)lw_malloc_zero( video_info_count * sizeof(video_frame_info_t) );
+        video_info = (video_frame_info_t *)malloc( video_info_count * sizeof(video_frame_info_t) );
         if( !video_info )
             goto fail_parsing;
     }
     if( adhp->stream_index >= 0 )
     {
-        audio_info = (audio_frame_info_t *)lw_malloc_zero( audio_info_count * sizeof(audio_frame_info_t) );
+        audio_info = (audio_frame_info_t *)malloc( audio_info_count * sizeof(audio_frame_info_t) );
         if( !audio_info )
             goto fail_parsing;
     }
@@ -3036,7 +3038,7 @@ static int parse_index
                 if( vdhp->stream_index == -1 )
                 {
                     vdhp->stream_index = stream_index;
-                    video_info = (video_frame_info_t *)lw_malloc_zero( video_info_count * sizeof(video_frame_info_t) );
+                    video_info = (video_frame_info_t *)malloc( video_info_count * sizeof(video_frame_info_t) );
                     if( !video_info )
                         goto fail_parsing;
                 }
@@ -3084,6 +3086,7 @@ static int parse_index
                     }
                     ++video_sample_count;
                     video_frame_info_t *info = &video_info[video_sample_count];
+                    memset( info, 0, sizeof(video_frame_info_t) );
                     info->pts             = pts;
                     info->dts             = dts;
                     info->file_offset     = pos;
@@ -3157,6 +3160,7 @@ static int parse_index
                     aohp->output_bits_per_sample = MAX( aohp->output_bits_per_sample, bits_per_sample );
                     ++audio_sample_count;
                     audio_frame_info_t *info = &audio_info[audio_sample_count];
+                    memset( info, 0, sizeof(audio_frame_info_t) );
                     info->pts             = pts;
                     info->dts             = dts;
                     info->file_offset     = pos;
