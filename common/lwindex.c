@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef _WIN32
+// GNU SOURCE macro for realpath
+#  define _GNU_SOURCE
+#endif
+
 #include "cpp_compat.h"
 
 #ifdef __cplusplus
