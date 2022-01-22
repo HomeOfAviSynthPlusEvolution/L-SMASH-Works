@@ -371,7 +371,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     const char *preferred_decoder_names = args[13].AsString( nullptr );
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
     int         ff_loglevel             = args[15].AsInt( 0 );
-    const char* cdir                    = args[16].AsString();
+    const char* cdir                    = args[16].AsString( nullptr );
     const bool  progress                = args[17].AsBool(true);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
@@ -410,7 +410,7 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     uint32_t    sample_rate             = args[6].AsInt( 0 );
     const char *preferred_decoder_names = args[7].AsString( nullptr );
     int         ff_loglevel             = args[8].AsInt( 0 );
-    const char* cdir                    = args[9].AsString();
+    const char* cdir                    = args[9].AsString( nullptr );
     double      drc                     = args[10].AsFloatf( 1.0f );
     const bool  progress                = args[11].AsBool(true);
     /* Set LW-Libav options. */
