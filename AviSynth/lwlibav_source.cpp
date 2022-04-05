@@ -149,8 +149,8 @@ LWLibavVideoSource::LWLibavVideoSource
     int ret = lwlibav_construct_index( &lwh, vdhp, vohp, adhp.get(), aohp.get(), lhp, opt, &indicator, NULL );
     free_audio_decode_handler();
     free_audio_output_handler();
-    if( ret < 0 )
-        env->ThrowError( "LWLibavVideoSource: failed to construct index." );
+    if (ret < 0)
+        env->ThrowError("LWLibavVideoSource: failed to construct index for %s.", lwh.file_path );
     /* Eliminate silent failure: if apply_repeat_flag == 1, then fail if repeat is not applied. */
     if (opt->apply_repeat_flag == 1)
     {
@@ -289,7 +289,7 @@ LWLibavAudioSource::LWLibavAudioSource
     indicator.close  = (progress) ? close_indicator : NULL;
     /* Construct index. */
     if( lwlibav_construct_index( &lwh, vdhp.get(), vohp.get(), adhp, aohp, lhp, opt, &indicator, NULL ) < 0 )
-        env->ThrowError( "LWLibavAudioSource: failed to get construct index." );
+        env->ThrowError( "LWLibavAudioSource: failed to get construct index for %s.", lwh.file_path );
     free_video_decode_handler();
     free_video_output_handler();
     /* Get the desired video track. */
