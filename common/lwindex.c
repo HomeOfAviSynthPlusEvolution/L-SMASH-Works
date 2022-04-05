@@ -2617,7 +2617,7 @@ static int create_index
     else
     {
         /* Check the active stream is DV in AVI Type-1 or not. */
-        if( adhp->dv_in_avi == 1 && format_ctx->streams[ adhp->stream_index ]->nb_index_entries == 0 )
+        if( adhp->dv_in_avi == 1 && avformat_index_get_entries_count(format_ctx->streams[ adhp->stream_index ]) == 0 )
         {
             /* DV in AVI Type-1 */
             audio_sample_count = video_info ? MIN( video_sample_count, audio_sample_count ) : 0;
@@ -2664,59 +2664,42 @@ static int create_index
             AVIndexEntry *temp = NULL;
             if( stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
             {
-                unsigned int allocated_size = video_keyframe_count * sizeof(AVIndexEntry);
-                temp = (AVIndexEntry *)av_realloc( stream->index_entries, allocated_size );
-                if( temp )
-                {
-                    uint32_t i = 0;
-                    for( uint32_t j = 1; j <= video_sample_count && i < video_keyframe_count; j++ )
-                        if( (video_info[j].flags & LW_VFRAME_FLAG_KEY)
-                         && (video_info[j].pts != AV_NOPTS_VALUE
-                          || video_info[j].dts != AV_NOPTS_VALUE) )
-                        {
-                            temp[i].pos          = video_info[j].file_offset;
-                            temp[i].timestamp    = video_info[j].pts != AV_NOPTS_VALUE ? video_info[j].pts : video_info[j].dts;
-                            temp[i].flags        = AVINDEX_KEYFRAME;
-                            temp[i].size         = 0;
-                            temp[i].min_distance = 0;
-                            ++i;
-                        }
-                    stream->index_entries                = temp;
-                    stream->index_entries_allocated_size = allocated_size;
-                    stream->nb_index_entries             = i;
-                }
+                uint32_t i = 0;
+                for (uint32_t j = 1; j <= video_sample_count && i < video_keyframe_count; j++)
+                    if ((video_info[j].flags & LW_VFRAME_FLAG_KEY)
+                        && (video_info[j].pts != AV_NOPTS_VALUE
+                            || video_info[j].dts != AV_NOPTS_VALUE))
+                    {
+                        av_add_index_entry(stream, video_info[j].file_offset,
+                            video_info[j].pts != AV_NOPTS_VALUE ? video_info[j].pts : video_info[j].dts,
+                            0, // size
+                            0, // distance
+                            AVINDEX_KEYFRAME);
+                        i++;
+                    }
             }
             else if( stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
             {
-                unsigned int allocated_size = audio_sample_count * sizeof(AVIndexEntry);
-                temp = (AVIndexEntry *)av_realloc( stream->index_entries, allocated_size );
-                if( temp )
+                av_add_index_entry(stream, 0, 0, 0, 0, 0);
+                uint32_t i = 0;
+                for (uint32_t j = 1; j <= audio_sample_count && i < audio_sample_count; j++)
                 {
-                    uint32_t i = 0;
-                    for( uint32_t j = 1; j <= audio_sample_count && i < audio_sample_count; j++ )
+                    if (audio_info[j].pts != AV_NOPTS_VALUE
+                        || audio_info[j].dts != AV_NOPTS_VALUE)
                     {
-                        if( audio_info[j].pts != AV_NOPTS_VALUE
-                         || audio_info[j].dts != AV_NOPTS_VALUE )
-                        {
-                            temp[i].pos          = audio_info[j].file_offset;
-                            temp[i].timestamp    = audio_info[j].pts != AV_NOPTS_VALUE ? audio_info[j].pts : audio_info[j].dts;
-                            temp[i].flags        = AVINDEX_KEYFRAME;
-                            temp[i].size         = 0;
-                            temp[i].min_distance = 0;
-                            ++i;
-                        }
+                        av_add_index_entry(stream, audio_info[j].file_offset,
+                            audio_info[j].pts != AV_NOPTS_VALUE ? audio_info[j].pts : audio_info[j].dts,
+                            0, // size
+                            0, // distance
+                            AVINDEX_KEYFRAME);
+                        i++;
                     }
-                    stream->index_entries                = temp;
-                    stream->index_entries_allocated_size = allocated_size;
-                    stream->nb_index_entries             = i;
                 }
             }
             if( !temp )
             {
                 /* Anyway clear the index entries. */
-                av_freep( &stream->index_entries );
-                stream->index_entries_allocated_size = 0;
-                stream->nb_index_entries             = 0;
+                av_add_index_entry(stream, 0, 0, 0, 0, 0);
             }
         }
     }
@@ -2725,45 +2708,45 @@ static int create_index
         AVStream *stream = format_ctx->streams[stream_index];
         if( stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
         {
-            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_VIDEO, stream->nb_index_entries );
+            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_VIDEO, avformat_index_get_entries_count(stream) );
             if( vdhp->stream_index != stream_index )
-                for( int i = 0; i < stream->nb_index_entries; i++ )
-                    write_av_index_entry( index, &stream->index_entries[i] );
-            else if( stream->nb_index_entries > 0 )
+                for( int i = 0; i < avformat_index_get_entries_count(stream); i++ )
+                    write_av_index_entry( index, avformat_index_get_entry(stream, i) );
+            else if(avformat_index_get_entries_count(stream) > 0 )
             {
-                vdhp->index_entries = (AVIndexEntry *)av_malloc( stream->index_entries_allocated_size );
+                vdhp->index_entries = (AVIndexEntry *)av_malloc( avformat_index_get_entries_count(stream) * sizeof(AVIndexEntry) );
                 if( !vdhp->index_entries )
                     goto fail_index;
-                for( int i = 0; i < stream->nb_index_entries; i++ )
+                for( int i = 0; i < avformat_index_get_entries_count(stream); i++ )
                 {
-                    AVIndexEntry *ie = &stream->index_entries[i];
+                    AVIndexEntry *ie = avformat_index_get_entry(stream, i);
                     vdhp->index_entries[i] = *ie;
                     write_av_index_entry( index, ie );
                 }
-                vdhp->index_entries_count = stream->nb_index_entries;
+                vdhp->index_entries_count = avformat_index_get_entries_count(stream);
             }
             print_index( index, "</StreamIndexEntries>\n" );
         }
         else if( stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && adhp->stream_index != -2 )
         {
-            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_AUDIO, stream->nb_index_entries );
+            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_AUDIO, avformat_index_get_entries_count(stream) );
             if( adhp->stream_index != stream_index )
-                for( int i = 0; i < stream->nb_index_entries; i++ )
-                    write_av_index_entry( index, &stream->index_entries[i] );
-            else if( stream->nb_index_entries > 0 )
+                for( int i = 0; i < avformat_index_get_entries_count(stream); i++ )
+                    write_av_index_entry( index, avformat_index_get_entry(stream, i) );
+            else if(avformat_index_get_entries_count(stream) > 0 )
             {
                 /* Audio stream in matroska container requires index_entries for seeking.
                  * This avoids for re-reading the file to create index_entries since the file will be closed once. */
-                adhp->index_entries = (AVIndexEntry *)av_malloc( stream->index_entries_allocated_size );
+                adhp->index_entries = (AVIndexEntry *)av_malloc( avformat_index_get_entries_count(stream) * sizeof(AVIndexEntry) );
                 if( !adhp->index_entries )
                     goto fail_index;
-                for( int i = 0; i < stream->nb_index_entries; i++ )
+                for( int i = 0; i < avformat_index_get_entries_count(stream); i++ )
                 {
-                    AVIndexEntry *ie = &stream->index_entries[i];
+                    AVIndexEntry *ie = avformat_index_get_entry(stream, i);
                     adhp->index_entries[i] = *ie;
                     write_av_index_entry( index, ie );
                 }
-                adhp->index_entries_count = stream->nb_index_entries;
+                adhp->index_entries_count = avformat_index_get_entries_count(stream);
             }
             print_index( index, "</StreamIndexEntries>\n" );
         }
@@ -3536,10 +3519,9 @@ int lwlibav_import_av_index_entry
     if( dhp->index_entries )
     {
         AVStream *stream = dhp->format->streams[ dhp->stream_index ];
-        av_free( stream->index_entries );
-        stream->index_entries                = dhp->index_entries;
-        stream->nb_index_entries             = dhp->index_entries_count;
-        stream->index_entries_allocated_size = dhp->index_entries_count * sizeof(AVIndexEntry);
+        for (int i = 0; i < dhp->index_entries_count; i++) {
+            av_add_index_entry(stream, dhp->index_entries[i].pos, dhp->index_entries[i].timestamp, dhp->index_entries[i].size, dhp->index_entries[i].min_distance, dhp->index_entries[i].flags);
+        }
         dhp->index_entries       = NULL;
         dhp->index_entries_count = 0;
     }
