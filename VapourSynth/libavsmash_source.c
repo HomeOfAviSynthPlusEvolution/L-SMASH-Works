@@ -288,7 +288,7 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
     }
-    set_frame_properties( vdhp, n, vi, av_frame, vs_frame, sample_number, vsapi );
+    set_frame_properties( vdhp, vi, av_frame, vs_frame, sample_number, vsapi );
     return vs_frame;
 }
 
