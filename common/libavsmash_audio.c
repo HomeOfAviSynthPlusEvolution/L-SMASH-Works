@@ -497,7 +497,6 @@ uint64_t libavsmash_audio_count_overall_pcm_samples
     int      current_sample_rate       = 0;
     uint64_t current_frame_length      = 0;
     uint64_t sequence_pcm_count        = 0;
-    uint64_t prior_sequences_pcm_count = 0;
     uint64_t overall_pcm_count         = 0;
     /* Count the number of output PCM audio samples in each sequence. */
     for( uint32_t i = 1; i <= adhp->frame_count; i++ )
@@ -511,7 +510,6 @@ uint64_t libavsmash_audio_count_overall_pcm_samples
             /* Encountered a new sequence. */
             if( current_sample_rate > 0 )
             {
-                prior_sequences_pcm_count += sequence_pcm_count;
                 /* Add the number of output PCM audio samples in the previous sequence. */
                 overall_pcm_count += count_sequence_output_pcm_samples( sequence_pcm_count,
                                                                         current_sample_rate,
