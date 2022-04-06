@@ -1907,7 +1907,7 @@ static inline void print_index
 static inline void write_av_index_entry
 (
     FILE         *index,
-    AVIndexEntry *ie
+    const AVIndexEntry *ie
 )
 {
     print_index( index, "POS=%" PRId64 ",TS=%" PRId64 ",Flags=%x,Size=%d,Distance=%d\n",
@@ -2719,7 +2719,7 @@ static int create_index
                     goto fail_index;
                 for( int i = 0; i < avformat_index_get_entries_count(stream); i++ )
                 {
-                    AVIndexEntry *ie = avformat_index_get_entry(stream, i);
+                    const AVIndexEntry *ie = avformat_index_get_entry(stream, i);
                     vdhp->index_entries[i] = *ie;
                     write_av_index_entry( index, ie );
                 }
@@ -2742,7 +2742,7 @@ static int create_index
                     goto fail_index;
                 for( int i = 0; i < avformat_index_get_entries_count(stream); i++ )
                 {
-                    AVIndexEntry *ie = avformat_index_get_entry(stream, i);
+                    const AVIndexEntry *ie = avformat_index_get_entry(stream, i);
                     adhp->index_entries[i] = *ie;
                     write_av_index_entry( index, ie );
                 }
