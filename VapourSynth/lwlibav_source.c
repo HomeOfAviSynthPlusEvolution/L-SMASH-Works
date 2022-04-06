@@ -275,7 +275,7 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
     }
-    set_frame_properties( n, vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, vsapi );
+    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, vsapi );
     return vs_frame;
 }
 
