@@ -25,6 +25,7 @@ extern "C"
 {
 #endif  /* __cplusplus */
 #include <libavcodec/avcodec.h>
+#include <libavutil/cpu.h>
 #include <libavutil/opt.h>
 #ifdef __cplusplus
 }
@@ -33,7 +34,7 @@ extern "C"
 #include "decode.h"
 #include "qsv.h"
 
-static AVCodec *select_hw_decoder
+static const AVCodec *select_hw_decoder
 (
     const char              *codec_name,
     const int                prefer_hw_decoder,
@@ -45,7 +46,7 @@ static AVCodec *select_hw_decoder
     const char *wrapper = prefer_hw_decoder == 1 ? "_cuvid" : "_qsv";
     memcpy( hw_decoder_name, codec_name, codec_name_length );
     memcpy( hw_decoder_name + codec_name_length, wrapper, strlen( wrapper ) );
-    AVCodec *hw_decoder = avcodec_find_decoder_by_name( hw_decoder_name );
+    const AVCodec *hw_decoder = avcodec_find_decoder_by_name( hw_decoder_name );
     if( !hw_decoder )
         return NULL;
     AVCodecContext *ctx = avcodec_alloc_context3( hw_decoder );
@@ -70,7 +71,7 @@ const AVCodec *find_decoder
     const int                prefer_hw_decoder
 )
 {
-    AVCodec *codec = avcodec_find_decoder( codec_id );
+    AVCodec *codec = ( AVCodec * )avcodec_find_decoder( codec_id );
     if( !codec )
         return NULL;
     if( preferred_decoder_names
@@ -78,11 +79,11 @@ const AVCodec *find_decoder
      && *preferred_decoder_names[0] )
         for( const char **decoder_name = preferred_decoder_names; *decoder_name != NULL; decoder_name++ )
         {
-            AVCodec *preferred_decoder = avcodec_find_decoder_by_name( *decoder_name );
+            const AVCodec *preferred_decoder = avcodec_find_decoder_by_name( *decoder_name );
             if( preferred_decoder
              && preferred_decoder->id == codec->id )
             {
-                codec = preferred_decoder;
+                codec = ( AVCodec * )preferred_decoder;
                 break;
             }
         }
@@ -99,12 +100,12 @@ const AVCodec *find_decoder
         AVCodec *preferred_decoder;
         if( prefer_hw_decoder == 3 )
         {
-            preferred_decoder = select_hw_decoder( codec_name, 1, codecpar );
+            preferred_decoder = ( AVCodec * )select_hw_decoder( codec_name, 1, codecpar );
             if( !preferred_decoder )
-                preferred_decoder = select_hw_decoder( codec_name, 2, codecpar );
+                preferred_decoder = ( AVCodec * )select_hw_decoder( codec_name, 2, codecpar );
         }
         else
-            preferred_decoder = select_hw_decoder( codec_name, prefer_hw_decoder, codecpar );
+            preferred_decoder = ( AVCodec * )select_hw_decoder( codec_name, prefer_hw_decoder, codecpar );
         if( preferred_decoder )
             codec = preferred_decoder;
     }
