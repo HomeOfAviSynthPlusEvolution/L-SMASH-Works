@@ -1,7 +1,9 @@
 [File]
-    vslsmashsource.dll    : A source plugin for VapourSynth
+    LSMASHSource.dll    : A source plugin for VapourSynth
 
-[vslsmashsource.dll: LSMASHSource for VapourSynth]
+[LSMASHSource.dll: LSMASHSource for VapourSynth]
+    [namespace]
+        [lsmas]
     [Functions]
         [LibavSMASHSource]
             LibavSMASHSource(string source, int track = 0, int threads = 0, int seek_mode = 0, int seek_threshold = 10,
@@ -84,6 +86,7 @@
                         "RGB27"
                         "RGB30"
                         "RGB48"
+                        "RGBA64BE"
                 + decoder (defalut : "")
                     Names of preferred decoder candidates separated by comma.
                     For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
@@ -118,7 +121,7 @@
                             Extremely verbose debugging, useful for libav* development.
         [LWLibavSource]
             LWLibavSource(string source, int stream_index = -1, int threads = 0, int cache = 1, string cachefile = source + ".lwi",
-                          int seek_mode = 0, int seek_threshold = 10, int dr = 0, int fpsnum = 0, int fpsden = 1, 
+                          int seek_mode = 0, int seek_threshold = 10, int dr = 0, int fpsnum = 0, int fpsden = 1,
                           int variable = 0, string format = "", int repeat = 1, int dominance = 0, string decoder = "", int prefer_hw = 0, int ff_loglevel = 0,
                           string cachedir = DEFAULT_CACHEDIR)
                 * This function uses libavcodec as video decoder and libavformat as demuxer.
@@ -170,11 +173,3 @@
                     Same as 'ff_loglevel' of LibavSMASHSource().
                 + cachedir (default : DEFAULT_CACHEDIR)
                     Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).
-
-        [Version]
-            Version()
-                * This function returns a dict containing the following keys:
-                    + version: lsmas version
-                    + config: extra configuration options used during meson build.
-                    + ffmpeg_version: the ffmpeg version used.
-
