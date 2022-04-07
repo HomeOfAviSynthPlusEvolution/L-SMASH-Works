@@ -86,7 +86,7 @@
                         "RGB27"
                         "RGB30"
                         "RGB48"
-                        "RGBA64BE"
+                        "RGB64BE"
                 + decoder (defalut : "")
                     Names of preferred decoder candidates separated by comma.
                     For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
