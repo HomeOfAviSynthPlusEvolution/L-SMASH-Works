@@ -97,5 +97,7 @@ void avs_set_frame_properties
     int64_t duration_den,
     bool rgb,
     PVideoFrame& avs_frame,
+    int top,
+    int bottom,
     IScriptEnvironment* env
 );

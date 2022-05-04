@@ -152,13 +152,15 @@ static void set_frame_properties
     AVFrame                           *av_frame,
     VSFrameRef                        *vs_frame,
     uint32_t                           sample_number,
+    int                                top,
+    int                                bottom,
     const VSAPI                       *vsapi
 )
 {
     int64_t duration_num;
     int64_t duration_den;
     get_sample_duration( vdhp, vi, sample_number, &duration_num, &duration_den );
-    vs_set_frame_properties( av_frame, NULL, duration_num, duration_den, vs_frame, vsapi );
+    vs_set_frame_properties( av_frame, NULL, duration_num, duration_den, vs_frame, top, bottom, vsapi );
 }
 
 static int prepare_video_decoding
@@ -288,7 +290,9 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
     }
-    set_frame_properties( vdhp, vi, av_frame, vs_frame, sample_number, vsapi );
+    set_frame_properties( vdhp, vi, av_frame, vs_frame, sample_number,
+                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
+                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n, vsapi );
     return vs_frame;
 }
 

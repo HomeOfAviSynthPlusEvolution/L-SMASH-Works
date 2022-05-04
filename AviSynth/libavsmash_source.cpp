@@ -140,6 +140,8 @@ static void set_frame_properties
     VideoInfo vi,
     PVideoFrame& avs_frame,
     uint32_t sample_number,
+    int top,
+    int bottom,
     IScriptEnvironment* env
 )
 {
@@ -148,7 +150,7 @@ static void set_frame_properties
     int64_t duration_den;
     bool rgb = vi.IsRGB();
     get_sample_duration(vdhp, vi, sample_number, &duration_num, &duration_den);
-    avs_set_frame_properties(av_frame, NULL, duration_num, duration_den, rgb, avs_frame, env);
+    avs_set_frame_properties(av_frame, NULL, duration_num, duration_den, rgb, avs_frame, top, bottom, env);
 }
 
 static void prepare_video_decoding
@@ -269,8 +271,10 @@ PVideoFrame __stdcall LSMASHVideoSource::GetFrame( int n, IScriptEnvironment *en
     PVideoFrame as_frame;
     if( make_frame( vohp, av_frame, as_frame, env ) < 0 )
         env->ThrowError( "LSMASHVideoSource: failed to make a frame." );
-    if (has_at_least_v8)
-        set_frame_properties(vdhp, av_frame,vi, as_frame, sample_number, env);
+    if ( has_at_least_v8 )
+        set_frame_properties( vdhp, av_frame,vi, as_frame, sample_number,
+                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
+                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n, env );
     return as_frame;
 }
 

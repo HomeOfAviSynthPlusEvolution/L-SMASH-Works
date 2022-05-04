@@ -160,13 +160,15 @@ static void set_frame_properties
     AVFrame     *av_frame,
     AVStream    *stream,
     VSFrameRef  *vs_frame,
+    int          top,
+    int          bottom,
     const VSAPI *vsapi
 )
 {
     /* Variable Frame Rate is not supported yet. */
     int64_t duration_num = vi->fpsDen;
     int64_t duration_den = vi->fpsNum;
-    vs_set_frame_properties( av_frame, stream, duration_num, duration_den, vs_frame, vsapi );
+    vs_set_frame_properties( av_frame, stream, duration_num, duration_den, vs_frame, top, bottom, vsapi );
 }
 
 static int prepare_video_decoding
@@ -275,7 +277,9 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
     }
-    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, vsapi );
+    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, 
+                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
+                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n,vsapi );
     return vs_frame;
 }
 

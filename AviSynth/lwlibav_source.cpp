@@ -68,6 +68,8 @@ static void set_frame_properties
     AVStream* stream,
     VideoInfo vi,
     PVideoFrame& avs_frame,
+    int top,
+    int bottom,
     IScriptEnvironment* env
 )
 {
@@ -75,7 +77,7 @@ static void set_frame_properties
     int64_t duration_num = vi.fps_denominator;
     int64_t duration_den = vi.fps_numerator;
     bool rgb = vi.IsRGB();
-    avs_set_frame_properties(av_frame, stream, duration_num, duration_den, rgb, avs_frame, env);
+    avs_set_frame_properties(av_frame, stream, duration_num, duration_den, rgb, avs_frame, top, bottom, env);
 }
 
 static void prepare_video_decoding
@@ -203,8 +205,10 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame( int n, IScriptEnvironment *e
     PVideoFrame as_frame;
     if( make_frame( vohp, av_frame, as_frame, env ) < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to make a frame." );
-    if (has_at_least_v8)
-        set_frame_properties(av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame, env);
+    if ( has_at_least_v8 )
+        set_frame_properties( av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame,
+                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
+                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n, env );
     return as_frame;
 }
 

@@ -88,5 +88,7 @@ void vs_set_frame_properties
     int64_t         duration_num,
     int64_t         duration_den,
     VSFrameRef     *vs_frame,
+    int             top,
+    int             bottom,
     const VSAPI    *vsapi
 );

@@ -1047,6 +1047,8 @@ void vs_set_frame_properties
     int64_t         duration_num,
     int64_t         duration_den,
     VSFrameRef     *vs_frame,
+    int             top,
+    int             bottom,
     const VSAPI    *vsapi
 )
 {
@@ -1079,6 +1081,8 @@ void vs_set_frame_properties
     if( av_frame->interlaced_frame )
         field_based = av_frame->top_field_first ? 2 : 1;
     vsapi->propSetInt( props, "_FieldBased", field_based, paReplace );
+    vsapi->propSetInt( props, "_EncodedFrameTop", top, paReplace );
+    vsapi->propSetInt( props, "_EncodedFrameBottom", bottom, paReplace );
     /* Mastering display color volume */
     int frame_has_primaries = 0, frame_has_luminance = 0;
     const AVFrameSideData *mastering_display_side_data = av_frame_get_side_data( av_frame, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA );
