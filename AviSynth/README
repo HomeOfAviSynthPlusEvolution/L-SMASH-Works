@@ -236,7 +236,7 @@
         [LWLibavVideoSource]
             LWLibavVideoSource(string source, int stream_index = -1, int threads = 0, bool cache = true, string cachefile = source + ".lwi",
                                int seek_mode = 0, int seek_threshold = 10, bool dr = false,
-                               int fpsnum = 0, int fpsden = 1, bool repeat = true, int dominance = 0,
+                               int fpsnum = 0, int fpsden = 1, bool repeat = unspecified, int dominance = 0,
                                string format = "", string decoder = "", int prefer_hw = 0, int ff_loglevel = 0, string cachedir = "")
                 * This function uses libavcodec as video decoder and libavformat as demuxer.
             [Arguments]
@@ -263,8 +263,10 @@
                     Same as 'fpsnum' of LSMASHVideoSource().
                 + fpsden (default : 1)
                     Same as 'fpsden' of LSMASHVideoSource().
-                + repeat (default : true)
-                    Reconstruct frames by the flags specified in video stream if set to true and usable.
+                + repeat (default : unspecified)
+                    Reconstruct frames by the flags specified in video stream if set to true.
+                    If set to true, and source file requested repeat and the filter is unable to obey the request, this filter will fail explicitly to eliminate any guesswork.
+                    If unspecified, and source file requested repeat and the filter is unable to obey the request, silently returning a VFR clip with a constant (but wrong) fps.
                     Note that this option is ignored when VFR->CFR conversion is enabled.
                 + dominance : (default : 0)
                     Which field, top or bottom, is displayed first.

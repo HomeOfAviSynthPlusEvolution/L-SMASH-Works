@@ -155,7 +155,7 @@ LWLibavVideoSource::LWLibavVideoSource
     if (opt->apply_repeat_flag == 1)
     {
         if (vohp->repeat_requested && !vohp->repeat_control)
-            env->ThrowError("LWLibavVideoSource: repeat requested for %d frames by input video, but unable to obey (try repeat=0 to get a VFR clip).");
+            env->ThrowError("LWLibavVideoSource: repeat requested for %d frames by input video, but unable to obey (try repeat=false to get a VFR clip).");
     }
     /* Get the desired video track. */
     if( lwlibav_video_get_desired_track( lwh.file_path, vdhp, lwh.threads ) < 0 )
@@ -365,7 +365,13 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         direct_rendering        = args[7].AsBool( false ) ? 1 : 0;
     int         fps_num                 = args[8].AsInt( 0 );
     int         fps_den                 = args[9].AsInt( 1 );
-    int         apply_repeat_flag       = args[10].AsBool( true ) ? 1 : 0;
+    int         apply_repeat_flag = [&]()
+    {
+        if (args[10].Defined())
+            return args[10].AsBool(true) ? 1 : 0;
+        else
+            return 2;
+    }();
     int         field_dominance         = args[11].AsInt( 0 );
     enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[12].AsString( nullptr ) );
     const char *preferred_decoder_names = args[13].AsString( nullptr );

@@ -342,7 +342,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_int64 ( &fps_num,                 0,    "fpsnum",         in, vsapi );
     set_option_int64 ( &fps_den,                 1,    "fpsden",         in, vsapi );
     set_option_int64 ( &prefer_hw_decoder,       0,    "prefer_hw",      in, vsapi );
-    set_option_int64 ( &apply_repeat_flag,       1,    "repeat",         in, vsapi );
+    set_option_int64 ( &apply_repeat_flag,       2,    "repeat",         in, vsapi );
     set_option_int64 ( &field_dominance,         0,    "dominance",      in, vsapi );
     set_option_int64 ( &ff_loglevel,             0,    "ff_loglevel",    in, vsapi );
     set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
