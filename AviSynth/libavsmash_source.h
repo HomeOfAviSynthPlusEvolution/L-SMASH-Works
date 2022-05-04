@@ -109,7 +109,7 @@ public:
         const char         *source,
         uint32_t            track_number,
         bool                skip_priming,
-        uint64_t            channel_layout,
+        const char         *channel_layout,
         int                 sample_rate,
         const char         *preferred_decoder_names,
         double              drc,

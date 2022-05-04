@@ -233,7 +233,7 @@ static void prepare_audio_decoding
 (
     lwlibav_audio_decode_handler_t *adhp,
     lwlibav_audio_output_handler_t *aohp,
-    uint64_t                        channel_layout,
+    const char                     *channel_layout,
     int                             sample_rate,
     lwlibav_file_handler_t         &lwh,
     VideoInfo                      &vi,
@@ -262,7 +262,7 @@ static void prepare_audio_decoding
 LWLibavAudioSource::LWLibavAudioSource
 (
     lwlibav_option_t   *opt,
-    uint64_t            channel_layout,
+    const char         *channel_layout,
     int                 sample_rate,
     const char         *preferred_decoder_names,
     double              drc,
@@ -436,7 +436,6 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.vfr2cfr.active    = 0;
     opt.vfr2cfr.fps_num   = 0;
     opt.vfr2cfr.fps_den   = 0;
-    uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
     set_av_log_level( ff_loglevel );
-    return new LWLibavAudioSource( &opt, channel_layout, sample_rate, preferred_decoder_names, drc, progress, env );
+    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, drc, progress, env );
 }

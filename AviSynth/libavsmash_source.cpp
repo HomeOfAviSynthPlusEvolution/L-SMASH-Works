@@ -409,7 +409,7 @@ static void prepare_audio_decoding
     libavsmash_audio_decode_handler_t *adhp,
     libavsmash_audio_output_handler_t *aohp,
     AVFormatContext                   *format_ctx,
-    uint64_t                           channel_layout,
+    const char                        *channel_layout,
     int                                sample_rate,
     bool                               skip_priming,
     VideoInfo                         &vi,
@@ -435,7 +435,7 @@ LSMASHAudioSource::LSMASHAudioSource
     const char         *source,
     uint32_t            track_number,
     bool                skip_priming,
-    uint64_t            channel_layout,
+    const char         *channel_layout,
     int                 sample_rate,
     const char         *preferred_decoder_names,
     double              drc,
@@ -527,8 +527,7 @@ AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScrip
     const char *preferred_decoder_names = args[5].AsString( nullptr );
     int         ff_loglevel             = args[6].AsInt( 0 );
     double      drc                     = args[7].AsFloatf( 1.0f );
-    uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
     set_av_log_level( ff_loglevel );
     return new LSMASHAudioSource( source, track_number, skip_priming,
-                                  channel_layout, sample_rate, preferred_decoder_names, drc, env );
+                                  layout_string, sample_rate, preferred_decoder_names, drc, env );
 }
