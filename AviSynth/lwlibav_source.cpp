@@ -209,6 +209,22 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame( int n, IScriptEnvironment *e
         set_frame_properties( av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame,
                             ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
                             ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n, env );
+    if ( vohp->scaler.output_pixel_format == AV_PIX_FMT_XYZ12LE )
+    {
+        const int pitch = as_frame->GetPitch() / 2;
+        uint16_t* as_frame_ptr = reinterpret_cast<uint16_t*>(as_frame->GetWritePtr());
+        for ( int y = 0; y < as_frame->GetHeight(); ++y )
+        {
+            for ( int x = 0; x < pitch; x += 3 )
+            {
+                const uint16_t temp = as_frame_ptr[x];
+                as_frame_ptr[x] = as_frame_ptr[x + 2];
+                as_frame_ptr[x + 2] = temp;
+            }
+
+            as_frame_ptr += pitch;
+        }
+    }
     return as_frame;
 }
 

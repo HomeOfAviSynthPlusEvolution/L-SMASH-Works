@@ -417,6 +417,7 @@ enum AVPixelFormat get_av_output_pixel_format
             { "GBRAP10",    AV_PIX_FMT_GBRAP10LE    },
             { "GBRAP12",    AV_PIX_FMT_GBRAP12LE    },
             { "GBRAP16",    AV_PIX_FMT_GBRAP16LE    },
+            { "XYZ12LE",    AV_PIX_FMT_XYZ12LE      },
             { NULL,         AV_PIX_FMT_NONE         }
         };
     for( int i = 0; format_table[i].format_name; i++ )
@@ -542,6 +543,7 @@ static int determine_colorspace_conversion
             { AV_PIX_FMT_RGB48BE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
             { AV_PIX_FMT_BGR48LE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
             { AV_PIX_FMT_BGR48BE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
+            { AV_PIX_FMT_XYZ12LE,      AV_PIX_FMT_XYZ12LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
             { AV_PIX_FMT_RGBA64LE,     AV_PIX_FMT_BGRA64LE,     VideoInfo::CS_BGR64,      8, 0, 0 },
             { AV_PIX_FMT_RGBA64BE,     AV_PIX_FMT_BGRA64LE,     VideoInfo::CS_BGR64,      8, 0, 0 },
             { AV_PIX_FMT_BGRA64LE,     AV_PIX_FMT_BGRA64LE,     VideoInfo::CS_BGR64,      8, 0, 0 },
@@ -563,8 +565,8 @@ static int determine_colorspace_conversion
             { AV_PIX_FMT_GBRAP12LE,    AV_PIX_FMT_GBRAP12LE,    VideoInfo::CS_RGBAP12,    4, 0, 0 },
             { AV_PIX_FMT_GBRAP12BE,    AV_PIX_FMT_GBRAP12LE,    VideoInfo::CS_RGBAP12,    4, 0, 0 },
             { AV_PIX_FMT_GBRAP16LE,    AV_PIX_FMT_GBRAP16LE,    VideoInfo::CS_RGBAP16,    8, 0, 0 },
-            { AV_PIX_FMT_GBRAP16BE,    AV_PIX_FMT_GBRAP16LE,    VideoInfo::CS_RGBAP16,    8, 0, 0 },
-            { AV_PIX_FMT_NONE,         AV_PIX_FMT_NONE,         VideoInfo::CS_UNKNOWN,    0, 0, 0 }
+            { AV_PIX_FMT_GBRAP16BE,    AV_PIX_FMT_GBRAP16LE,    VideoInfo::CS_RGBAP16,    8, 0, 0 },            
+            { AV_PIX_FMT_NONE,         AV_PIX_FMT_NONE,         VideoInfo::CS_UNKNOWN,    0, 0, 0 }            
         };
     as_vohp->bitdepth_minus_8 = 0;
     int i = 0;
@@ -645,6 +647,7 @@ static int determine_colorspace_conversion
         case AV_PIX_FMT_BGRA:
         case AV_PIX_FMT_BGR48LE:
         case AV_PIX_FMT_BGRA64LE:
+        case AV_PIX_FMT_XYZ12LE:
             as_vohp->make_black_background = make_black_background_packed_all_zero;
             as_vohp->make_frame            = make_frame_packed_rgb;
             return 0;
