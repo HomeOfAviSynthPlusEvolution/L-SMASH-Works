@@ -435,7 +435,10 @@ static uint32_t correct_current_frame_number
     uint32_t                        goal
 )
 {
-#define MATCH_DTS( j ) (info[j].dts == pkt->dts)
+// It's possible that the first few encoded frames all have DTS AV_NOPTS_VALUE, so we really
+// shouldn't stop when dts matches: at least we should fallback to checking POS if allowed.
+// Also note that `j` might contain side-effects, must always evaluate it exactly once!
+#define MATCH_DTS( j ) (info[j].dts == pkt->dts && (pkt->dts != AV_NOPTS_VALUE || ((vdhp->lw_seek_flags & SEEK_POS_CORRECTION) == 0)))
 #define MATCH_POS( j ) ((vdhp->lw_seek_flags & SEEK_POS_CORRECTION) && info[j].file_offset == pkt->pos)
     order_converter_t  *oc   = vdhp->order_converter;
     video_frame_info_t *info = vdhp->frame_list;
