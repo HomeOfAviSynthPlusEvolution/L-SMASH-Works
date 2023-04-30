@@ -41,6 +41,10 @@ extern "C"
 #include "lwlibav_source.h"
 #include "../common/lwlibav_video_internal.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifdef _MSC_VER
 #pragma warning( disable:4996 )
 #endif
@@ -172,9 +176,7 @@ LWLibavVideoSource::LWLibavVideoSource
     /* */
     prepare_video_decoding( vdhp, vohp, direct_rendering, pixel_format, env );
 
-    has_at_least_v8 = true;
-    try { env->CheckVersion(8); }
-    catch (const AvisynthError&) { has_at_least_v8 = false; }
+    has_at_least_v8 = env->FunctionExists("propShow");
 
     av_frame = lwlibav_video_get_frame_buffer(vdhp);
     int num = av_frame->sample_aspect_ratio.num;
@@ -373,9 +375,66 @@ static void set_av_log_level( int level )
         av_log_set_level( AV_LOG_TRACE );
 }
 
+#ifdef WIN32
+static AVS_FORCEINLINE int ansi_to_wchar(const char* filename_ansi, wchar_t** filename_w)
+{
+    int num_chars;
+    num_chars = MultiByteToWideChar(CP_ACP, 0, filename_ansi, -1, NULL, 0);
+    if (num_chars <= 0) {
+        *filename_w = NULL;
+        return 0;
+    }
+    *filename_w = (wchar_t*)av_calloc(num_chars, sizeof(wchar_t));
+    if (!*filename_w) {
+        errno = ENOMEM;
+        return -1;
+    }
+    MultiByteToWideChar(CP_ACP, 0, filename_ansi, -1, *filename_w, num_chars);
+    return 0;
+}
+
+static AVS_FORCEINLINE int wchar_to_utf8(const wchar_t* filename_w, char** filename)
+{
+    int num_chars = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, filename_w, -1, NULL, 0, NULL, NULL);
+    if (num_chars <= 0) {
+        *filename = NULL;
+        return 0;
+    }
+    *filename = (char*)av_malloc_array(num_chars, sizeof * filename);
+    if (!*filename) {
+        errno = ENOMEM;
+        return -1;
+    }
+    WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, filename_w, -1, *filename, num_chars, NULL, NULL);
+    return 0;
+}
+
+static AVS_FORCEINLINE int ansi_to_utf8(const char* filename_ansi, char** filename)
+{
+    wchar_t* filename_w = NULL;
+    int ret = -1;
+    if (ansi_to_wchar(filename_ansi, &filename_w))
+        return -1;
+
+    if (!filename_w) {
+        *filename = NULL;
+        return 0;
+    }
+
+    ret = wchar_to_utf8(filename_w, filename);
+    av_free(filename_w);
+    return ret;
+}
+#endif
+
 AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-    const char *source                  = args[0].AsString();
+#ifdef WIN32
+    const char *source_
+#else
+    const char *source
+#endif
+                                        = args[0].AsString();
     int         stream_index            = args[1].AsInt( -1 );
     int         threads                 = args[2].AsInt( 0 );
     int         no_create_index         = args[3].AsBool( true ) ? 0 : 1;
@@ -399,6 +458,18 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         ff_loglevel             = args[15].AsInt( 0 );
     const char* cdir                    = args[16].AsString( nullptr );
     const bool  progress                = args[17].AsBool(true);
+
+#ifdef WIN32
+    char* tmp = nullptr;
+    if (ansi_to_utf8(source_, &tmp))
+        env->ThrowError("LWLibavVideoSource: Cannot allocate filename");
+    if (!tmp)
+        env->ThrowError("LWLibavVideoSource: Cannot retrieve num_chars");
+
+    const char* source = tmp;
+    av_free(tmp);
+#endif
+
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -427,7 +498,12 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
 
 AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-    const char *source                  = args[0].AsString();
+#ifdef WIN32
+    const char* source_
+#else
+    const char* source
+#endif
+                                        = args[0].AsString();
     int         stream_index            = args[1].AsInt( -1 );
     int         no_create_index         = args[2].AsBool( true  ) ? 0 : 1;
     const char *index_file_path         = args[3].AsString( nullptr );
@@ -439,6 +515,18 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     const char* cdir                    = args[9].AsString( nullptr );
     double      drc                     = args[10].AsFloatf( 1.0f );
     const bool  progress                = args[11].AsBool(true);
+
+#ifdef WIN32
+    char* tmp = nullptr;
+    if (ansi_to_utf8(source_, &tmp))
+        env->ThrowError("LWLibavAudioSource: Cannot allocate filename");
+    if (!tmp)
+        env->ThrowError("LWLibavAudioSource: Cannot retrieve num_chars");
+
+    const char* source = tmp;
+    av_free(tmp);
+#endif
+
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;

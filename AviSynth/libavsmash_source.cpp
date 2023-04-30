@@ -236,9 +236,7 @@ LSMASHVideoSource::LSMASHVideoSource
     prepare_video_decoding( vdhp, vohp, format_ctx.get(), threads, direct_rendering, pixel_format, vi, env );
     lsmash_discard_boxes( libavsmash_video_get_root( vdhp ) );
 
-    has_at_least_v8 = true;
-    try { env->CheckVersion(8); }
-    catch (const AvisynthError&) { has_at_least_v8 = false; }
+    has_at_least_v8 = env->FunctionExists("propShow");
 
     av_frame = libavsmash_video_get_frame_buffer(vdhp);
     int num = av_frame->sample_aspect_ratio.num;
