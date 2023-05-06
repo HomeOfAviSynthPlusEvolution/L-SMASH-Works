@@ -22,7 +22,7 @@
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include "lsmashsource.h"
 
 extern "C"
@@ -376,54 +376,20 @@ static void set_av_log_level( int level )
 }
 
 #ifdef WIN32
-static AVS_FORCEINLINE int ansi_to_wchar(const char* filename_ansi, wchar_t** filename_w)
+static AVS_FORCEINLINE std::wstring ansi_to_wchar( const std::string& filename_ansi )
 {
-    int num_chars;
-    num_chars = MultiByteToWideChar(CP_ACP, 0, filename_ansi, -1, NULL, 0);
-    if (num_chars <= 0) {
-        *filename_w = NULL;
-        return 0;
-    }
-    *filename_w = (wchar_t*)av_calloc(num_chars, sizeof(wchar_t));
-    if (!*filename_w) {
-        errno = ENOMEM;
-        return -1;
-    }
-    MultiByteToWideChar(CP_ACP, 0, filename_ansi, -1, *filename_w, num_chars);
-    return 0;
+    const int num_chars = MultiByteToWideChar( CP_ACP, 0, &filename_ansi[0], static_cast<int>( filename_ansi.size() ), NULL, 0 );
+    std::wstring filename_w( num_chars, 0 );
+    MultiByteToWideChar( CP_ACP, 0, &filename_ansi[0], static_cast<int>( filename_ansi.size() ), &filename_w[0], num_chars );
+    return filename_w;
 }
 
-static AVS_FORCEINLINE int wchar_to_utf8(const wchar_t* filename_w, char** filename)
+static AVS_FORCEINLINE std::string wchar_to_utf8( std::wstring filename_w )
 {
-    int num_chars = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, filename_w, -1, NULL, 0, NULL, NULL);
-    if (num_chars <= 0) {
-        *filename = NULL;
-        return 0;
-    }
-    *filename = (char*)av_malloc_array(num_chars, sizeof * filename);
-    if (!*filename) {
-        errno = ENOMEM;
-        return -1;
-    }
-    WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, filename_w, -1, *filename, num_chars, NULL, NULL);
-    return 0;
-}
-
-static AVS_FORCEINLINE int ansi_to_utf8(const char* filename_ansi, char** filename)
-{
-    wchar_t* filename_w = NULL;
-    int ret = -1;
-    if (ansi_to_wchar(filename_ansi, &filename_w))
-        return -1;
-
-    if (!filename_w) {
-        *filename = NULL;
-        return 0;
-    }
-
-    ret = wchar_to_utf8(filename_w, filename);
-    av_free(filename_w);
-    return ret;
+    const int num_chars = WideCharToMultiByte( CP_UTF8, 0, &filename_w[0], static_cast<int>( filename_w.size() ), NULL, 0, NULL, NULL );
+    std::string filename( num_chars, 0 );
+    WideCharToMultiByte( CP_UTF8, 0, &filename_w[0], static_cast<int>( filename_w.size() ), &filename[0], num_chars, NULL, NULL );
+    return filename;
 }
 #endif
 
@@ -446,8 +412,8 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         fps_den                 = args[9].AsInt( 1 );
     int         apply_repeat_flag = [&]()
     {
-        if (args[10].Defined())
-            return args[10].AsBool(true) ? 1 : 0;
+        if ( args[10].Defined() )
+            return args[10].AsBool( true ) ? 1 : 0;
         else
             return 2;
     }();
@@ -457,17 +423,13 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
     int         ff_loglevel             = args[15].AsInt( 0 );
     const char* cdir                    = args[16].AsString( nullptr );
-    const bool  progress                = args[17].AsBool(true);
+    const bool  progress                = args[17].AsBool( true );
 
 #ifdef WIN32
-    char* tmp = nullptr;
-    if (ansi_to_utf8(source_, &tmp))
-        env->ThrowError("LWLibavVideoSource: Cannot allocate filename");
-    if (!tmp)
-        env->ThrowError("LWLibavVideoSource: Cannot retrieve num_chars");
-
-    const char* source = tmp;
-    av_free(tmp);
+    std::string input_file( source_ );
+    std::wstring wchar = ansi_to_wchar( input_file );
+    std::string utf8 = wchar_to_utf8( wchar );
+    const char* source = utf8.c_str();
 #endif
 
     /* Set LW-Libav options. */
@@ -514,17 +476,13 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     int         ff_loglevel             = args[8].AsInt( 0 );
     const char* cdir                    = args[9].AsString( nullptr );
     double      drc                     = args[10].AsFloatf( 1.0f );
-    const bool  progress                = args[11].AsBool(true);
+    const bool  progress                = args[11].AsBool( true );
 
 #ifdef WIN32
-    char* tmp = nullptr;
-    if (ansi_to_utf8(source_, &tmp))
-        env->ThrowError("LWLibavAudioSource: Cannot allocate filename");
-    if (!tmp)
-        env->ThrowError("LWLibavAudioSource: Cannot retrieve num_chars");
-
-    const char* source = tmp;
-    av_free(tmp);
+    std::string input_file( source_ );
+    std::wstring wchar = ansi_to_wchar( input_file );
+    std::string utf8 = wchar_to_utf8( wchar );
+    const char* source = utf8.c_str();
 #endif
 
     /* Set LW-Libav options. */
