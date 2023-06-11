@@ -161,7 +161,7 @@ LWLibavVideoSource::LWLibavVideoSource
     if (opt->apply_repeat_flag == 1)
     {
         if (vohp->repeat_requested && !vohp->repeat_control)
-            env->ThrowError("LWLibavVideoSource: repeat requested for %d frames by input video, but unable to obey (try repeat=false to get a VFR clip).");
+            env->ThrowError("LWLibavVideoSource: repeat requested for %d frames by input video, but unable to obey (try repeat=false to get a VFR clip).", vohp->repeat_requested);
     }
     /* Get the desired video track. */
     if( lwlibav_video_get_desired_track( lwh.file_path, vdhp, lwh.threads ) < 0 )
@@ -208,9 +208,24 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame( int n, IScriptEnvironment *e
     if( make_frame( vohp, av_frame, as_frame, env ) < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to make a frame." );
     if ( has_at_least_v8 )
-        set_frame_properties( av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame,
-                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
-                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n, env );
+    {
+        const int top = [&]() {
+            if ( vohp->repeat_control && vohp->repeat_requested )
+                return ( vohp->frame_order_list[n].top == vohp->frame_order_list[frame_number].top ) ? static_cast<int>( vohp->frame_order_list[n - 1].top ) :
+                    static_cast<int>( vohp->frame_order_list[n].top );
+            else
+                return -1;
+        } ();
+        const int bottom = [&]() {
+            if ( vohp->repeat_control && vohp->repeat_requested )
+                return ( vohp->frame_order_list[n].bottom == vohp->frame_order_list[frame_number].bottom ) ? static_cast<int>( vohp->frame_order_list[n - 1].bottom ) :
+                    static_cast<int>( vohp->frame_order_list[n].bottom );
+            else
+                return -1;
+        } ();
+
+        set_frame_properties( av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame, top, bottom, env );
+    }
     if ( vohp->scaler.output_pixel_format == AV_PIX_FMT_XYZ12LE )
     {
         const int pitch = as_frame->GetPitch() / 2;

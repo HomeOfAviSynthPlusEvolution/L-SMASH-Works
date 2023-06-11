@@ -277,9 +277,19 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
     }
-    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, 
-                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
-                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n,vsapi );
+    int top = -1;
+    if ( vohp->repeat_control && vohp->repeat_requested )
+    {
+        top = ( vohp->frame_order_list[n].top == vohp->frame_order_list[frame_number].top ) ? vohp->frame_order_list[n - 1].top :
+            vohp->frame_order_list[n].top;
+    }
+    int bottom = -1;
+    if ( vohp->repeat_control && vohp->repeat_requested )
+    {
+        bottom = ( vohp->frame_order_list[n].bottom == vohp->frame_order_list[frame_number].bottom ) ? vohp->frame_order_list[n - 1].bottom :
+            vohp->frame_order_list[n].bottom;
+    }
+    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, top, bottom,vsapi );
     return vs_frame;
 }
 
@@ -352,7 +362,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
-    set_option_string( &cache_dir,               DEFAULT_CACHEDIR,  "cachedir",       in, vsapi );
+    set_option_string( &cache_dir,               NULL,  "cachedir",       in, vsapi );
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
     /* Set options. */
     lwlibav_option_t opt;

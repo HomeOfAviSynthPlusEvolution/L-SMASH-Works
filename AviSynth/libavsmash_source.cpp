@@ -270,9 +270,25 @@ PVideoFrame __stdcall LSMASHVideoSource::GetFrame( int n, IScriptEnvironment *en
     if( make_frame( vohp, av_frame, as_frame, env ) < 0 )
         env->ThrowError( "LSMASHVideoSource: failed to make a frame." );
     if ( has_at_least_v8 )
-        set_frame_properties( vdhp, av_frame,vi, as_frame, sample_number,
-                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
-                            ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n, env );
+    {
+        const int top = [&]() {
+            if ( vohp->repeat_control && vohp->repeat_requested )
+                return ( vohp->frame_order_list[n].top == vohp->frame_order_list[sample_number].top ) ? static_cast<int>( vohp->frame_order_list[n - 1].top ) :
+                static_cast<int>( vohp->frame_order_list[n].top );
+            else
+                return -1;
+        } ();
+        const int bottom = [&]() {
+            if ( vohp->repeat_control && vohp->repeat_requested )
+                return ( vohp->frame_order_list[n].bottom == vohp->frame_order_list[sample_number].bottom ) ? static_cast<int>( vohp->frame_order_list[n - 1].bottom ) :
+                static_cast<int>( vohp->frame_order_list[n].bottom );
+            else
+                return -1;
+        } ();
+
+        set_frame_properties( vdhp, av_frame, vi, as_frame, sample_number, top, bottom, env );
+    }
+
     return as_frame;
 }
 

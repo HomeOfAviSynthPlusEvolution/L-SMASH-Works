@@ -290,9 +290,19 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         vsapi->propSetFrame( props, "_Alpha", vs_frame2, paAppend );
         vsapi->freeFrame( vs_frame2 );
     }
-    set_frame_properties( vdhp, vi, av_frame, vs_frame, sample_number,
-                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].top : n,
-                        ( vohp->repeat_control ) ? vohp->frame_order_list[n].bottom : n, vsapi );
+    int top = -1;
+    if ( vohp->repeat_control && vohp->repeat_requested )
+    {
+        top = ( vohp->frame_order_list[n].top == vohp->frame_order_list[sample_number].top ) ? vohp->frame_order_list[n - 1].top :
+            vohp->frame_order_list[n].top;
+    }
+    int bottom = -1;
+    if ( vohp->repeat_control && vohp->repeat_requested )
+    {
+        bottom = ( vohp->frame_order_list[n].bottom == vohp->frame_order_list[sample_number].bottom ) ? vohp->frame_order_list[n - 1].bottom :
+            vohp->frame_order_list[n].bottom;
+    }
+    set_frame_properties( vdhp, vi, av_frame, vs_frame, sample_number, top, bottom, vsapi );
     return vs_frame;
 }
 

@@ -1149,7 +1149,7 @@ static inline int copy_field
         }
     }
     /* Treat this frame as interlaced. */
-    dst->interlaced_frame = 1;
+    dst->interlaced_frame = src->interlaced_frame;
     dst->top_field_first  = top_field_first;
     return 0;
 }
@@ -1192,7 +1192,7 @@ static int lwlibav_repeat_control
             if( get_requested_picture( vdhp, vdhp->frame_buffer, first_field_number ) < 0 )
                 return -1;
             /* Treat this frame as interlaced. */
-            vdhp->frame_buffer->interlaced_frame = 1;
+            vdhp->frame_buffer->interlaced_frame = vohp->frame_cache_buffers[0]->interlaced_frame;
             return 0;
         }
     }
