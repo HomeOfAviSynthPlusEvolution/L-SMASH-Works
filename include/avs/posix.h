@@ -43,6 +43,9 @@
 #define __single_inheritance
 
 // These things don't exist in Linux
+#if defined(AVS_HAIKU)
+#undef __declspec
+#endif
 #define __declspec(x)
 #define lstrlen strlen
 #define lstrcmp strcmp
@@ -63,6 +66,8 @@
 
 #define InterlockedIncrement(x) __sync_add_and_fetch((x), 1)
 #define InterlockedDecrement(x) __sync_sub_and_fetch((x), 1)
+#define InterlockedExchangeAdd(x, v) __sync_add_and_fetch((x), (v))
+
 #define MulDiv(nNumber, nNumerator, nDenominator)   (int32_t) (((int64_t) (nNumber) * (int64_t) (nNumerator) + (int64_t) ((nDenominator)/2)) / (int64_t) (nDenominator))
 
 #ifndef TRUE
@@ -104,8 +109,23 @@
 #define STATUS_STACK_OVERFLOW 0xc00000fd
 
 // Calling convension
+#ifndef AVS_HAIKU
 #define __stdcall
 #define __cdecl
+#endif
+
+// PowerPC OS X is really niche these days, but this painless equivocation
+// of the function/macro names used in posix_get_available_memory()
+// is all it takes to let it work.  The G5 was 64-bit, and if 10.5 Leopard
+// can run in native 64-bit, it probably uses the names in that block as-is.
+#ifdef AVS_MACOS
+#ifdef PPC32
+#define vm_statistics64_data_t vm_statistics_data_t
+#define HOST_VM_INFO64_COUNT HOST_VM_INFO_COUNT
+#define HOST_VM_INFO64 HOST_VM_INFO
+#define host_statistics64 host_statistics
+#endif // PPC32
+#endif // AVS_MACOS
 
 #endif // AVSCORE_POSIX_H
 #endif // AVS_POSIX
