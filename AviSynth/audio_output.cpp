@@ -117,6 +117,8 @@ void as_setup_audio_rendering
     /* Set up AviSynth output format. */
     vi->nchannels                = output_channels;
     vi->audio_samples_per_second = aohp->output_sample_rate;
+    if ( env->FunctionExists("SetChannelMask") )
+        vi->SetChannelMask( true, aohp->output_channel_layout );
     switch ( aohp->output_sample_format )
     {
         case AV_SAMPLE_FMT_U8 :
