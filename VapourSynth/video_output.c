@@ -39,13 +39,8 @@
 #include "video_output.h"
 #include <VSHelper.h>
 
+#ifdef __SSE2__
 #include <emmintrin.h>
-
-typedef struct
-{
-    uint8_t *data    [4];
-    int      linesize[4];
-} vs_picture_t;
 
 static inline __m128i _MM_PACKUS_EPI32( const __m128i *low, const __m128i *high )
 {
@@ -55,6 +50,13 @@ static inline __m128i _MM_PACKUS_EPI32( const __m128i *low, const __m128i *high 
     const __m128i high1  = _mm_sub_epi32( *high, val_32 );
     return _mm_add_epi16( _mm_packs_epi32( low1, high1 ), val_16 );
 }
+#endif
+
+typedef struct
+{
+    uint8_t *data    [4];
+    int      linesize[4];
+} vs_picture_t;
 
 static void make_black_background_planar_yuv8
 (
@@ -136,6 +138,7 @@ static void make_frame_planar_yuv
     };
     if( vshp->input_pixel_format == AV_PIX_FMT_P010LE && vshp->output_pixel_format == AV_PIX_FMT_YUV420P10LE )
     {
+        #ifdef __SSE2__
         const int width_y       = vsapi->getFrameWidth( vs_frame, 0 );
         const int width_uv      = vsapi->getFrameWidth( vs_frame, 1 );
         const int height_y      = vsapi->getFrameHeight( vs_frame, 0 );
@@ -186,9 +189,13 @@ static void make_frame_planar_yuv
             dstp_u  += dst_stride_uv;
             dstp_v  += dst_stride_uv;
         }
+        #else
+        goto fallback;
+        #endif
     }
     else
-        sws_scale( vshp->sws_ctx, (const uint8_t* const*)av_picture->data, av_picture->linesize, 0, av_picture->height, vs_picture.data, vs_picture.linesize );
+    fallback:
+        sws_scale(vshp->sws_ctx, (const uint8_t* const*)av_picture->data, av_picture->linesize, 0, av_picture->height, vs_picture.data, vs_picture.linesize);
 }
 
 static void make_frame_planar_gray
