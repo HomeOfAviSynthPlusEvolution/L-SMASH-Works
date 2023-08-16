@@ -30,6 +30,6 @@ void as_setup_audio_rendering
     VideoInfo                 *vi,
     IScriptEnvironment        *env,
     const char                *filter_name,
-    const char                *channel_layout,
+    uint64_t                   channel_layout,
     int                        sample_rate
 );
