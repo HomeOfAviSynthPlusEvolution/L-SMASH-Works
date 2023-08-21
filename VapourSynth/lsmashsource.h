@@ -99,3 +99,8 @@ static inline const char **tokenize_preferred_decoder_names
 {
     return lw_tokenize_string( preferred_decoder_names_buf, ',', NULL );
 }
+
+#ifdef SSE2_ENABLED
+void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv, const int dst_stride_y, const int dst_stride_uv, const int src_stride_y, const int src_stride_uv,
+    const int width_y, const int width_uv, const int height_y, const int height_uv);
+#endif // SSE2_ENABLED

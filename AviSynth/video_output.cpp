@@ -30,17 +30,6 @@
 
 #include "lsmashsource.h"
 
-#if _MSC_VER >= 1700
-#define VC_HAS_AVX2 1
-#else
-#define VC_HAS_AVX2 0
-#endif
-
-#include <emmintrin.h>  /* SSE2 */
-#if VC_HAS_AVX2
-#include <immintrin.h>  /* AVX, AVX2 */
-#endif
-
 extern "C"
 {
 #include <libavformat/avformat.h>
@@ -54,15 +43,6 @@ extern "C"
 #include "../common/lwsimd.h"
 
 #include "video_output.h"
-
-static inline __m128i _MM_PACKUS_EPI32( const __m128i &low, const __m128i &high )
-{
-    const __m128i val_32 = _mm_set1_epi32( 0x8000 );
-    const __m128i val_16 = _mm_set1_epi16( 0x8000 );
-    const __m128i low1   = _mm_sub_epi32( low, val_32 );
-    const __m128i high1  = _mm_sub_epi32( high, val_32 );
-    return _mm_add_epi16( _mm_packs_epi32( low1, high1 ), val_16 );
-}
 
 static void make_black_background_planar_yuv
 (
@@ -211,6 +191,7 @@ static int make_frame_planar_yuv
     as_picture.linesize[2] = as_frame->GetPitch   ( PLANAR_V );
     if( vohp->scaler.input_pixel_format == AV_PIX_FMT_P010LE && vohp->scaler.output_pixel_format == AV_PIX_FMT_YUV420P10LE )
     {
+#ifdef SSE2_ENABLED
         const int width_y       = as_frame->GetRowSize( PLANAR_Y ) / sizeof( uint16_t );
         const int width_uv      = as_frame->GetRowSize( PLANAR_U ) / sizeof( uint16_t );
         const int height_y      = as_frame->GetHeight( PLANAR_Y );
@@ -225,44 +206,13 @@ static int make_frame_planar_yuv
         uint16_t *dstp_u        = (uint16_t *)as_picture.data[1];
         uint16_t *dstp_v        = (uint16_t *)as_picture.data[2];
 
-        for( int y = 0; y < height_y; y++ )
-        {
-            for( int x = 0; x < width_y; x += 8 )
-            {
-                __m128i yy = _mm_load_si128( (const __m128i *)(srcp_y + x) );
-                yy         = _mm_srli_epi16( yy, 6 );
-                _mm_stream_si128( (__m128i *)(dstp_y + x), yy );
-            }
-            srcp_y += src_pitch_y;
-            dstp_y += dst_pitch_y;
-        }
-
-        const __m128i mask = _mm_set1_epi32(0x0000FFFF);
-        for( int y = 0; y < height_uv; y++ )
-        {
-            for( int x = 0; x < width_uv; x += 8 )
-            {
-                __m128i uv_low  = _mm_load_si128( (__m128i *)((uint32_t *)srcp_uv + x + 0) );
-                __m128i uv_high = _mm_load_si128( (__m128i *)((uint32_t *)srcp_uv + x + 4) );
-
-                __m128i u_low  = _mm_and_si128( uv_low, mask );
-                __m128i u_high = _mm_and_si128( uv_high, mask );
-                __m128i u      = _MM_PACKUS_EPI32( u_low, u_high );
-                u              = _mm_srli_epi16( u, 6 );
-                _mm_stream_si128( (__m128i *)(dstp_u + x), u );
-
-                __m128i v_low  = _mm_srli_epi32( uv_low, 16 );
-                __m128i v_high = _mm_srli_epi32( uv_high, 16 );
-                __m128i v      = _MM_PACKUS_EPI32( v_low, v_high );
-                v              = _mm_srli_epi16( v, 6 );
-                _mm_stream_si128( (__m128i *)(dstp_v + x), v );
-            }
-            srcp_uv += src_pitch_uv;
-            dstp_u  += dst_pitch_uv;
-            dstp_v  += dst_pitch_uv;
-        }
+        planar_yuv_sse2(dstp_y, dstp_u, dstp_v, srcp_y, srcp_uv, dst_pitch_y, dst_pitch_uv, src_pitch_y, src_pitch_uv,
+            width_y, width_uv, height_y, height_uv);
 
         return height_y;
+#else
+        return convert_av_pixel_format(vohp->scaler.sws_ctx, height, av_frame, &as_picture);
+#endif // SSE2_ENABLED
     }
     else
         return convert_av_pixel_format( vohp->scaler.sws_ctx, height, av_frame, &as_picture );
