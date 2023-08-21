@@ -7,6 +7,8 @@ add_project_arguments('-Wno-deprecated-declarations', '-DXXH_INLINE_ALL', '-D_FI
 
 sources = [
   'index.c',
+  '../common/audio_output.c',
+  '../common/audio_output.h',
   '../common/decode.c',
   '../common/decode.h',
   '../common/lwindex.c',
@@ -19,6 +21,8 @@ sources = [
   '../common/lwlibav_video.h',
   '../common/osdep.c',
   '../common/osdep.h',
+  '../common/resample.c',
+  '../common/resample.h',
   '../common/qsv.c',
   '../common/qsv.h',
   '../common/utils.c',
