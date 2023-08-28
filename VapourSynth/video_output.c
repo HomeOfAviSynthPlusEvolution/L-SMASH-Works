@@ -1019,11 +1019,16 @@ void vs_set_frame_properties
     vsapi->propSetInt( props, "_DurationNum", duration_num, paReplace );
     vsapi->propSetInt( props, "_DurationDen", duration_den, paReplace );
     vsapi->propSetInt( props, "_PTS", av_frame->pts, paReplace );
+    vsapi->propSetInt( props, "_PktDTS", av_frame->pkt_dts, paReplace );
     if( stream!=NULL )
     {
         vsapi->propSetInt( props, "_TimeBaseNum", stream->time_base.num, paReplace );
         vsapi->propSetInt( props, "_TimeBaseDen", stream->time_base.den, paReplace );
         vsapi->propSetFloat( props, "_AbsoluteTime", (float)av_frame->pts/stream->time_base.den*stream->time_base.num, paReplace );
+    }
+    else
+    {
+        vsapi->propSetFloat( props, "_AbsoluteTime", (float)av_frame->pkt_dts/duration_den, paReplace );
     }
     /* Color format
      * The decoded color format may not match with the output. Set proper properties when
