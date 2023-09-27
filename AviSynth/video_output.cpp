@@ -358,6 +358,7 @@ enum AVPixelFormat get_av_output_pixel_format
             { "RGB32",      AV_PIX_FMT_BGRA         },
             { "RGB48",      AV_PIX_FMT_BGR48LE      },
             { "RGB64",      AV_PIX_FMT_BGRA64LE     },
+            { "BGR0",       AV_PIX_FMT_BGR0         },
             { "GBRP8",      AV_PIX_FMT_GBRP         },
             { "GBRP10",     AV_PIX_FMT_GBRP10LE     },
             { "GBRP12",     AV_PIX_FMT_GBRP12LE     },
@@ -489,6 +490,7 @@ static int determine_colorspace_conversion
             { AV_PIX_FMT_RGBA,         AV_PIX_FMT_BGRA,         VideoInfo::CS_BGR32,      0, 0, 0 },
             { AV_PIX_FMT_ABGR,         AV_PIX_FMT_BGRA,         VideoInfo::CS_BGR32,      0, 0, 0 },
             { AV_PIX_FMT_BGRA,         AV_PIX_FMT_BGRA,         VideoInfo::CS_BGR32,      0, 0, 0 },
+            { AV_PIX_FMT_BGR0,         AV_PIX_FMT_BGR0,         VideoInfo::CS_BGR32,      0, 0, 0 },
             { AV_PIX_FMT_RGB48LE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
             { AV_PIX_FMT_RGB48BE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
             { AV_PIX_FMT_BGR48LE,      AV_PIX_FMT_BGR48LE,      VideoInfo::CS_BGR48,      8, 0, 0 },
@@ -595,6 +597,7 @@ static int determine_colorspace_conversion
             return 0;
         case AV_PIX_FMT_BGR24:
         case AV_PIX_FMT_BGRA:
+        case AV_PIX_FMT_BGR0:
         case AV_PIX_FMT_BGR48LE:
         case AV_PIX_FMT_BGRA64LE:
         case AV_PIX_FMT_XYZ12LE:
@@ -681,6 +684,10 @@ static int as_check_dr_available
         AV_PIX_FMT_GRAY8,
         AV_PIX_FMT_BGR24,
         AV_PIX_FMT_BGRA,
+        AV_PIX_FMT_BGR0,
+        AV_PIX_FMT_BGR48LE,
+        AV_PIX_FMT_BGRA64LE,
+        AV_PIX_FMT_XYZ12LE,
         AV_PIX_FMT_NONE
     };
     for( int i = 0; dr_support_pix_fmt[i] != AV_PIX_FMT_NONE; i++ )
