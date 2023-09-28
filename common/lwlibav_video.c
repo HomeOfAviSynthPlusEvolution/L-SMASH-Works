@@ -1192,7 +1192,7 @@ static int lwlibav_repeat_control
             if( get_requested_picture( vdhp, vdhp->frame_buffer, first_field_number ) < 0 )
                 return -1;
             /* Treat this frame as interlaced. */
-            vdhp->frame_buffer->interlaced_frame = vohp->frame_cache_buffers[0]->interlaced_frame;
+            vdhp->frame_buffer->interlaced_frame = vdhp->last_req_frame->interlaced_frame;
             return 0;
         }
     }
