@@ -18,7 +18,6 @@ option(ENABLE_XML2S "Enable DNXHD support" ON)
 message(STATUS "Enable DNXHD support: ${ENABLE_XML2S}.")
 
 set(sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/decode.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.c
@@ -30,7 +29,6 @@ set(sources
     ${CMAKE_CURRENT_SOURCE_DIR}/common/lwsimd.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/common/resample.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/xxhash.c
@@ -50,6 +48,8 @@ endif()
 if (BUILD_AVS_PLUGIN)
     set(sources
         ${sources}
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/resample.c
         ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lsmashsource.cpp
@@ -92,6 +92,10 @@ add_library(LSMASHSource SHARED ${sources})
 
 target_include_directories(LSMASHSource PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+if (APPLE)
+    target_include_directories(LSMASHSource PRIVATE /usr/local/include)
+endif()
+
 if (WIN32)
     find_library(bcrypt bcrypt)
     message(STATUS "bcrypt: ${bcrypt}")
@@ -117,7 +121,7 @@ message(STATUS "swscale: ${libswscale}")
 find_library(libswresample NAMES swresample libswresample.a)
 message(STATUS "swresample: ${libswresample}")
 
-find_library(libzlib NAMES zlib zlib.lib)
+find_library(libzlib NAMES z zlib.lib)
 message(STATUS "zlib: ${libzlib}")
 
 find_library(libxxhash NAMES xxhash xxhash.lib)
@@ -162,6 +166,8 @@ if (ENABLE_XML2S)
         target_compile_definitions(LSMASHSource PRIVATE "-DLIBXML_STATIC")
     endif()
 endif()
+
+target_compile_features(LSMASHSource PRIVATE cxx_std_17)
 
 if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
     if (NOT CMAKE_BUILD_TYPE)
