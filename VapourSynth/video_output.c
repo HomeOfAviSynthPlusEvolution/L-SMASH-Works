@@ -1010,7 +1010,8 @@ void vs_set_frame_properties
     VSFrameRef     *vs_frame,
     int             top,
     int             bottom,
-    const VSAPI    *vsapi
+    const VSAPI    *vsapi,
+    int             n
 )
 {
     VSMap *props = vsapi->getFramePropsRW( vs_frame );
@@ -1020,6 +1021,8 @@ void vs_set_frame_properties
     /* Sample duration */
     vsapi->propSetInt( props, "_DurationNum", duration_num, paReplace );
     vsapi->propSetInt( props, "_DurationDen", duration_den, paReplace );
+    if (stream)
+        vsapi->propSetFloat(props, "_AbsoluteTime", stream->start_time + (double)(n * duration_num) / duration_den, paReplace);
     /* Color format
      * The decoded color format may not match with the output. Set proper properties when
      * no YUV->RGB conversion is there. */

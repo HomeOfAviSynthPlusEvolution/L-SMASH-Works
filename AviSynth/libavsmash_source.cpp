@@ -142,7 +142,8 @@ static void set_frame_properties
     uint32_t sample_number,
     int top,
     int bottom,
-    IScriptEnvironment* env
+    IScriptEnvironment* env,
+    int n
 )
 {
     /* Variable Frame Rate is not supported yet. */
@@ -150,7 +151,7 @@ static void set_frame_properties
     int64_t duration_den;
     bool rgb = vi.IsRGB();
     get_sample_duration(vdhp, vi, sample_number, &duration_num, &duration_den);
-    avs_set_frame_properties(av_frame, NULL, duration_num, duration_den, rgb, avs_frame, top, bottom, env);
+    avs_set_frame_properties(av_frame, NULL, duration_num, duration_den, rgb, avs_frame, top, bottom, env, n);
 }
 
 static void prepare_video_decoding
@@ -286,7 +287,7 @@ PVideoFrame __stdcall LSMASHVideoSource::GetFrame( int n, IScriptEnvironment *en
                 return -1;
         } ();
 
-        set_frame_properties( vdhp, av_frame, vi, as_frame, sample_number, top, bottom, env );
+        set_frame_properties( vdhp, av_frame, vi, as_frame, sample_number, top, bottom, env, n );
     }
 
     return as_frame;

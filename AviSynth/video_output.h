@@ -99,5 +99,6 @@ void avs_set_frame_properties
     PVideoFrame& avs_frame,
     int top,
     int bottom,
-    IScriptEnvironment* env
+    IScriptEnvironment* env,
+    int n
 );

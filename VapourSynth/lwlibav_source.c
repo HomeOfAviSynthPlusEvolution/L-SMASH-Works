@@ -162,13 +162,14 @@ static void set_frame_properties
     VSFrameRef  *vs_frame,
     int          top,
     int          bottom,
-    const VSAPI *vsapi
+    const VSAPI *vsapi,
+    int          n
 )
 {
     /* Variable Frame Rate is not supported yet. */
     int64_t duration_num = vi->fpsDen;
     int64_t duration_den = vi->fpsNum;
-    vs_set_frame_properties( av_frame, stream, duration_num, duration_den, vs_frame, top, bottom, vsapi );
+    vs_set_frame_properties( av_frame, stream, duration_num, duration_den, vs_frame, top, bottom, vsapi, n );
 }
 
 static int prepare_video_decoding
@@ -289,7 +290,7 @@ static const VSFrameRef *VS_CC vs_filter_get_frame( int n, int activation_reason
         bottom = ( vohp->frame_order_list[n].bottom == vohp->frame_order_list[frame_number].bottom ) ? vohp->frame_order_list[n - 1].bottom :
             vohp->frame_order_list[n].bottom;
     }
-    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, top, bottom,vsapi );
+    set_frame_properties( vi, av_frame, vdhp->format->streams[vdhp->stream_index], vs_frame, top, bottom, vsapi, n );
     return vs_frame;
 }
 

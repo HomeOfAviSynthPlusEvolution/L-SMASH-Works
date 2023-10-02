@@ -853,8 +853,8 @@ void avs_set_frame_properties
     PVideoFrame& avs_frame,
     int top,
     int bottom,
-    IScriptEnvironment* env
-    
+    IScriptEnvironment* env,
+    int n    
 )
 {
     AVSMap* props = env->getFramePropsRW(avs_frame);
@@ -864,6 +864,8 @@ void avs_set_frame_properties
     /* Sample duration */
     env->propSetInt(props, "_DurationNum", duration_num, 0);
     env->propSetInt(props, "_DurationDen", duration_den, 0);
+    if (stream)
+        env->propSetFloat(props, "_AbsoluteTime", stream->start_time + static_cast<double>(n * duration_num) / duration_den, 0);
     /* Color format
      * The decoded color format may not match with the output. Set proper properties when
      * no YUV->RGB conversion is there. */

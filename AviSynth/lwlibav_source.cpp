@@ -74,14 +74,15 @@ static void set_frame_properties
     PVideoFrame& avs_frame,
     int top,
     int bottom,
-    IScriptEnvironment* env
+    IScriptEnvironment* env,
+    int n
 )
 {
     /* Variable Frame Rate is not supported yet. */
     int64_t duration_num = vi.fps_denominator;
     int64_t duration_den = vi.fps_numerator;
     bool rgb = vi.IsRGB();
-    avs_set_frame_properties(av_frame, stream, duration_num, duration_den, rgb, avs_frame, top, bottom, env);
+    avs_set_frame_properties(av_frame, stream, duration_num, duration_den, rgb, avs_frame, top, bottom, env, n);
 }
 
 static void prepare_video_decoding
@@ -224,7 +225,7 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame( int n, IScriptEnvironment *e
                 return -1;
         } ();
 
-        set_frame_properties( av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame, top, bottom, env );
+        set_frame_properties( av_frame, vdhp->format->streams[vdhp->stream_index], vi, as_frame, top, bottom, env, n );
     }
     if ( vohp->scaler.output_pixel_format == AV_PIX_FMT_XYZ12LE )
     {

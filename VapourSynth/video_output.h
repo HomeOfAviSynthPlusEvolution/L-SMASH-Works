@@ -90,5 +90,6 @@ void vs_set_frame_properties
     VSFrameRef     *vs_frame,
     int             top,
     int             bottom,
-    const VSAPI    *vsapi
+    const VSAPI    *vsapi,
+    int             n
 );
