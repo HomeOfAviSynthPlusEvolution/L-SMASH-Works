@@ -865,7 +865,10 @@ void avs_set_frame_properties
     env->propSetInt(props, "_DurationNum", duration_num, 0);
     env->propSetInt(props, "_DurationDen", duration_den, 0);
     if (stream)
-        env->propSetFloat(props, "_AbsoluteTime", stream->start_time + static_cast<double>(n * duration_num) / duration_den, 0);
+        env->propSetFloat(props, "_AbsoluteTime", ((stream->start_time != AV_NOPTS_VALUE) ? (static_cast<double>(stream->start_time) / stream->time_base.den * stream->time_base.num) : 0.0)
+            + static_cast<double>(n * duration_num) / duration_den, 0);
+    else
+        env->propSetFloat(props, "_AbsoluteTime", static_cast<double>(n * duration_num) / duration_den, 0);
     /* Color format
      * The decoded color format may not match with the output. Set proper properties when
      * no YUV->RGB conversion is there. */

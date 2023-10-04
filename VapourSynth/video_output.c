@@ -1022,7 +1022,10 @@ void vs_set_frame_properties
     vsapi->propSetInt( props, "_DurationNum", duration_num, paReplace );
     vsapi->propSetInt( props, "_DurationDen", duration_den, paReplace );
     if (stream)
-        vsapi->propSetFloat(props, "_AbsoluteTime", stream->start_time + (double)(n * duration_num) / duration_den, paReplace);
+        vsapi->propSetFloat(props, "_AbsoluteTime", ((stream->start_time != AV_NOPTS_VALUE) ? ((double)(stream->start_time) / stream->time_base.den * stream->time_base.num) : 0.0)
+            + (double)(n * duration_num) / duration_den, paReplace);
+    else
+        vsapi->propSetFloat(props, "_AbsoluteTime", (double)(n * duration_num) / duration_den, paReplace);
     /* Color format
      * The decoded color format may not match with the output. Set proper properties when
      * no YUV->RGB conversion is there. */
