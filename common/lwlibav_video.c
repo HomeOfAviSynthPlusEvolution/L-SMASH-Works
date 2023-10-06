@@ -353,8 +353,16 @@ use_lavf_frame_rate:
     }
     else
     {
-        *framerate_num = (int64_t)stream->codecpar->framerate.num;
-        *framerate_den = (int64_t)stream->codecpar->framerate.den;
+        if (vdhp->format->iformat->raw_codec_id)
+        {
+            *framerate_num = (int64_t)stream->codecpar->framerate.num;
+            *framerate_den = (int64_t)stream->codecpar->framerate.den;
+        }
+        else
+        {
+            *framerate_num = (int64_t)stream->avg_frame_rate.num;
+            *framerate_den = (int64_t)stream->avg_frame_rate.den;
+        }        
     }
     return;
 }
