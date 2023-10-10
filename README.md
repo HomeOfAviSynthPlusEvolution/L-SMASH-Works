@@ -2,6 +2,10 @@
 
 [VapourSynth README](https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/blob/master/VapourSynth/README)
 
+##### Note
+
+`LSMASHVideoSource`/`LibavSMASHSource` will/can result to worse performance compared to `LWLibavVideoSource`/`LWLibavSource` if it's used for anything than previewing. ([#41](https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/issues/41))
+
 ##### CMake building options
 
 |      Option      |          Description         | Default value |
