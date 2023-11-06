@@ -41,10 +41,6 @@ extern "C"
 #include "lwlibav_source.h"
 #include "../common/lwlibav_video_internal.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #ifdef _MSC_VER
 #pragma warning( disable:4996 )
 #endif
@@ -391,32 +387,9 @@ static void set_av_log_level( int level )
         av_log_set_level( AV_LOG_TRACE );
 }
 
-#ifdef WIN32
-static AVS_FORCEINLINE std::wstring ansi_to_wchar( const std::string& filename_ansi )
-{
-    const int num_chars = MultiByteToWideChar( CP_ACP, 0, &filename_ansi[0], static_cast<int>( filename_ansi.size() ), NULL, 0 );
-    std::wstring filename_w( num_chars, 0 );
-    MultiByteToWideChar( CP_ACP, 0, &filename_ansi[0], static_cast<int>( filename_ansi.size() ), &filename_w[0], num_chars );
-    return filename_w;
-}
-
-static AVS_FORCEINLINE std::string wchar_to_utf8( std::wstring filename_w )
-{
-    const int num_chars = WideCharToMultiByte( CP_UTF8, 0, &filename_w[0], static_cast<int>( filename_w.size() ), NULL, 0, NULL, NULL );
-    std::string filename( num_chars, 0 );
-    WideCharToMultiByte( CP_UTF8, 0, &filename_w[0], static_cast<int>( filename_w.size() ), &filename[0], num_chars, NULL, NULL );
-    return filename;
-}
-#endif
-
 AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-#ifdef WIN32
-    const char *source_
-#else
-    const char *source
-#endif
-                                        = args[0].AsString();
+    const char *source                  = args[0].AsString();
     int         stream_index            = args[1].AsInt( -1 );
     int         threads                 = args[2].AsInt( 0 );
     int         no_create_index         = args[3].AsBool( true ) ? 0 : 1;
@@ -439,15 +412,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
     int         ff_loglevel             = args[15].AsInt( 0 );
     const char* cdir                    = args[16].AsString( nullptr );
-    const bool  progress                = args[17].AsBool( true );
-
-#ifdef WIN32
-    std::string input_file( source_ );
-    std::wstring wchar = ansi_to_wchar( input_file );
-    std::string utf8 = wchar_to_utf8( wchar );
-    const char* source = utf8.c_str();
-#endif
-
+    const bool  progress                = args[17].AsBool(true);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -476,12 +441,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
 
 AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )
 {
-#ifdef WIN32
-    const char* source_
-#else
-    const char* source
-#endif
-                                        = args[0].AsString();
+    const char *source                  = args[0].AsString();
     int         stream_index            = args[1].AsInt( -1 );
     int         no_create_index         = args[2].AsBool( true  ) ? 0 : 1;
     const char *index_file_path         = args[3].AsString( nullptr );
@@ -492,15 +452,7 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     int         ff_loglevel             = args[8].AsInt( 0 );
     const char* cdir                    = args[9].AsString( nullptr );
     double      drc                     = args[10].AsFloatf( 1.0f );
-    const bool  progress                = args[11].AsBool( true );
-
-#ifdef WIN32
-    std::string input_file( source_ );
-    std::wstring wchar = ansi_to_wchar( input_file );
-    std::string utf8 = wchar_to_utf8( wchar );
-    const char* source = utf8.c_str();
-#endif
-
+    const bool  progress                = args[11].AsBool(true);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
