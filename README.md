@@ -2,9 +2,17 @@
 
 [VapourSynth README](https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/blob/master/VapourSynth/README)
 
-##### Note
+##### Note about LSMASHVideoSource and LibavSMASHSource
 
 `LSMASHVideoSource`/`LibavSMASHSource` will/can result to worse performance compared to `LWLibavVideoSource`/`LWLibavSource` if it's used for anything than previewing. ([#41](https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/issues/41))
+
+##### Note about the file names (Windows only)
+
+If you have issues about the file names here few tips:
+
+- Try another previewing app. At the moment AvsPmod (<=2.7.5.5) has some issues. VirtualDub2 should work.
+- Save the AviSynth script (`.avs`) as UTF-8 instead ANSI.
+- Or just Enable UTF-8 code pages in Windows - `Windows Settings > Time & language > Language & region > Administrative language settings > Change system locale, and check Beta: Use Unicode UTF-8 for worldwide language support.`
 
 ##### CMake building options
 
