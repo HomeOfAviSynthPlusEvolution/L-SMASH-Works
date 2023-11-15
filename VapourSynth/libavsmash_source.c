@@ -377,6 +377,7 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     int64_t ff_loglevel;
     const char *format;
     const char *preferred_decoder_names;
+    const char *ff_options;
     set_option_int64 ( &track_number,            0,    "track",          in, vsapi );
     set_option_int64 ( &threads,                 0,    "threads",        in, vsapi );
     set_option_int64 ( &seek_mode,               0,    "seek_mode",      in, vsapi );
@@ -389,11 +390,13 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
     set_option_int64 ( &ff_loglevel,             0,    "ff_loglevel",    in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
+    set_option_string( &ff_options,              NULL, "ff_options",     in, vsapi);
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
     libavsmash_video_set_seek_mode              ( vdhp, CLIP_VALUE( seek_mode,      0, 2 ) );
     libavsmash_video_set_forward_seek_threshold ( vdhp, CLIP_VALUE( seek_threshold, 1, 999 ) );
     libavsmash_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names( hp->preferred_decoder_names_buf ) );
     libavsmash_video_set_prefer_hw_decoder      ( vdhp, CLIP_VALUE( prefer_hw_decoder, 0, 3 ) );
+    lwlibav_video_set_decoder_options           ( vdhp, ff_options );
     vohp->vfr2cfr = (fps_num > 0 && fps_den > 0);
     vohp->cfr_num = (uint32_t)fps_num;
     vohp->cfr_den = (uint32_t)fps_den;

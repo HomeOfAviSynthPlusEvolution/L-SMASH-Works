@@ -118,7 +118,7 @@ int open_decoder
     const AVCodecParameters *codecpar,
     const AVCodec           *codec,
     const int                thread_count,
-    const double             drc
+    const char              *ff_options
 )
 {
     AVCodecContext *c = avcodec_alloc_context3( codec );
@@ -133,9 +133,6 @@ int open_decoder
                                          * For instance, when stream is encoded as AC-3,
                                          * AVCodecContext.codec_id might have been set to AV_CODEC_ID_EAC3
                                          * while AVCodec.id is set to AV_CODEC_ID_AC3. */
-    if ( codec->id == AV_CODEC_ID_AC3
-        && ( ret = av_opt_set_double(c->priv_data, "drc_scale", drc, 0 )) < 0 )
-        goto fail;
     if( !strcmp( codec->name, "libdav1d" )
      && (ret = av_opt_set_int( c->priv_data, "framethreads", 1, 0 )) < 0 )
         goto fail;
@@ -149,7 +146,15 @@ int open_decoder
     if( codec->wrapper_name
      && !strcmp( codec->wrapper_name, "cuvid" ) )
         c->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
-    if( (ret = avcodec_open2( c, codec, NULL )) < 0 )
+    AVDictionary* ff_d = NULL;
+    if ( ff_options && ( ret = av_dict_parse_string( &ff_d, ff_options, "=", " ", 0 )) < 0 )
+    {
+        av_dict_free(&ff_d);
+        goto fail;
+    }
+    ret = avcodec_open2( c, codec, &ff_d );
+    av_dict_free( &ff_d );
+    if ( ret < 0 )
         goto fail;
     if( is_qsv_decoder( c->codec ) )
         if( (ret = do_qsv_decoder_workaround( c )) < 0 )
@@ -168,13 +173,13 @@ int find_and_open_decoder
     const char             **preferred_decoder_names,
     const int                prefer_hw_decoder,
     const int                thread_count,
-    const double             drc
+    const char              *ff_options
 )
 {
     const AVCodec *codec = find_decoder( codecpar->codec_id, codecpar, preferred_decoder_names, prefer_hw_decoder );
     if( !codec )
         return -1;
-    return open_decoder( ctx, codecpar, codec, thread_count, drc );
+    return open_decoder( ctx, codecpar, codec, thread_count, ff_options );
 }
 
 /* An incomplete simulator of the old libavcodec video decoder API

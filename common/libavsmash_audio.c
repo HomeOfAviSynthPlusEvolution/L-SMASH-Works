@@ -146,13 +146,13 @@ void libavsmash_audio_set_preferred_decoder_names
     adhp->config.preferred_decoder_names = preferred_decoder_names;
 }
 
-void libavsmash_audio_set_drc
+void libavsmash_audio_set_decoder_options
 (
-    libavsmash_audio_decode_handler_t* adhp,
-    double                             drc
+    libavsmash_audio_decode_handler_t *adhp,
+    const char                        *ff_options
 )
 {
-    adhp->config.drc = drc;
+    adhp->config.ff_options = ff_options;
 }
 
 /*****************************************************************************

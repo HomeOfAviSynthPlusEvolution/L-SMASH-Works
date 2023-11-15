@@ -176,6 +176,15 @@ void libavsmash_video_set_prefer_hw_decoder
     vdhp->config.prefer_hw_decoder = prefer_hw_decoder;
 }
 
+void libavsmash_video_set_decoder_options
+(
+    libavsmash_video_decode_handler_t *vdhp,
+    const char                        *ff_options
+)
+{
+    vdhp->config.ff_options = ff_options;
+}
+
 void libavsmash_video_set_log_handler
 (
     libavsmash_video_decode_handler_t *vdhp,

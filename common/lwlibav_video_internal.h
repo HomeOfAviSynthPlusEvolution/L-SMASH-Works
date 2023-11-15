@@ -62,6 +62,7 @@ struct lwlibav_video_decode_handler_tag
     enum AVCodecID      codec_id;
     const char        **preferred_decoder_names;
     int                 prefer_hw_decoder;
+    const char         *ff_options;
     AVRational          time_base;
     uint32_t            frame_count;
     AVFrame            *frame_buffer;

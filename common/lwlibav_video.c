@@ -179,6 +179,15 @@ void lwlibav_video_set_prefer_hw_decoder
     vdhp->prefer_hw_decoder = prefer_hw_decoder;
 }
 
+void lwlibav_video_set_decoder_options
+(
+    lwlibav_video_decode_handler_t *vdhp,
+    const char                     *ff_options
+)
+{
+    vdhp->ff_options = ff_options;
+}
+
 void lwlibav_video_set_log_handler
 (
     lwlibav_video_decode_handler_t *vdhp,
@@ -279,7 +288,7 @@ int lwlibav_video_get_desired_track
      || vdhp->frame_count == 0
      || lavf_open_file( &vdhp->format, file_path, &vdhp->lh ) < 0
      || find_and_open_decoder( &ctx, vdhp->format->streams[ vdhp->stream_index ]->codecpar,
-                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads, 0 ) < 0 )
+                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads, vdhp->ff_options ) < 0 )
     {
         av_freep( &vdhp->index_entries );
         lw_freep( &vdhp->frame_list );

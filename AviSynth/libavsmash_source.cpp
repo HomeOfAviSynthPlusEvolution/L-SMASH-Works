@@ -212,6 +212,7 @@ LSMASHVideoSource::LSMASHVideoSource
     enum AVPixelFormat  pixel_format,
     const char         *preferred_decoder_names,
     int                 prefer_hw_decoder,
+    const char         *ff_options,
     IScriptEnvironment *env
 ) : LSMASHVideoSource{}
 {
@@ -223,6 +224,7 @@ LSMASHVideoSource::LSMASHVideoSource
     libavsmash_video_set_forward_seek_threshold ( vdhp, forward_seek_threshold );
     libavsmash_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names() );
     libavsmash_video_set_prefer_hw_decoder      ( vdhp, prefer_hw_decoder );
+    libavsmash_video_set_decoder_options        ( vdhp, ff_options );
     vohp->vfr2cfr = (fps_num > 0 && fps_den > 0);
     vohp->cfr_num = (uint32_t)fps_num;
     vohp->cfr_den = (uint32_t)fps_den;
@@ -457,7 +459,7 @@ LSMASHAudioSource::LSMASHAudioSource
     const char         *channel_layout,
     int                 sample_rate,
     const char         *preferred_decoder_names,
-    double              drc,
+    const char         *ff_options,
     IScriptEnvironment *env
 ) : LSMASHAudioSource{}
 {
@@ -466,7 +468,7 @@ LSMASHAudioSource::LSMASHAudioSource
     libavsmash_audio_output_handler_t *aohp = this->aohp.get();
     set_preferred_decoder_names( preferred_decoder_names );
     libavsmash_audio_set_preferred_decoder_names( adhp, tokenize_preferred_decoder_names() );
-    libavsmash_audio_set_drc( adhp, drc );
+    libavsmash_audio_set_decoder_options( adhp, ff_options );
     get_audio_track( source, track_number, env );
     prepare_audio_decoding( adhp, aohp, format_ctx.get(), channel_layout, sample_rate, skip_priming, vi, env );
     lsmash_discard_boxes( libavsmash_audio_get_root( adhp ) );
@@ -526,6 +528,7 @@ AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScrip
     const char *preferred_decoder_names = args[9].AsString( nullptr );
     int         prefer_hw_decoder       = args[10].AsInt( 0 );
     int         ff_loglevel             = args[11].AsInt( 0 );
+    const char* ff_options              = args[12].AsString( nullptr );
     threads                = threads >= 0 ? threads : 0;
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
@@ -533,7 +536,7 @@ AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScrip
     prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 3 );
     set_av_log_level( ff_loglevel );
     return new LSMASHVideoSource( source, track_number, threads, seek_mode, forward_seek_threshold,
-                                  direct_rendering, fps_num, fps_den, pixel_format, preferred_decoder_names, prefer_hw_decoder, env );
+                                  direct_rendering, fps_num, fps_den, pixel_format, preferred_decoder_names, prefer_hw_decoder, ff_options, env );
 }
 
 AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )
@@ -545,8 +548,8 @@ AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScrip
     int         sample_rate             = args[4].AsInt( 0 );
     const char *preferred_decoder_names = args[5].AsString( nullptr );
     int         ff_loglevel             = args[6].AsInt( 0 );
-    double      drc                     = args[7].AsFloatf( 1.0f );
+    const char* ff_options              = args[7].AsString( nullptr );
     set_av_log_level( ff_loglevel );
     return new LSMASHAudioSource( source, track_number, skip_priming,
-                                  layout_string, sample_rate, preferred_decoder_names, drc, env );
+                                  layout_string, sample_rate, preferred_decoder_names, ff_options, env );
 }

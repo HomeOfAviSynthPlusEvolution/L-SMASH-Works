@@ -53,7 +53,7 @@ typedef struct
     extended_summary_t    prefer;
     lw_log_handler_t      lh;
     int  (*get_buffer)( struct AVCodecContext *, AVFrame *, int );
-    double                drc;
+    const char           *ff_options;
     struct
     {
         uint32_t       index;       /* index of the queued decoder configuration */

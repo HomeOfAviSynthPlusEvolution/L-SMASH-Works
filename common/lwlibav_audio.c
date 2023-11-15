@@ -141,13 +141,13 @@ void lwlibav_audio_set_preferred_decoder_names
     adhp->preferred_decoder_names = preferred_decoder_names;
 }
 
-void lwlibav_audio_set_drc
+void lwlibav_audio_set_decoder_options
 (
     lwlibav_audio_decode_handler_t *adhp,
-    double                          drc
+    const char                     *ff_options
 )
 {
-    adhp->drc = drc;
+    adhp->ff_options = ff_options;
 }
 
 void lwlibav_audio_set_log_handler
@@ -210,7 +210,7 @@ int lwlibav_audio_get_desired_track
      || adhp->frame_count == 0
      || lavf_open_file( &adhp->format, file_path, &adhp->lh ) < 0
      || find_and_open_decoder( &ctx, adhp->format->streams[ adhp->stream_index ]->codecpar,
-                               adhp->preferred_decoder_names, 0, threads, adhp->drc ) < 0 )
+                               adhp->preferred_decoder_names, 0, threads, adhp->ff_options ) < 0 )
     {
         av_freep( &adhp->index_entries );
         lw_freep( &adhp->frame_list );
@@ -563,7 +563,7 @@ retry_seek:
             lwlibav_update_configuration( (lwlibav_decode_handler_t *)adhp, rap_number, extradata_index, 0 );
         }
         else
-            lwlibav_flush_buffers( (lwlibav_decode_handler_t *)adhp, adhp->drc );
+            lwlibav_flush_buffers( (lwlibav_decode_handler_t *)adhp, adhp->ff_options );
         if( adhp->error )
             return 0;
         /* Seek and get a audio packet. */

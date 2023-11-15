@@ -347,6 +347,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     const char *format;
     const char *preferred_decoder_names;
     const char *cache_dir;
+    const char *ff_options;
     set_option_int64 ( &stream_index,           -1,    "stream_index",   in, vsapi );
     set_option_int64 ( &threads,                 0,    "threads",        in, vsapi );
     set_option_int64 ( &cache_index,             1,    "cache",          in, vsapi );
@@ -363,7 +364,8 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_option_string( &index_file_path,         NULL, "cachefile",      in, vsapi );
     set_option_string( &format,                  NULL, "format",         in, vsapi );
     set_option_string( &preferred_decoder_names, NULL, "decoder",        in, vsapi );
-    set_option_string( &cache_dir,               NULL,  "cachedir",       in, vsapi );
+    set_option_string( &cache_dir,               NULL, "cachedir",       in, vsapi );
+    set_option_string( &ff_options,              NULL, "ff_options",     in, vsapi);
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
     /* Set options. */
     lwlibav_option_t opt;
@@ -386,6 +388,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     lwlibav_video_set_forward_seek_threshold ( vdhp, CLIP_VALUE( seek_threshold, 1, 999 ) );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names( hp->preferred_decoder_names_buf ) );
     lwlibav_video_set_prefer_hw_decoder      ( vdhp, CLIP_VALUE( prefer_hw_decoder, 0, 3 ) );
+    lwlibav_video_set_decoder_options        ( vdhp, ff_options );
     vs_vohp->variable_info          = CLIP_VALUE( variable_info,     0, 1 );
     vs_vohp->direct_rendering       = CLIP_VALUE( direct_rendering,  0, 1 ) && !format;
     vs_vohp->vs_output_pixel_format = vs_vohp->variable_info ? pfNone : get_vs_output_pixel_format( format );

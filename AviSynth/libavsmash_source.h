@@ -75,6 +75,7 @@ public:
         enum AVPixelFormat  pixel_format,
         const char         *preferred_decoder_names,
         int                 prefer_hw_decoder,
+        const char         *ff_options,
         IScriptEnvironment *env
     );
     ~LSMASHVideoSource();
@@ -112,7 +113,7 @@ public:
         const char         *channel_layout,
         int                 sample_rate,
         const char         *preferred_decoder_names,
-        double              drc,
+        const char         *ff_options,
         IScriptEnvironment *env
     );
     ~LSMASHAudioSource();

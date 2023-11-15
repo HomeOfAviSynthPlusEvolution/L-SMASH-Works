@@ -68,6 +68,7 @@ public:
         const char         *preferred_decoder_names,
         int                 prefer_hw_decoder,
         bool                progress,
+        const char         *ff_options,
         IScriptEnvironment *env
     );
     ~LWLibavVideoSource();
@@ -88,8 +89,8 @@ public:
         const char         *channel_layout,
         int                 sample_rate,
         const char         *preferred_decoder_names,
-        double              drc,
         bool                progress,
+        const char         *ff_options,
         IScriptEnvironment *env
     );
     ~LWLibavAudioSource();

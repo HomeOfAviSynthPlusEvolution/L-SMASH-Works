@@ -458,7 +458,7 @@ int libavsmash_find_and_open_decoder
     const AVCodec *codec = libavsmash_find_decoder( config, codecpar->codec_id );
     if( !codec )
         return -1;
-    return open_decoder( &config->ctx, codecpar, codec, thread_count, config->drc );
+    return open_decoder( &config->ctx, codecpar, codec, thread_count, config->ff_options );
 }
 
 static lsmash_codec_specific_data_type get_codec_specific_data_type
@@ -804,7 +804,7 @@ void libavsmash_flush_buffers
     AVCodecParameters *codecpar     = avcodec_parameters_alloc();
     if( !codecpar
      || avcodec_parameters_from_context( codecpar, config->ctx ) < 0
-     || open_decoder( &ctx, codecpar, codec, config->ctx->thread_count, config->drc ) < 0 )
+     || open_decoder( &ctx, codecpar, codec, config->ctx->thread_count, config->ff_options ) < 0 )
     {
         avcodec_flush_buffers( config->ctx );
         config->error = 1;
@@ -910,7 +910,7 @@ void update_configuration
     /* Open an appropriate decoder.
      * Here, we force single threaded decoding since some decoder doesn't do its proper initialization with multi-threaded decoding. */
     AVCodecContext *ctx = NULL;
-    if( open_decoder( &ctx, codecpar, codec, 1, 0 ) < 0 )
+    if( open_decoder( &ctx, codecpar, codec, 1, config->ff_options ) < 0 )
     {
         strcpy( error_string, "Failed to open decoder.\n" );
         goto fail;

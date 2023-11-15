@@ -119,6 +119,7 @@ LWLibavVideoSource::LWLibavVideoSource
     const char         *preferred_decoder_names,
     int                 prefer_hw_decoder,
     bool                progress,
+    const char         *ff_options,
     IScriptEnvironment *env
 ) : LWLibavVideoSource{}
 {
@@ -130,7 +131,8 @@ LWLibavVideoSource::LWLibavVideoSource
     lwlibav_video_set_seek_mode              ( vdhp, seek_mode );
     lwlibav_video_set_forward_seek_threshold ( vdhp, forward_seek_threshold );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names() );
-    lwlibav_video_set_prefer_hw_decoder      ( vdhp, prefer_hw_decoder);
+    lwlibav_video_set_prefer_hw_decoder      ( vdhp, prefer_hw_decoder );
+    lwlibav_video_set_decoder_options        ( vdhp, ff_options );
     as_video_output_handler_t *as_vohp = (as_video_output_handler_t *)lw_malloc_zero( sizeof(as_video_output_handler_t) );
     if( !as_vohp )
         env->ThrowError( "LWLibavVideoSource: failed to allocate the AviSynth video output handler." );
@@ -299,8 +301,8 @@ LWLibavAudioSource::LWLibavAudioSource
     const char         *channel_layout,
     int                 sample_rate,
     const char         *preferred_decoder_names,
-    double              drc,
     bool                progress,
+    const char         *ff_options,
     IScriptEnvironment *env
 ) : LWLibavAudioSource{}
 {
@@ -310,7 +312,7 @@ LWLibavAudioSource::LWLibavAudioSource
     lwlibav_audio_output_handler_t *aohp = this->aohp.get();
     set_preferred_decoder_names( preferred_decoder_names );
     lwlibav_audio_set_preferred_decoder_names( adhp, tokenize_preferred_decoder_names() );
-    lwlibav_audio_set_drc(adhp, drc);
+    lwlibav_audio_set_decoder_options( adhp, ff_options );
     /* Set up error handler. */
     lw_log_handler_t *lhp = lwlibav_audio_get_log_handler( adhp );
     lhp->level    = LW_LOG_FATAL; /* Ignore other than fatal error. */
@@ -412,7 +414,8 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
     int         ff_loglevel             = args[15].AsInt( 0 );
     const char* cdir                    = args[16].AsString( nullptr );
-    const bool  progress                = args[17].AsBool(true);
+    const bool  progress                = args[17].AsBool( true );
+    const char* ff_options              = args[18].AsString( nullptr );
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -436,7 +439,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 3 );
     set_av_log_level( ff_loglevel );
     return new LWLibavVideoSource( &opt, seek_mode, forward_seek_threshold,
-                                   direct_rendering, pixel_format, preferred_decoder_names, prefer_hw_decoder, progress, env );
+                                   direct_rendering, pixel_format, preferred_decoder_names, prefer_hw_decoder, progress, ff_options, env );
 }
 
 AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScriptEnvironment *env )
@@ -451,8 +454,8 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     const char *preferred_decoder_names = args[7].AsString( nullptr );
     int         ff_loglevel             = args[8].AsInt( 0 );
     const char* cdir                    = args[9].AsString( nullptr );
-    double      drc                     = args[10].AsFloatf( 1.0f );
-    const bool  progress                = args[11].AsBool(true);
+    const bool  progress                = args[10].AsBool( true );
+    const char* ff_options              = args[11].AsString(nullptr);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -471,5 +474,5 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.vfr2cfr.fps_num   = 0;
     opt.vfr2cfr.fps_den   = 0;
     set_av_log_level( ff_loglevel );
-    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, drc, progress, env );
+    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, progress, ff_options, env );
 }
