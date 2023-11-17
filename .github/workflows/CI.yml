@@ -30,7 +30,7 @@ jobs:
 
     - name: Install FFmpeg
       run: |
-        git clone https://github.com/HomeOfAviSynthPlusEvolution/FFmpeg --branch custom-patches-for-lsmashsource-1 --depth 1
+        git clone https://github.com/HomeOfAviSynthPlusEvolution/FFmpeg --branch custom-patches-for-lsmashsource --depth 1
         pushd FFmpeg
         ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-all --disable-autodetect --enable-avcodec --enable-avformat --enable-swresample --enable-swscale --disable-asm --disable-debug
         make -j2
