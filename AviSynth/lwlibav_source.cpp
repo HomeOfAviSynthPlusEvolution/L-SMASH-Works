@@ -184,6 +184,7 @@ LWLibavVideoSource::LWLibavVideoSource
     env->SetVar(env->Sprintf("%s", "FFSAR_DEN"), den);
     if (num > 0 && den > 0)
         env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
+    env->SetVar(env->Sprintf("%s", "LWLDECODER"), vdhp->ctx->codec->name);
 }
 
 LWLibavVideoSource::~LWLibavVideoSource()

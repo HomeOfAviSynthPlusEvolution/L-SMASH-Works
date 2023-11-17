@@ -248,6 +248,7 @@ LSMASHVideoSource::LSMASHVideoSource
     env->SetVar(env->Sprintf("%s", "FFSAR_DEN"), den);
     if (num > 0 && den > 0)
         env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
+    env->SetVar(env->Sprintf("%s", "LWLDECODER"), vdhp->config.ctx->codec->name);
 }
 
 LSMASHVideoSource::~LSMASHVideoSource()
