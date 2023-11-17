@@ -43,6 +43,12 @@ extern "C"
 #include "qsv.h"
 #include "decode.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#include "osdep.h"
+#endif // _WIN32
+
+
 #define BYTE_SWAP_16( x ) ((( x ) << 8 & 0xff00)  | (( x ) >> 8 & 0x00ff))
 #define BYTE_SWAP_32( x ) (BYTE_SWAP_16( x ) << 16 | BYTE_SWAP_16(( x ) >> 16))
 
@@ -86,8 +92,35 @@ lsmash_root_t *libavsmash_open_file
     /* libavformat */
     if( avformat_open_input( p_format_ctx, file_name, NULL, NULL ) )
     {
-        strcpy( error_string, "Failed to avformat_open_input.\n" );
-        goto open_fail;
+#ifdef _WIN32
+        wchar_t* wname;
+        if (lw_string_to_wchar(CP_ACP, file_name, &wname))
+        {
+            char* name;
+            if (lw_string_from_wchar(CP_UTF8, wname, &name))
+            {
+                lw_free(wname);
+                const int open = avformat_open_input(p_format_ctx, name, NULL, NULL);
+                lw_free(name);
+                if (open)
+                {
+                    strcpy(error_string, "Failed to avformat_open_input.\n");
+                    goto open_fail;
+                }
+            }
+            else
+            {
+                lw_free(wname);
+                strcpy(error_string, "Failed to avformat_open_input.\n");
+                goto open_fail;
+            }
+        }
+        else
+#endif // _WIN32
+        {
+            strcpy(error_string, "Failed to avformat_open_input.\n");
+            goto open_fail;
+        }
     }
     if( avformat_find_stream_info( *p_format_ctx, NULL ) < 0 )
     {

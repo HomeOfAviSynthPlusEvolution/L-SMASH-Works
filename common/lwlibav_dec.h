@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifdef _WIN32
+#include <Windows.h>
+#include "osdep.h"
+#endif // _WIN32
+
 #define SEEK_DTS_BASED      0x00000001
 #define SEEK_PTS_BASED      0x00000002
 #define SEEK_POS_BASED      0x00000004
@@ -99,8 +104,28 @@ static inline int lavf_open_file
     av_dict_set( &prob_size, "probesize", "6000000", 0 );
     if( avformat_open_input( format_ctx, file_path, NULL, &prob_size) )
     {
-        lw_log_show( lhp, LW_LOG_FATAL, "Failed to avformat_open_input." );
-        return -1;
+#ifdef _WIN32
+        wchar_t* wname;
+        if (lw_string_to_wchar(CP_ACP, file_path, &wname))
+        {
+            char* name;
+            if (lw_string_from_wchar(CP_UTF8, wname, &name))
+            {
+                lw_free(wname);
+                const int open = avformat_open_input(format_ctx, name, NULL, &prob_size);
+                lw_free(name);
+                if (open)
+                    goto fail_open;
+            }
+            else
+            {
+                lw_free(wname);
+                goto fail_open;
+            }
+        }
+        else
+#endif // _WIN32
+        goto fail_open;
     }
     if( avformat_find_stream_info( *format_ctx, NULL ) < 0 )
     {
@@ -109,6 +134,10 @@ static inline int lavf_open_file
     }
     av_dict_free( &prob_size );
     return 0;
+
+fail_open:
+    lw_log_show(lhp, LW_LOG_FATAL, "Failed to avformat_open_input.");
+    return -1;
 }
 
 static inline void lavf_close_file( AVFormatContext **format_ctx )
