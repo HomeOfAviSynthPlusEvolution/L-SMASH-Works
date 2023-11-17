@@ -2143,6 +2143,9 @@ static int create_index
     adhp->dv_in_avi    = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
     int32_t video_index_pos = 0;
     int32_t audio_index_pos = 0;
+#ifdef _WIN32
+    wchar_t* wname = NULL;
+#endif // _WIN32
     if( index )
     {
         /* Write Index file header. */
@@ -2158,7 +2161,6 @@ static int create_index
         fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
         fprintf( index, "<InputFilePath>%s</InputFilePath>\n", lwhp->file_path );
 #ifdef _WIN32
-        wchar_t *wname;
         struct _stat64 file_stat;
         if( lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname ) )
             _wstat64( wname, &file_stat );
@@ -2814,6 +2816,10 @@ static int create_index
         if( opt->av_sync && vdhp->stream_index >= 0 )
             lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, audio_sample_rate );
     }
+    av_freep(&vdhp->index_entries);
+#ifdef _WIN32
+    lw_free(wname);
+#endif // _WIN32
     cleanup_index_helpers( &indexer, format_ctx );
     if( index )
         fclose( index );
@@ -2823,6 +2829,9 @@ static int create_index
     adhp->format = NULL;
     return 0;
 fail_index:
+#ifdef _WIN32
+    lw_free(wname);
+#endif // _WIN32
     cleanup_index_helpers( &indexer, format_ctx );
     free( video_info );
     free( audio_info );
@@ -2880,12 +2889,15 @@ static int parse_index
     int active_video_index;
     int active_audio_index;
 #ifdef _WIN32
-    wchar_t *wname;
+    wchar_t *wname = NULL;
     struct _stat64 file_stat;
     if( lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname ) )
     {
-        if( _wstat64( wname, &file_stat ) )
+        if (_wstat64(wname, &file_stat))
+        {
+            lw_free(wname);
             return -1;
+        }
     }
     else
     {
@@ -3415,10 +3427,18 @@ static int parse_index
             fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", vdhp->stream_index );
             fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index );
         }
+        av_freep(&vdhp->index_entries);
+#ifdef _WIN32
+        lw_free(wname);
+#endif // _WIN32
         free( stream_info );
         return 0;
     }
 fail_parsing:
+    av_freep(&vdhp->index_entries);
+#ifdef _WIN32
+    lw_free(wname);
+#endif // _WIN32
     vdhp->frame_list = NULL;
     adhp->frame_list = NULL;
     if( video_info )
