@@ -303,6 +303,7 @@ LWLibavAudioSource::LWLibavAudioSource
     int                 sample_rate,
     const char         *preferred_decoder_names,
     bool                progress,
+    const double        drc,
     const char         *ff_options,
     IScriptEnvironment *env
 ) : LWLibavAudioSource{}
@@ -313,6 +314,7 @@ LWLibavAudioSource::LWLibavAudioSource
     lwlibav_audio_output_handler_t *aohp = this->aohp.get();
     set_preferred_decoder_names( preferred_decoder_names );
     lwlibav_audio_set_preferred_decoder_names( adhp, tokenize_preferred_decoder_names() );
+    lwlibav_audio_set_drc( adhp, drc );
     lwlibav_audio_set_decoder_options( adhp, ff_options );
     /* Set up error handler. */
     lw_log_handler_t *lhp = lwlibav_audio_get_log_handler( adhp );
@@ -456,7 +458,8 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     int         ff_loglevel             = args[8].AsInt( 0 );
     const char* cdir                    = args[9].AsString( nullptr );
     const bool  progress                = args[10].AsBool( true );
-    const char* ff_options              = args[11].AsString(nullptr);
+    const double drc                    = args[11].AsFloat(-1.0);
+    const char* ff_options              = args[12].AsString(nullptr);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -475,5 +478,5 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.vfr2cfr.fps_num   = 0;
     opt.vfr2cfr.fps_den   = 0;
     set_av_log_level( ff_loglevel );
-    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, progress, ff_options, env );
+    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, progress, drc, ff_options, env );
 }

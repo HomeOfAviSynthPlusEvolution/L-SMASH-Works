@@ -49,11 +49,12 @@ struct lwlibav_audio_decode_handler_tag
     enum AVCodecID      codec_id;
     const char        **preferred_decoder_names;
     int                 prefer_hw_decoder;
-    const char         *ff_options;
     AVRational          time_base;
     uint32_t            frame_count;
     AVFrame            *frame_buffer;
     audio_frame_info_t *frame_list;
+    const char         *ff_options;
+    double              drc;
     /* */
     AVPacket            packet;         /* for getting and freeing */
     AVPacket            alter_packet;   /* for consumed by the decoder instead of 'packet'. */

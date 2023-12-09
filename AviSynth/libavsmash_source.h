@@ -113,6 +113,7 @@ public:
         const char         *channel_layout,
         int                 sample_rate,
         const char         *preferred_decoder_names,
+        const double        drc,
         const char         *ff_options,
         IScriptEnvironment *env
     );

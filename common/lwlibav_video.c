@@ -288,7 +288,7 @@ int lwlibav_video_get_desired_track
      || vdhp->frame_count == 0
      || lavf_open_file( &vdhp->format, file_path, &vdhp->lh ) < 0
      || find_and_open_decoder( &ctx, vdhp->format->streams[ vdhp->stream_index ]->codecpar,
-                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads, vdhp->ff_options ) < 0 )
+                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads, -1.0, vdhp->ff_options ) < 0 )
     {
         av_freep( &vdhp->index_entries );
         lw_freep( &vdhp->frame_list );

@@ -67,7 +67,7 @@ extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3( IScriptEnvironm
     env->AddFunction
     (
         "LSMASHAudioSource",
-        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s[ff_loglevel]i[ff_options]s",
+        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s[ff_loglevel]i[drc_scale]f[ff_options]s",
         CreateLSMASHAudioSource,
         0
     );
@@ -83,7 +83,7 @@ extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3( IScriptEnvironm
     env->AddFunction
     (
         "LWLibavAudioSource",
-        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s[ff_loglevel]i[cachedir]s[indexingpr]b[ff_options]s",
+        "[source]s[stream_index]i[cache]b[cachefile]s[av_sync]b[layout]s[rate]i[decoder]s[ff_loglevel]i[cachedir]s[indexingpr]b[drc_scale]f[ff_options]s",
         CreateLWLibavAudioSource,
         0
     );

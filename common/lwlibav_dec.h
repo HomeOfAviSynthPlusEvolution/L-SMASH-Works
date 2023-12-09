@@ -91,6 +91,7 @@ typedef struct
     AVFrame                    *frame_buffer;
     void                       *frame_list;
     const char                 *ff_options;
+    double                      drc;
 } lwlibav_decode_handler_t;
 
 static inline int lavf_open_file
@@ -167,13 +168,13 @@ int find_and_open_decoder
     const char             **preferred_decoder_names,
     const int                prefer_hw_decoder,
     const int                thread_count,
+    const double             drc,
     const char              *ff_options
 );
 
 void lwlibav_flush_buffers
 (
-    lwlibav_decode_handler_t *dhp,
-    const char               *ff_options
+    lwlibav_decode_handler_t *dhp
 );
 
 int lwlibav_get_av_frame

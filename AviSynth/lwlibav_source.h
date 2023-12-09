@@ -90,6 +90,7 @@ public:
         int                 sample_rate,
         const char         *preferred_decoder_names,
         bool                progress,
+        const double        drc,
         const char         *ff_options,
         IScriptEnvironment *env
     );

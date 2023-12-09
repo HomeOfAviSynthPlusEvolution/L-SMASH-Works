@@ -118,6 +118,7 @@ int open_decoder
     const AVCodecParameters *codecpar,
     const AVCodec           *codec,
     const int                thread_count,
+    const double             drc,
     const char              *ff_options
 )
 {
@@ -147,7 +148,18 @@ int open_decoder
      && !strcmp( codec->wrapper_name, "cuvid" ) )
         c->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
     AVDictionary* ff_d = NULL;
-    if ( ff_options && ( ret = av_dict_parse_string( &ff_d, ff_options, "=", " ", 0 )) < 0 )
+    if (codec->id == AV_CODEC_ID_AC3 && drc > -1)
+    {
+        char buf[10];
+        if ((ret = snprintf(buf, sizeof(buf), "%.10g", drc)) > 0)
+        {
+            if ((ret = av_dict_set(&ff_d, "drc_scale", buf, 0)) < 0)
+                goto fail;
+        }
+        else
+            goto fail;
+    }
+    if ( ff_options && ( ret = av_dict_parse_string( &ff_d, ff_options, "=", " ", 0)) < 0)
     {
         av_dict_free(&ff_d);
         goto fail;
@@ -173,13 +185,14 @@ int find_and_open_decoder
     const char             **preferred_decoder_names,
     const int                prefer_hw_decoder,
     const int                thread_count,
+    const double             drc,
     const char              *ff_options
 )
 {
     const AVCodec *codec = find_decoder( codecpar->codec_id, codecpar, preferred_decoder_names, prefer_hw_decoder );
     if( !codec )
         return -1;
-    return open_decoder( ctx, codecpar, codec, thread_count, ff_options );
+    return open_decoder( ctx, codecpar, codec, thread_count, drc, ff_options );
 }
 
 /* An incomplete simulator of the old libavcodec video decoder API
