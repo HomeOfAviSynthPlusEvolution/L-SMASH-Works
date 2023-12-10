@@ -673,7 +673,7 @@ static uint32_t seek_video
         /* Update the decoder configuration. */
         lwlibav_update_configuration( (lwlibav_decode_handler_t *)vdhp, rap_number, extradata_index, rap_pos );
     else
-        lwlibav_flush_buffers( (lwlibav_decode_handler_t *)vdhp, 0 );
+        lwlibav_flush_buffers( (lwlibav_decode_handler_t *)vdhp );
     if( vdhp->error )
         return 0;
     if( lavf_seek_frame( vdhp->format, vdhp->stream_index, rap_pos, vdhp->av_seek_flags ) < 0 )
