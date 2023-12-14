@@ -527,7 +527,13 @@ AVSValue __cdecl CreateLSMASHVideoSource( AVSValue args, void *user_data, IScrip
     int         direct_rendering        = args[5].AsBool( false ) ? 1 : 0;
     int         fps_num                 = args[6].AsInt( 0 );
     int         fps_den                 = args[7].AsInt( 1 );
-    enum AVPixelFormat pixel_format     = get_av_output_pixel_format( args[8].AsString( nullptr ) );
+    enum AVPixelFormat pixel_format = AV_PIX_FMT_NONE;
+    if (args[8].Defined())
+    {
+        pixel_format = get_av_output_pixel_format(args[8].AsString(nullptr));
+        if (pixel_format == AV_PIX_FMT_NONE)
+            env->ThrowError("LSMASHVideoSource: wrong format.");
+    }
     const char *preferred_decoder_names = args[9].AsString( nullptr );
     int         prefer_hw_decoder       = args[10].AsInt( 0 );
     int         ff_loglevel             = args[11].AsInt( 0 );
