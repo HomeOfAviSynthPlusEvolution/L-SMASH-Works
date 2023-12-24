@@ -415,9 +415,13 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     enum AVPixelFormat pixel_format = AV_PIX_FMT_NONE;
     if (args[12].Defined())
     {
-        pixel_format = get_av_output_pixel_format(args[12].AsString());
-        if (pixel_format == AV_PIX_FMT_NONE)
-            env->ThrowError("LWLibavVideoSource: wrong format.");
+        const char* pix_fmt = args[12].AsString();
+        if (strcmp(pix_fmt, ""))
+        {
+            pixel_format = get_av_output_pixel_format(pix_fmt);
+            if (pixel_format == AV_PIX_FMT_NONE)
+                env->ThrowError("LWLibavVideoSource: wrong format.");
+        }
     }
     const char *preferred_decoder_names = args[13].AsString( nullptr );
     int         prefer_hw_decoder       = args[14].AsInt( 0 );
