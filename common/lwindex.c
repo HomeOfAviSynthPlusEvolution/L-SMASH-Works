@@ -1009,8 +1009,11 @@ static void create_video_frame_order_list
                 complete_frame ^= 1;
                 order_count    -= 1;
             }
-            else if( !repeat_field )
+            else if (!repeat_field)
+            {
+                opt->apply_repeat_flag = i;
                 goto disable_repeat;
+            }
         }
         if( opt->apply_repeat_flag )
             switch( repeat_pict )

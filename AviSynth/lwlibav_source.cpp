@@ -151,16 +151,17 @@ LWLibavVideoSource::LWLibavVideoSource
     indicator.update = (progress) ? update_indicator : NULL;
     indicator.close  = (progress) ? close_indicator : NULL;
     /* Construct index. */
+    const int orig_apply_repeat_flag = opt->apply_repeat_flag;
     int ret = lwlibav_construct_index( &lwh, vdhp, vohp, adhp.get(), aohp.get(), lhp, opt, &indicator, NULL );
     free_audio_decode_handler();
     free_audio_output_handler();
     if (ret < 0)
         env->ThrowError("LWLibavVideoSource: failed to construct index for %s.", lwh.file_path );
     /* Eliminate silent failure: if apply_repeat_flag == 1, then fail if repeat is not applied. */
-    if (opt->apply_repeat_flag == 1)
+    if (orig_apply_repeat_flag == 1)
     {
         if (vohp->repeat_requested && !vohp->repeat_control)
-            env->ThrowError("LWLibavVideoSource: repeat requested for %d frames by input video, but unable to obey (try repeat=false to get a VFR clip).", vohp->repeat_requested);
+            env->ThrowError("LWLibavVideoSource: frame %d has mismatched field order (try repeat=false to get a VFR clip).", opt->apply_repeat_flag);
     }
     /* Get the desired video track. */
     if( lwlibav_video_get_desired_track( lwh.file_path, vdhp, lwh.threads ) < 0 )

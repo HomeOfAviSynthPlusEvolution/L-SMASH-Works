@@ -426,12 +426,12 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
         return;
     }
     /* Eliminate silent failure: if apply_repeat_flag == 1, then fail if repeat is not applied. */
-    if ( opt.apply_repeat_flag == 1 )
+    if ( apply_repeat_flag == 1 )
     {
         if ( vohp->repeat_requested && !vohp->repeat_control )
         {
             free_handler( &hp );
-            set_error_on_init( out, vsapi, "lsmas: repeat requested for %d frames by input video, but unable to obey (try repeat=0 to get a VFR clip).", vohp->repeat_requested );
+            set_error_on_init( out, vsapi, "lsmas: frame %d has mismatched field order (try repeat=0 to get a VFR clip).", opt.apply_repeat_flag );
             return;
         }
     }
