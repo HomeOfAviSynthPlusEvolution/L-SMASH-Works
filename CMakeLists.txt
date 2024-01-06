@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.1)
 
+if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+    if (NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+    endif()
+endif()
+
 project(LSMASHSource)
 
 option(BUILD_AVS_PLUGIN "Build plugin for AviSynth" ON)
@@ -170,10 +176,6 @@ endif()
 target_compile_features(LSMASHSource PRIVATE cxx_std_17)
 
 if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
-    if (NOT CMAKE_BUILD_TYPE)
-        set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-    endif()
-
     string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
     if (build_type STREQUAL debug)
         target_compile_definitions(LSMASHSource PRIVATE DEBUG_BUILD)
