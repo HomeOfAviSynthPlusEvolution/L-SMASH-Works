@@ -2177,7 +2177,7 @@ static int create_index
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
         audio_index_pos = ftell( index );
-        fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index == -2 ? -2 : -1 );
+        fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index );
     }
     AVPacket pkt = { 0 };
     int       pix_fmt_investigated  = 0;
@@ -2942,7 +2942,23 @@ static int parse_index
     int video_present = (active_video_index >= 0);
     int audio_present = (active_audio_index >= 0);
     vdhp->stream_index = opt->force_video ? opt->force_video_index : active_video_index;
-    adhp->stream_index = opt->force_audio ? opt->force_audio_index : active_audio_index;
+    if (opt->force_audio)
+        adhp->stream_index = opt->force_audio_index;
+    else
+    {
+        if (audio_present)
+        {
+            const int first_audio = ++active_video_index;
+            if (first_audio != active_audio_index)
+            {
+#ifdef _WIN32
+                lw_free(wname);
+#endif // _WIN32
+                return -1;
+            }
+        }
+        adhp->stream_index = active_audio_index;
+    }
     uint32_t video_info_count = 1 << 16;
     uint32_t audio_info_count = 1 << 16;
     video_frame_info_t *video_info = NULL;
@@ -3516,7 +3532,7 @@ int lwlibav_construct_index
     }
     lwhp->threads      = opt->threads;
     vdhp->stream_index = -1;
-    adhp->stream_index = ( opt->force_audio_index == -2 ) ? -2 : -1;
+    adhp->stream_index = opt->force_audio_index;
     /* Create the index file. */
     int err = create_index( lwhp, vdhp, vohp, adhp, aohp, format_ctx, opt, indicator, php );
     /* Close file.
