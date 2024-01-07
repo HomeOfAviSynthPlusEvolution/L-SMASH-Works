@@ -362,7 +362,7 @@ use_lavf_frame_rate:
     }
     else
     {
-        if (vdhp->format->iformat->raw_codec_id)
+        if (lwhp->raw_demuxer)
         {
             *framerate_num = (int64_t)stream->codecpar->framerate.num;
             *framerate_den = (int64_t)stream->codecpar->framerate.den;
