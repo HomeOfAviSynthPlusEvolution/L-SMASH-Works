@@ -2181,6 +2181,7 @@ static int create_index
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
         audio_index_pos = ftell( index );
         fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index );
+        fprintf(index, "<DefaultAudioStreamIndex>%+011d</DefaultAudioStreamIndex>\n", -1);
     }
     AVPacket pkt = { 0 };
     int       pix_fmt_investigated  = 0;
@@ -2466,6 +2467,7 @@ static int create_index
                     int32_t current_pos = ftell( index );
                     fseek( index, audio_index_pos, SEEK_SET );
                     fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", pkt.stream_index );
+                    fprintf(index, "<DefaultAudioStreamIndex>%+011d</DefaultAudioStreamIndex>\n", pkt.stream_index);
                     fseek( index, current_pos, SEEK_SET );
                 }
                 adhp->ctx          = pkt_ctx;
@@ -2889,8 +2891,9 @@ static int parse_index
     uint64_t file_hash = 0;
     unsigned file_hash_32 = 0;
     char format_name[256];
-    int active_video_index;
-    int active_audio_index;
+    const int active_video_index;
+    const int active_audio_index;
+    const int default_audio;
 #ifdef _WIN32
     wchar_t *wname = NULL;
     struct _stat64 file_stat;
@@ -2938,7 +2941,8 @@ static int parse_index
         return -1;
     int32_t active_index_pos = ftell( index );
     if( fscanf( index, "<ActiveVideoStreamIndex>%d</ActiveVideoStreamIndex>\n", &active_video_index ) != 1
-     || fscanf( index, "<ActiveAudioStreamIndex>%d</ActiveAudioStreamIndex>\n", &active_audio_index ) != 1 )
+     || fscanf( index, "<ActiveAudioStreamIndex>%d</ActiveAudioStreamIndex>\n", &active_audio_index ) != 1
+     || fscanf( index, "<DefaultAudioStreamIndex>%d</DefaultAudioStreamIndex>\n", &default_audio ) != 1 )
         return -1;
     lwhp->format_name = format_name;
     adhp->dv_in_avi = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
@@ -2949,16 +2953,12 @@ static int parse_index
         adhp->stream_index = opt->force_audio_index;
     else
     {
-        if (audio_present)
+        if (audio_present && default_audio != active_audio_index)
         {
-            const int first_audio = ++active_video_index;
-            if (first_audio != active_audio_index)
-            {
 #ifdef _WIN32
-                lw_free(wname);
+            lw_free(wname);
 #endif // _WIN32
-                return -1;
-            }
+            return -1;
         }
         adhp->stream_index = active_audio_index;
     }
