@@ -23,6 +23,10 @@ message(STATUS "Enable Intel HW decoding: ${ENABLE_MFX}.")
 option(ENABLE_XML2S "Enable DNXHD support" ON)
 message(STATUS "Enable DNXHD support: ${ENABLE_XML2S}.")
 
+cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
+option(ENABLE_SSE2 "Enable SSE2 support" ${sse2})
+message(STATUS "Enable SSE2 support: ${ENABLE_SSE2}.")
+
 set(sources
     ${CMAKE_CURRENT_SOURCE_DIR}/common/decode.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.c
@@ -40,15 +44,11 @@ set(sources
     ${CMAKE_CURRENT_SOURCE_DIR}/common/xxhash.c
 )
 
-cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
-if (${sse2})
+if (ENABLE_SSE2)
     set(sources
         ${sources}
         ${CMAKE_CURRENT_SOURCE_DIR}/common/planar_yuv_sse2.c
     )
-    message(STATUS "SSE2 enabled.")
-else()
-    message(STATUS "SSE2 disabled.")
 endif()
 
 if (BUILD_AVS_PLUGIN)
