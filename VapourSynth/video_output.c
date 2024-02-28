@@ -441,6 +441,7 @@ static const component_reorder_t *get_component_reorder( enum AVPixelFormat av_o
             { AV_PIX_FMT_RGBA64LE,     {  0,  1,  2,  3 } },
             { AV_PIX_FMT_BGRA64LE,     {  2,  1,  0,  3 } },
             { AV_PIX_FMT_RGBA64BE,     {  0,  1,  2,  3 | component_reorder_bigendian } },
+            { AV_PIX_FMT_XYZ12LE,      {  0,  1,  2, -1 } },
             { AV_PIX_FMT_NONE,         {  0,  1,  2,  3 } }
         };
     int i = 0;
@@ -649,6 +650,7 @@ static int determine_colorspace_conversion
             { AV_PIX_FMT_RGBA64LE,     pfRGB48,     1 },
             { AV_PIX_FMT_BGRA64LE,     pfRGB48,     1 },
             { AV_PIX_FMT_RGBA64BE,     pfRGB48,     1 },
+            { AV_PIX_FMT_XYZ12LE,      pfRGB48,     1 },
             { AV_PIX_FMT_NONE,         pfNone,      1 }
         };
     if( vs_vohp->variable_info || vs_vohp->vs_output_pixel_format == pfNone )
