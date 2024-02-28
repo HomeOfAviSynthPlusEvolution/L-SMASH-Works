@@ -321,7 +321,7 @@
                 The path of the source file.
             + stream_index (default : -1)
                 The stream index to open in the source file.
-                The value -1 means trying to get the first detected audio stream.
+                The value -1 means the defalut audio stream.
             + cache (default : true)
                 Same as 'cache' of LWLibavVideoSource().
             + cachefile (default : source + ".lwi")
