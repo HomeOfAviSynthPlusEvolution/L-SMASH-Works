@@ -71,7 +71,7 @@ const AVCodec *find_decoder
     const int                prefer_hw_decoder
 )
 {
-    AVCodec *codec = ( AVCodec * )avcodec_find_decoder( codec_id );
+    const AVCodec *codec = avcodec_find_decoder( codec_id );
     if( !codec )
         return NULL;
     if( preferred_decoder_names
@@ -83,7 +83,7 @@ const AVCodec *find_decoder
             if( preferred_decoder
              && preferred_decoder->id == codec->id )
             {
-                codec = ( AVCodec * )preferred_decoder;
+                codec = preferred_decoder;
                 break;
             }
         }
@@ -100,12 +100,12 @@ const AVCodec *find_decoder
         AVCodec *preferred_decoder;
         if( prefer_hw_decoder == 3 )
         {
-            preferred_decoder = ( AVCodec * )select_hw_decoder( codec_name, 1, codecpar );
+            preferred_decoder = select_hw_decoder( codec_name, 1, codecpar );
             if( !preferred_decoder )
-                preferred_decoder = ( AVCodec * )select_hw_decoder( codec_name, 2, codecpar );
+                preferred_decoder = select_hw_decoder( codec_name, 2, codecpar );
         }
         else
-            preferred_decoder = ( AVCodec * )select_hw_decoder( codec_name, prefer_hw_decoder, codecpar );
+            preferred_decoder = select_hw_decoder( codec_name, prefer_hw_decoder, codecpar );
         if( preferred_decoder )
             codec = preferred_decoder;
     }
