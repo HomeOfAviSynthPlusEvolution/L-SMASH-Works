@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.28)
 
 if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
     if (NOT CMAKE_BUILD_TYPE)
