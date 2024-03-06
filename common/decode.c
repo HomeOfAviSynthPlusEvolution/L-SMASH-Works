@@ -91,10 +91,12 @@ const AVCodec *find_decoder
           && prefer_hw_decoder )
     {
         const char *codec_name;
-        if( !strcmp( codec->name, "mpeg1video" ) )
+        if (!strcmp(codec->name, "mpeg1video"))
             codec_name = "mpeg1";
-        else if( !strcmp( codec->name, "mpeg2video" ) )
+        else if (!strcmp(codec->name, "mpeg2video"))
             codec_name = "mpeg2";
+        else if (!strcmp(codec->name, "libdav1d"))
+            codec_name = "av1";
         else
             codec_name = codec->name;
         AVCodec *preferred_decoder;
