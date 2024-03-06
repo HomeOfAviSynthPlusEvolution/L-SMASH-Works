@@ -114,6 +114,7 @@
                 For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
                 used 'h264' and 'mpeg2video' decoder, then specify as "h264_qsv,mpeg2_qsv". The evaluations are done
                 in the written order and the first matched decoder is used if any.
+                The LWLDECODER variable can be used to see what decoder is used.
             + prefer_hw (default : 0)
                 Whether to prefer hardware accelerated decoder to software decoder.
                 Have no effect if 'decoder' is specified.
@@ -121,6 +122,7 @@
                     - 1 : Use NVIDIA CUVID acceleration for supported codec, otherwise use default software decoder.
                     - 2 : Use Intel Quick Sync Video acceleration for supported codec, otherwise use default software decoder.
                     - 3 : Try hardware decoder in the order of CUVID->QSV. If none is available then use default software decoder.
+                The LWLDECODER variable can be used to see what decoder is used.
             + ff_loglevel (default : 0)
                 Set the log level in FFmpeg.
                     - 0 : AV_LOG_QUIET
