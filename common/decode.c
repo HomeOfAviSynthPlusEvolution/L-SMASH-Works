@@ -95,7 +95,8 @@ const AVCodec *find_decoder
             codec_name = "mpeg1";
         else if (!strcmp(codec->name, "mpeg2video"))
             codec_name = "mpeg2";
-        else if (!strcmp(codec->name, "libdav1d"))
+        else if (!strcmp(codec->name, "libdav1d")
+         || !strcmp(codec->name, "libaom-av1"))
             codec_name = "av1";
         else
             codec_name = codec->name;
