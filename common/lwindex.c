@@ -2097,7 +2097,7 @@ static int create_index
     }
     /*
         # Structure of Libav reader index file
-        <LibavReaderIndexFile=16>
+        <LibavReaderIndexFile=17>
         <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
         <FileLastModificationTime=000>
@@ -2105,6 +2105,7 @@ static int create_index
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
         <ActiveAudioStreamIndex>-0000000001</ActiveAudioStreamIndex>
+        <DefaultAudioStreamIndex>-0000000001</DefaultAudioStreamIndex>
         <StreamInfo=0,0>
         Codec=2,TimeBase=1001/24000,Width=1920,Height=1080,Format=yuv420p,ColorSpace=5
         </StreamInfo>
