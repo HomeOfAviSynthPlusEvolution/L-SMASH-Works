@@ -2950,18 +2950,20 @@ static int parse_index
     int video_present = (active_video_index >= 0);
     int audio_present = (active_audio_index >= 0);
     vdhp->stream_index = opt->force_video ? opt->force_video_index : active_video_index;
-    if (opt->force_audio)
-        adhp->stream_index = opt->force_audio_index;
-    else
+    switch (opt->force_audio_index)
     {
-        if (audio_present && default_audio != active_audio_index)
+        case -1:
         {
+            if (default_audio != active_audio_index)
+            {
 #ifdef _WIN32
-            lw_free(wname);
+                lw_free(wname);
 #endif // _WIN32
-            return -1;
+                return -1;
+            }
         }
-        adhp->stream_index = active_audio_index;
+        case -2: adhp->stream_index = active_audio_index; break;
+        default: adhp->stream_index = opt->force_audio_index; break;
     }
     uint32_t video_info_count = 1 << 16;
     uint32_t audio_info_count = 1 << 16;
