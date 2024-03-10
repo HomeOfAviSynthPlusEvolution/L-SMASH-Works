@@ -25,7 +25,10 @@ static inline uint32_t get_decoder_delay
     AVCodecContext *ctx
 )
 {
-    return ctx->has_b_frames + ((ctx->active_thread_type & FF_THREAD_FRAME) ? ctx->thread_count - 1 : 0);
+    if (!strcmp(ctx->codec->name, "libdav1d"))
+        return ctx->delay;
+    else
+        return ctx->has_b_frames + ((ctx->active_thread_type & FF_THREAD_FRAME) ? ctx->thread_count - 1 : 0);
 }
 
 const AVCodec *find_decoder

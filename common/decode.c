@@ -137,8 +137,8 @@ int open_decoder
                                          * For instance, when stream is encoded as AC-3,
                                          * AVCodecContext.codec_id might have been set to AV_CODEC_ID_EAC3
                                          * while AVCodec.id is set to AV_CODEC_ID_AC3. */
-    if( !strcmp( codec->name, "libdav1d" )
-     && (ret = av_opt_set_int( c->priv_data, "framethreads", 1, 0 )) < 0 )
+    if (!strcmp(codec->name, "libdav1d")
+        && (ret = av_opt_set_int(c->priv_data, "max_frame_delay", 2, 0)) < 0)
         goto fail;
     else if( !strcmp( codec->name, "vp9" )
           && thread_count != 1
