@@ -1,0 +1,105 @@
+name: manual
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-14]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install automake
+      if: ${{ matrix.os == 'macos-latest' }}
+      run: |
+        brew update
+        brew install automake
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.x # Version range or exact version of a Python version to use, using SemVer's version range syntax
+
+    - name: Install CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Install FFmpeg
+      run: |
+        git clone https://github.com/HomeOfAviSynthPlusEvolution/FFmpeg --branch custom-patches-for-lsmashsource --depth 1
+        pushd FFmpeg
+        ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-all --disable-autodetect --enable-avcodec --enable-avformat --enable-swresample --enable-swscale --disable-asm --disable-debug
+        make -j2
+        sudo make install -j2
+        popd
+        rm -rf FFmpeg
+    - name: Install obuparse
+      run : |
+        git clone https://github.com/dwbuiten/obuparse --depth 1
+        pushd obuparse
+        if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            sed -i '' 's/--version-script,/ /g' Makefile
+        fi
+        make -j2
+        sudo make install -j2
+        popd
+        rm -rf obuparse
+      shell: bash
+
+    - name: Install l-smash
+      run: |
+        git clone https://github.com/vimeo/l-smash --depth 1
+        pushd l-smash
+        mv configure configure.old
+        sed 's/-Wl,--version-script,liblsmash.ver//g' configure.old >configure
+        chmod +x configure
+        ./configure --disable-static
+        make lib -j2
+        sudo make install-lib -j2
+        popd
+        rm -rf l-smash
+    - name: Install xxHash
+      run: |
+        git clone https://github.com/Cyan4973/xxHash --branch v0.8.2 --depth 1
+        pushd xxHash
+        cmake -S ./cmake_unofficial -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DXXHASH_BUILD_XXHSUM=OFF
+        cmake --build build -j 2
+        sudo cmake --install build
+        popd
+        rm -rf xxHash
+    - name: Install AviSynth
+      run: |
+        git clone https://github.com/AviSynth/AviSynthPlus --branch 3.7 --depth 1 avisynth-build
+        pushd avisynth-build
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_PLUGINS=OFF -DENABLE_INTEL_SIMD=OFF
+        cmake --build build -j 2
+        sudo cmake --install build
+        popd
+        rm -rf avisynth-build
+    - name: Install zimg
+      run: |
+        git clone https://github.com/sekrit-twc/zimg --branch v3.0 --depth 1
+        pushd zimg
+        ./autogen.sh
+        ./configure --disable-static --disable-simd
+        make -j2
+        sudo make install -j2
+        popd
+        rm -rf zimg
+    - name: Install VapourSynth
+      run: |
+        git clone https://github.com/vapoursynth/vapoursynth --depth 1 vapoursynth-build
+        pushd vapoursynth-build
+        ./autogen.sh
+        ./configure --disable-static --disable-x86-asm --disable-vsscript --disable-vspipe --disable-python-module --disable-plugins
+        make -j2
+        sudo make install -j2
+        popd
+        rm -rf vapoursynth-build
+    - name: Build AviSynth/VapourSynth plugin
+      run: |
+        cmake -S . -B build_vs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2S=OFF -DBUILD_AVS_PLUGIN=OFF
+        cmake --build build_vs -j 2
