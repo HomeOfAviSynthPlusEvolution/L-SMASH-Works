@@ -40,7 +40,7 @@ jobs:
       run : |
         git clone https://github.com/dwbuiten/obuparse --depth 1
         pushd obuparse
-        if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+        if [[ "${{ matrix.os }}" == "macos-14" ]]; then
             sed -i '' 's/--version-script,/ /g' Makefile
         fi
         make -j2
