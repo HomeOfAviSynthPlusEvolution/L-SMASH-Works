@@ -23,58 +23,45 @@
 #include <stdint.h>
 
 #ifdef __GNUC__
-static void __cpuid(int CPUInfo[4], int prm)
-{
-    __asm volatile ( "cpuid" :"=a"(CPUInfo[0]), "=b"(CPUInfo[1]), "=c"(CPUInfo[2]), "=d"(CPUInfo[3]) :"a"(prm) );
-    return;
-}
+//static void __cpuid(int CPUInfo[4], int prm)
+//{
+//    __asm volatile ( "cpuid" :"=a"(CPUInfo[0]), "=b"(CPUInfo[1]), "=c"(CPUInfo[2]), "=d"(CPUInfo[3]) :"a"(prm) );
+//    return;
+//}
 #else
 #include <intrin.h>
 #endif /* __GNUC__ */
 
-static int check_xgetbv( void )
-{
-#if defined(_MSC_VER) && defined(_XCR_XFEATURE_ENABLED_MASK)
-    uint64_t eax = _xgetbv( _XCR_XFEATURE_ENABLED_MASK );
-#elif defined(__GNUC__)
-    uint32_t eax;
-    uint32_t edx;
-    __asm volatile ( ".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(0) );
-#else
-    uint32_t eax = 0;
-#endif
-    return (eax & 0x6) == 0x6;
-}
+//static int check_xgetbv( void )
+//{
+//#if defined(_MSC_VER) && defined(_XCR_XFEATURE_ENABLED_MASK)
+//    uint64_t eax = _xgetbv( _XCR_XFEATURE_ENABLED_MASK );
+//#elif defined(__GNUC__)
+//    uint32_t eax;
+//    uint32_t edx;
+//    __asm volatile ( ".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(0) );
+//#else
+//    uint32_t eax = 0;
+//#endif
+//    return (eax & 0x6) == 0x6;
+//}
 
 int lw_check_sse2()
 {
-    int CPUInfo[4];
-    __cpuid( CPUInfo, 1 );
-    return (CPUInfo[3] & 0x04000000) != 0;
+    return 0;
 }
 
 int lw_check_ssse3()
 {
-    int CPUInfo[4];
-    __cpuid( CPUInfo, 1 );
-    return (CPUInfo[2] & 0x00000200) != 0;
+    return 0;
 }
 
 int lw_check_sse41()
 {
-    int CPUInfo[4];
-    __cpuid( CPUInfo, 1 );
-    return (CPUInfo[2] & 0x00080000) != 0;
+    return 0;
 }
 
 int lw_check_avx2()
 {
-    int CPUInfo[4];
-    __cpuid( CPUInfo, 1 );
-    if( (CPUInfo[2] & 0x18000000) == 0x18000000 && check_xgetbv() )
-    {
-        __cpuid( CPUInfo, 7 );
-        return (CPUInfo[1] & 0x00000020) != 0;
-    }
     return 0;
 }
