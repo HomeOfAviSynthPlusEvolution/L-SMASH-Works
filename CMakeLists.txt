@@ -8,19 +8,19 @@ endif()
 
 project(LSMASHSource)
 
-option(BUILD_AVS_PLUGIN "Build plugin for AviSynth" ON)
+option(BUILD_AVS_PLUGIN "Build plugin for AviSynth" OFF)
 message(STATUS "Build plugin for AviSynth: ${BUILD_AVS_PLUGIN}.")
 
 option(BUILD_VS_PLUGIN "Build plugin for VapourSynth" ON)
 message(STATUS "Build plugin for VapourSynth: ${BUILD_VS_PLUGIN}.")
 
-option(ENABLE_DAV1D "Enable dav1d AV1 decoding" ON)
+option(ENABLE_DAV1D "Enable dav1d AV1 decoding" OFF)
 message(STATUS "Enable dav1d AV1 decoding: ${ENABLE_DAV1D}.")
 
-option(ENABLE_MFX "Enable Intel HW decoding" ON)
+option(ENABLE_MFX "Enable Intel HW decoding" OFF)
 message(STATUS "Enable Intel HW decoding: ${ENABLE_MFX}.")
 
-option(ENABLE_XML2S "Enable DNXHD support" ON)
+option(ENABLE_XML2S "Enable DNXHD support" OFF)
 message(STATUS "Enable DNXHD support: ${ENABLE_XML2S}.")
 
 cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
