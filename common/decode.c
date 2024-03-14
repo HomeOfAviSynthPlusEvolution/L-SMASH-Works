@@ -98,6 +98,8 @@ const AVCodec *find_decoder
         else if (!strcmp(codec->name, "libdav1d")
          || !strcmp(codec->name, "libaom-av1"))
             codec_name = "av1";
+        else if (!strcmp(codec->name, "libvpx-vp9"))
+            codec_name = "vp9";
         else
             codec_name = codec->name;
         AVCodec *preferred_decoder;
