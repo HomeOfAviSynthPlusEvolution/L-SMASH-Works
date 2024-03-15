@@ -19,4 +19,5 @@ If you have issues about the file names save the AviSynth script (`.avs`) as UTF
 | ENABLE_DAV1D     | Enable dav1d AV1 decoding    |       ON      |
 | ENABLE_MFX       | Enable Intel HW decoding     |       ON      |
 | ENABLE_XML2S     | Enable DNXHD support         |       ON      |
+| ENABLE_VPX       | Enable libvpx decoding       |       ON      |
 | ENABLE_SSE2      | Force SSE2                   |       ON      |

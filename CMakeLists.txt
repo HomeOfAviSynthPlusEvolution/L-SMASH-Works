@@ -23,6 +23,9 @@ message(STATUS "Enable Intel HW decoding: ${ENABLE_MFX}.")
 option(ENABLE_XML2S "Enable DNXHD support" ON)
 message(STATUS "Enable DNXHD support: ${ENABLE_XML2S}.")
 
+option(ENABLE_VPX "Enable libvpx support" ON)
+message(STATUS "Enable libvpx support: ${ENABLE_VPX}.")
+
 cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
 option(ENABLE_SSE2 "Enable SSE2 support" ${sse2})
 message(STATUS "Enable SSE2 support: ${ENABLE_SSE2}.")
@@ -171,6 +174,12 @@ if (ENABLE_XML2S)
     if (WIN32)
         target_compile_definitions(LSMASHSource PRIVATE "-DLIBXML_STATIC")
     endif()
+endif()
+
+if (ENABLE_VPX)
+    find_library(libvpx NAMES vpx vpx.lib vpxmd.lib)
+    message(STATUS "vpx: ${libvpx}")
+    target_link_libraries(LSMASHSource PRIVATE ${libvpx})
 endif()
 
 target_compile_features(LSMASHSource PRIVATE cxx_std_17)
