@@ -10,6 +10,10 @@
 
 If you have issues about the file names save the AviSynth script (`.avs`) as UTF-8 or just enable UTF-8 code pages in Windows (if available) - `Windows Settings > Time & language > Language & region > Administrative language settings > Change system locale, and check Beta: Use Unicode UTF-8 for worldwide language support.`
 
+##### FFmpeg
+
+[This](https://github.com/HomeOfAviSynthPlusEvolution/FFmpeg/tree/custom-patches-for-lsmashsource) is the recommended FFmpeg version.
+
 ##### CMake building options
 
 |      Option      |          Description         | Default value |
