@@ -53,7 +53,7 @@ static int consume_decoded_audio_samples
     for( int i = 0; i < aohp->input_planes; i++ )
         in_data[i] = frame->extended_data[i] + decoded_data_offset;
     audio_samples_t in;
-    in.channel_layout = frame->channel_layout;
+    in.channel_layout = frame->ch_layout.u.mask;
     in.sample_count   = input_sample_count;
     in.sample_format  = (enum AVSampleFormat)frame->format;
     in.data           = in_data;
@@ -61,8 +61,7 @@ static int consume_decoded_audio_samples
     uint8_t *resampled_buffer = NULL;
     if( aohp->s24_output )
     {
-        int out_channels = get_channel_layout_nb_channels( aohp->output_channel_layout );
-        int out_linesize = get_linesize( out_channels, wanted_sample_count, aohp->output_sample_format );
+        int out_linesize = get_linesize(aohp->output_channel_layout.nb_channels, wanted_sample_count, aohp->output_sample_format);
         if( !aohp->resampled_buffer || out_linesize > aohp->resampled_buffer_size )
         {
             uint8_t *temp = (uint8_t *)av_realloc( aohp->resampled_buffer, out_linesize );
@@ -74,7 +73,7 @@ static int consume_decoded_audio_samples
         resampled_buffer = aohp->resampled_buffer;
     }
     audio_samples_t out;
-    out.channel_layout = aohp->output_channel_layout;
+    out.channel_layout = aohp->output_channel_layout.u.mask;
     out.sample_count   = wanted_sample_count;
     out.sample_format  = aohp->output_sample_format;
     out.data           = resampled_buffer ? &resampled_buffer : out_data;
@@ -153,20 +152,20 @@ uint64_t output_pcm_samples_from_packet
          && frame_buffer->extended_data[0] )
         {
             /* Check channel layout, sample rate and sample format of decoded audio samples. */
-            if( frame_buffer->channel_layout == 0 )
-                frame_buffer->channel_layout = av_get_default_channel_layout( ctx->channels );
+            if (frame_buffer->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC)
+                av_channel_layout_default(&frame_buffer->ch_layout, ctx->ch_layout.nb_channels);
             enum AVSampleFormat input_sample_format = (enum AVSampleFormat)frame_buffer->format;
-            if( aohp->input_channel_layout != frame_buffer->channel_layout
+            if( aohp->input_channel_layout.u.mask != frame_buffer->ch_layout.u.mask
              || aohp->input_sample_rate    != frame_buffer->sample_rate
              || aohp->input_sample_format  != input_sample_format )
             {
                 /* Detected a change of channel layout, sample rate or sample format.
                  * Reconfigure audio resampler. */
                 if( update_resampler_configuration( aohp->swr_ctx,
-                                                    aohp->output_channel_layout,
+                                                   &aohp->output_channel_layout,
                                                     aohp->output_sample_rate,
                                                     aohp->output_sample_format,
-                                                    frame_buffer->channel_layout,
+                                                    &frame_buffer->ch_layout,
                                                     frame_buffer->sample_rate,
                                                     input_sample_format,
                                                     &aohp->input_planes,
@@ -175,7 +174,7 @@ uint64_t output_pcm_samples_from_packet
                     *output_flags |= AUDIO_RECONFIG_FAILURE;
                     break;
                 }
-                aohp->input_channel_layout = frame_buffer->channel_layout;
+                av_channel_layout_copy(&aohp->input_channel_layout, &frame_buffer->ch_layout);
                 aohp->input_sample_rate    = frame_buffer->sample_rate;
                 aohp->input_sample_format  = input_sample_format;
             }
@@ -212,6 +211,8 @@ void lw_cleanup_audio_output_handler
     lw_audio_output_handler_t *aohp
 )
 {
+    av_channel_layout_uninit(&aohp->output_channel_layout);
+    av_channel_layout_uninit(&aohp->input_channel_layout);
     if( aohp->resampled_buffer )
         av_freep( &aohp->resampled_buffer );
     if( aohp->swr_ctx )

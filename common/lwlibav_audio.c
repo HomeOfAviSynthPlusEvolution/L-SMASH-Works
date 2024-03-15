@@ -653,11 +653,10 @@ void set_audio_basic_settings
     AVCodecParameters   *codecpar = adhp->format->streams[ adhp->stream_index ]->codecpar;
     lwlibav_extradata_t *entry    = &adhp->exh.entries[ adhp->frame_list[frame_number].extradata_index ];
     codecpar->sample_rate           = entry->sample_rate;
-    codecpar->channel_layout        = entry->channel_layout;
+    av_channel_layout_from_mask(&codecpar->ch_layout, entry->channel_layout);
     codecpar->format                = (int)entry->sample_format;
     codecpar->bits_per_coded_sample = entry->bits_per_sample;
     codecpar->block_align           = entry->block_align;
-    codecpar->channels              = av_get_channel_layout_nb_channels( codecpar->channel_layout );
 }
 
 int try_decode_audio_frame
@@ -700,7 +699,7 @@ int try_decode_audio_frame
             {
                 if( ctx->sample_rate == 0 )
                     strcpy( error_string, "Failed to set up sample rate.\n" );
-                else if( ctx->channel_layout == 0 && ctx->channels == 0 )
+                else if( ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC && ctx->ch_layout.nb_channels == 0 )
                     strcpy( error_string, "Failed to set up channels.\n" );
                 else
                     strcpy( error_string, "Failed to set up sample format.\n" );
@@ -714,8 +713,7 @@ int try_decode_audio_frame
         ++frame_number;
     } while( ctx->sample_rate == 0
           || ctx->sample_fmt == AV_SAMPLE_FMT_NONE
-          || (ctx->channels == 0 && ctx->channel_layout == 0)
-          || (ctx->channels != av_get_channel_layout_nb_channels( ctx->channel_layout )) );
+          || (ctx->ch_layout.nb_channels == 0 && ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) );
 abort:
     av_frame_free( &picture );
     return err;

@@ -102,7 +102,7 @@ const AVCodec *find_decoder
             codec_name = "vp9";
         else
             codec_name = codec->name;
-        AVCodec *preferred_decoder;
+        const AVCodec *preferred_decoder;
         if( prefer_hw_decoder == 3 )
         {
             preferred_decoder = select_hw_decoder( codec_name, 1, codecpar );

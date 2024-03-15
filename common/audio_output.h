@@ -24,15 +24,15 @@
 
 typedef struct
 {
-    SwrContext *swr_ctx;
+    SwrContext*             swr_ctx;
     uint8_t                *resampled_buffer;
     int                     resampled_buffer_size;
     int                     input_planes;
-    uint64_t                input_channel_layout;
+    AVChannelLayout         input_channel_layout;
     enum AVSampleFormat     input_sample_format;
     int                     input_sample_rate;
     int                     input_block_align;
-    uint64_t                output_channel_layout;
+    AVChannelLayout         output_channel_layout;
     enum AVSampleFormat     output_sample_format;
     int                     output_sample_rate;
     int                     output_block_align;

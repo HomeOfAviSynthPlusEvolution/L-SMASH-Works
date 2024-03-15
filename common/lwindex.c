@@ -1818,7 +1818,7 @@ static int get_audio_frame_length
                 ret = helper->decode( ctx, helper->picture, &output_audio, &temp );
                 if( ret < 0 )
                 {
-                    ctx->channels    = av_get_channel_layout_nb_channels( helper->picture->channel_layout );
+                    av_channel_layout_copy(&ctx->ch_layout, &helper->picture->ch_layout);
                     ctx->sample_rate = helper->picture->sample_rate;
                 }
                 if( output_audio )
@@ -2141,7 +2141,9 @@ static int create_index
     }
     lwhp->format_name  = (char *)format_ctx->iformat->name;
     lwhp->format_flags = format_ctx->iformat->flags;
-    lwhp->raw_demuxer  = !!format_ctx->iformat->raw_codec_id;
+    char lname[4];
+    snprintf(lname, sizeof lname, "%.3s", format_ctx->iformat->long_name);
+    lwhp->raw_demuxer  = !strcmp(lname, "raw");
     vdhp->format       = format_ctx;
     adhp->format       = format_ctx;
     adhp->dv_in_avi    = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
@@ -2231,14 +2233,14 @@ static int create_index
                          pkt_ctx->colorspace );
         else
         {
-            if( pkt_ctx->channel_layout == 0 )
-                pkt_ctx->channel_layout = av_get_default_channel_layout( pkt_ctx->channels );
+            if (pkt_ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC)
+                av_channel_layout_default(&pkt_ctx->ch_layout, pkt_ctx->ch_layout.nb_channels);
             int bits_per_sample = pkt_ctx->bits_per_raw_sample   > 0 ? pkt_ctx->bits_per_raw_sample
                                 : pkt_ctx->bits_per_coded_sample > 0 ? pkt_ctx->bits_per_coded_sample
                                 : av_get_bytes_per_sample( pkt_ctx->sample_fmt ) << 3;
             print_index( index, "Codec=%d,TimeBase=%d/%d,Channels=%d:0x%" PRIx64 ",Rate=%d,Format=%s,BPS=%d\n",
                          pkt_ctx->codec_id, stream->time_base.num, stream->time_base.den,
-                         pkt_ctx->channels, pkt_ctx->channel_layout, pkt_ctx->sample_rate,
+                         pkt_ctx->ch_layout.nb_channels, pkt_ctx->ch_layout.u.mask, pkt_ctx->sample_rate,
                          av_get_sample_fmt_name( pkt_ctx->sample_fmt ) ? av_get_sample_fmt_name( pkt_ctx->sample_fmt ) : "none",
                          bits_per_sample );
         }
@@ -2517,9 +2519,8 @@ static int create_index
                         }
                         audio_info = temp;
                     }
-                    if( av_get_channel_layout_nb_channels( pkt_ctx->channel_layout )
-                      > av_get_channel_layout_nb_channels( aohp->output_channel_layout ) )
-                        aohp->output_channel_layout = pkt_ctx->channel_layout;
+                    if (pkt_ctx->ch_layout.nb_channels > aohp->output_channel_layout.nb_channels)
+                        av_channel_layout_copy(&aohp->output_channel_layout, &pkt_ctx->ch_layout);
                     aohp->output_sample_format   = select_better_sample_format( aohp->output_sample_format, pkt_ctx->sample_fmt );
                     aohp->output_sample_rate     = MAX( aohp->output_sample_rate, audio_sample_rate );
                     aohp->output_bits_per_sample = MAX( aohp->output_bits_per_sample, bits_per_sample );
@@ -2536,7 +2537,7 @@ static int create_index
                 lwlibav_extradata_handler_t *list = &helper->exh;
                 lwlibav_extradata_t *entry = &list->entries[ list->current_index ];
                 if( entry->channel_layout == 0 )
-                    entry->channel_layout = pkt_ctx->channel_layout;
+                    entry->channel_layout = pkt_ctx->ch_layout.u.mask;
                 if( entry->sample_rate == 0 )
                     entry->sample_rate = pkt_ctx->sample_rate;
                 if( entry->sample_format == AV_SAMPLE_FMT_NONE )
@@ -2892,9 +2893,9 @@ static int parse_index
     uint64_t file_hash = 0;
     unsigned file_hash_32 = 0;
     char format_name[256];
-    const int active_video_index;
-    const int active_audio_index;
-    const int default_audio;
+    int active_video_index;
+    int active_audio_index;
+    int default_audio;
 #ifdef _WIN32
     wchar_t *wname = NULL;
     struct _stat64 file_stat;
@@ -3166,11 +3167,8 @@ static int parse_index
                         adhp->time_base.num = time_base.num;
                         adhp->time_base.den = time_base.den;
                     }
-                    if( layout == 0 )
-                        layout = av_get_default_channel_layout( channels );
-                    if( av_get_channel_layout_nb_channels( layout )
-                      > av_get_channel_layout_nb_channels( aohp->output_channel_layout ) )
-                        aohp->output_channel_layout = layout;
+                    if (channels > aohp->output_channel_layout.nb_channels)
+                        av_channel_layout_from_mask(&aohp->output_channel_layout, layout);
                     aohp->output_sample_format   = select_better_sample_format( aohp->output_sample_format,
                                                                                 av_get_sample_fmt( sample_fmt ) );
                     aohp->output_sample_rate     = MAX( aohp->output_sample_rate, audio_sample_rate );

@@ -441,7 +441,7 @@ static void prepare_audio_decoding
     /* Initialize the audio decoder configuration. */
     if( libavsmash_audio_initialize_decoder_configuration( adhp, format_ctx, 0 ) < 0 )
         env->ThrowError( "LSMASHAudioSource: failed to initialize the decoder configuration." );
-    aohp->output_channel_layout  = libavsmash_audio_get_best_used_channel_layout ( adhp );
+    av_channel_layout_from_mask(&aohp->output_channel_layout, libavsmash_audio_get_best_used_channel_layout(adhp));
     aohp->output_sample_format   = libavsmash_audio_get_best_used_sample_format  ( adhp );
     aohp->output_sample_rate     = libavsmash_audio_get_best_used_sample_rate    ( adhp );
     aohp->output_bits_per_sample = libavsmash_audio_get_best_used_bits_per_sample( adhp );

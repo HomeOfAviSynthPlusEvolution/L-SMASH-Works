@@ -61,23 +61,23 @@ int flush_resampler_buffers(SwrContext *swr )
 }
 
 int update_resampler_configuration(SwrContext *swr,
-                                    uint64_t out_channel_layout, int out_sample_rate, enum AVSampleFormat out_sample_fmt,
-                                    uint64_t  in_channel_layout, int  in_sample_rate, enum AVSampleFormat  in_sample_fmt,
+                                    AVChannelLayout* out_channel_layout, int out_sample_rate, enum AVSampleFormat out_sample_fmt,
+                                    AVChannelLayout*  in_channel_layout, int  in_sample_rate, enum AVSampleFormat  in_sample_fmt,
                                     int *input_planes, int *input_block_align )
 {
     /* Reopen the resampler. */
     swr_close( swr );
-    av_opt_set_int( swr, "in_channel_layout",   in_channel_layout,  0 );
-    av_opt_set_int( swr, "in_sample_fmt",       in_sample_fmt,      0 );
-    av_opt_set_int( swr, "in_sample_rate",      in_sample_rate,     0 );
-    av_opt_set_int( swr, "out_channel_layout",  out_channel_layout, 0 );
-    av_opt_set_int( swr, "out_sample_fmt",      out_sample_fmt,     0 );
-    av_opt_set_int( swr, "out_sample_rate",     out_sample_rate,    0 );
-    av_opt_set_int( swr, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP, 0 );
+    av_opt_set_chlayout(   swr, "in_chlayout",         in_channel_layout,  0 );
+    av_opt_set_sample_fmt( swr, "in_sample_fmt",       in_sample_fmt,      0 );
+    av_opt_set_int(        swr, "in_sample_rate",      in_sample_rate,     0 );
+    av_opt_set_chlayout(   swr, "out_chlayout",        out_channel_layout, 0 );
+    av_opt_set_sample_fmt( swr, "out_sample_fmt",      out_sample_fmt,     0 );
+    av_opt_set_int(        swr, "out_sample_rate",     out_sample_rate,    0 );
+    av_opt_set_sample_fmt( swr, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP, 0 );
     if( swr_init( swr ) < 0 )
         return -1;
     /* Set up the number of planes and the block alignment of input audio frame. */
-    int input_channels = av_get_channel_layout_nb_channels( in_channel_layout );
+    const int input_channels = in_channel_layout->nb_channels;
     if( av_sample_fmt_is_planar( in_sample_fmt ) )
     {
         *input_planes      = input_channels;

@@ -63,14 +63,10 @@ void as_setup_audio_rendering
 )
 {
     /* Channel layout. */
-    if( ctx->ch_layout.order == 0 )
-        av_channel_layout_default( &ctx->ch_layout, ctx->channels );
-    AVChannelLayout output_layout;
     if ( channel_layout != 0 )
-        av_channel_layout_from_string( &output_layout, channel_layout );
+        av_channel_layout_from_string(&aohp->output_channel_layout, channel_layout );
     else
-        av_channel_layout_copy( &output_layout, &ctx->ch_layout );
-    aohp->output_channel_layout = output_layout.u.mask;
+        av_channel_layout_copy(&aohp->output_channel_layout, &ctx->ch_layout );
     /* Sample rate. */
     if( sample_rate > 0 )
         aohp->output_sample_rate = sample_rate;
@@ -97,7 +93,7 @@ void as_setup_audio_rendering
         aohp->input_planes      = 1;
         aohp->input_block_align = av_get_bytes_per_sample( ctx->sample_fmt ) * input_channels;
     }
-    int output_channels = output_layout.nb_channels;
+    int output_channels = aohp->output_channel_layout.nb_channels;
     aohp->output_block_align = (output_channels * aohp->output_bits_per_sample) / 8;
     /* Set up resampler. */
     SwrContext *swr_ctx = aohp->swr_ctx;
@@ -108,7 +104,7 @@ void as_setup_audio_rendering
     av_opt_set_chlayout(   swr_ctx, "in_chlayout",        &ctx->ch_layout,             0 );
     av_opt_set_sample_fmt( swr_ctx, "in_sample_fmt",       ctx->sample_fmt,            0 );
     av_opt_set_int(        swr_ctx, "in_sample_rate",      ctx->sample_rate,           0 );
-    av_opt_set_chlayout(   swr_ctx, "out_chlayout",       &output_layout,              0 );
+    av_opt_set_chlayout(   swr_ctx, "out_chlayout",       &aohp->output_channel_layout, 0 );
     av_opt_set_sample_fmt( swr_ctx, "out_sample_fmt",      aohp->output_sample_format, 0 );
     av_opt_set_int(        swr_ctx, "out_sample_rate",     aohp->output_sample_rate,   0 );
     av_opt_set_sample_fmt( swr_ctx, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP,         0 );
@@ -118,7 +114,7 @@ void as_setup_audio_rendering
     vi->nchannels                = output_channels;
     vi->audio_samples_per_second = aohp->output_sample_rate;
     if ( env->FunctionExists("SetChannelMask") )
-        vi->SetChannelMask( true, aohp->output_channel_layout );
+        vi->SetChannelMask( true, aohp->output_channel_layout.u.mask );
     switch ( aohp->output_sample_format )
     {
         case AV_SAMPLE_FMT_U8 :
@@ -140,5 +136,4 @@ void as_setup_audio_rendering
         default :
             env->ThrowError( "%s: %s is not supported.", filter_name, av_get_sample_fmt_name( ctx->sample_fmt ) );
     }
-    av_channel_layout_uninit( &output_layout );
 }
