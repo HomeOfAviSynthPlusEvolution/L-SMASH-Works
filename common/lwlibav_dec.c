@@ -45,25 +45,31 @@ void lwlibav_flush_buffers
     lwlibav_decode_handler_t *dhp
 )
 {
-    const AVCodecParameters *codecpar     = dhp->format->streams[ dhp->stream_index ]->codecpar;
-    const AVCodec           *codec        = dhp->ctx->codec;
-    void                    *app_specific = dhp->ctx->opaque;
-    AVCodecContext *ctx = NULL;
-    if( open_decoder( &ctx, codecpar, codec, dhp->ctx->thread_count, dhp->drc, dhp->ff_options ) < 0 )
+    if (dhp->index_entries_count <= 1)
     {
-        avcodec_flush_buffers( dhp->ctx );
-        dhp->error = 1;
-        lw_log_show( &dhp->lh, LW_LOG_FATAL,
-                     "Failed to flush buffers by a reliable way.\n"
-                     "It is recommended you reopen the file." );
+        const AVCodecParameters* codecpar = dhp->format->streams[dhp->stream_index]->codecpar;
+        const AVCodec* codec = dhp->ctx->codec;
+        void* app_specific = dhp->ctx->opaque;
+        AVCodecContext* ctx = NULL;
+        if (open_decoder(&ctx, codecpar, codec, dhp->ctx->thread_count, dhp->drc, dhp->ff_options) < 0)
+        {
+            avcodec_flush_buffers(dhp->ctx);
+            dhp->error = 1;
+            lw_log_show(&dhp->lh, LW_LOG_FATAL,
+                "Failed to flush buffers by a reliable way.\n"
+                "It is recommended you reopen the file.");
+        }
+        else
+        {
+            dhp->ctx->opaque = NULL;
+            avcodec_free_context(&dhp->ctx);
+            dhp->ctx = ctx;
+            dhp->ctx->opaque = app_specific;
+        }
     }
     else
-    {
-        dhp->ctx->opaque = NULL;
-        avcodec_free_context( &dhp->ctx );
-        dhp->ctx = ctx;
-        dhp->ctx->opaque = app_specific;
-    }
+        avcodec_flush_buffers(dhp->ctx);
+
     dhp->exh.delay_count = 0;
 }
 
