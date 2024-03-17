@@ -20,11 +20,6 @@ jobs:
         brew update
         brew install automake
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.x # Version range or exact version of a Python version to use, using SemVer's version range syntax
-
     - name: Install CMake
       uses: lukka/get-cmake@latest
 
@@ -84,27 +79,8 @@ jobs:
         popd
         rm -rf avisynth-build
 
-    - name: Install zimg
-      run: |
-        git clone https://github.com/sekrit-twc/zimg --branch v3.0 --depth 1
-        pushd zimg
-        ./autogen.sh
-        ./configure --disable-static --disable-simd
-        make -j2
-        sudo make install -j2
-        popd
-        rm -rf zimg
-
-    - name: Install VapourSynth
-      run: |
-        git clone https://github.com/vapoursynth/vapoursynth --depth 1 vapoursynth-build
-        pushd vapoursynth-build
-        ./autogen.sh
-        ./configure --disable-static --disable-x86-asm --disable-vsscript --disable-vspipe --disable-python-module --disable-plugins
-        make -j2
-        sudo make install -j2
-        popd
-        rm -rf vapoursynth-build
+    - name: Setup vapoursynth
+      uses: deadnews/action-setup-vs@latest
 
     - name: Build AviSynth/VapourSynth plugin
       run: |
