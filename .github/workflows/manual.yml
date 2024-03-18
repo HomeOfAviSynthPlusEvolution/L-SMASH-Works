@@ -36,15 +36,6 @@ jobs:
         sudo make install -j2
         popd
         rm -rf FFmpeg
-    - name: Install obuparse
-      run : |
-        git clone https://github.com/dwbuiten/obuparse --depth 1
-        pushd obuparse
-        make libobuparse.a
-        make -j2
-        sudo make install -j2
-        popd
-        rm -rf obuparse
       shell: bash
 
     - name: Install l-smash
