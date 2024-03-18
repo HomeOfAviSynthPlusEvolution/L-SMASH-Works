@@ -133,9 +133,6 @@ message(STATUS "zlib: ${libzlib}")
 find_library(libxxhash NAMES xxhash xxhash.lib)
 message(STATUS "xxhash: ${libxxhash}")
 
-find_library(libobuparse NAMES obuparse obuparse.lib)
-message(STATUS "obuparse: ${libobuparse}")
-
 find_library(liblsmash NAMES lsmash lsmash.lib)
 message(STATUS "lsmash: ${liblsmash}")
 
@@ -147,7 +144,6 @@ target_link_libraries(LSMASHSource PRIVATE
     ${libswresample}
     ${libzlib}
     ${libxxhash}
-    ${libobuparse}
     ${liblsmash}
 )
 
