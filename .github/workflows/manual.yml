@@ -40,9 +40,7 @@ jobs:
       run : |
         git clone https://github.com/dwbuiten/obuparse --depth 1
         pushd obuparse
-        if [[ "${{ matrix.os }}" == "macos-14" ]]; then
-            sed -i '' 's/--version-script,/ /g' Makefile
-        fi
+        make libobuparse.a
         make -j2
         sudo make install -j2
         popd
