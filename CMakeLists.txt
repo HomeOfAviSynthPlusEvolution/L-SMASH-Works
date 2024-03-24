@@ -30,6 +30,9 @@ cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
 option(ENABLE_SSE2 "Enable SSE2 support" ${sse2})
 message(STATUS "Enable SSE2 support: ${ENABLE_SSE2}.")
 
+option(USE_PKG_CONFIG "Use pkg-config to find libraries" OFF)
+message(STATUS "Use pkg-config to find libraries: ${USE_PKG_CONFIG}")
+
 set(sources
     ${CMAKE_CURRENT_SOURCE_DIR}/common/decode.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.c
@@ -106,80 +109,111 @@ if (APPLE)
 endif()
 
 if (WIN32)
-    find_library(bcrypt bcrypt)
-    message(STATUS "bcrypt: ${bcrypt}")
-    target_link_libraries(LSMASHSource PRIVATE ${bcrypt})
+    if (NOT USE_PKG_CONFIG)
+        find_library(bcrypt bcrypt)
+        message(STATUS "bcrypt: ${bcrypt}")
+        target_link_libraries(LSMASHSource PRIVATE ${bcrypt})
+    endif()
 endif()
 
 if (MSVC)
     set(CMAKE_FIND_LIBRARY_SUFFIXES "")
 endif()
 
-find_library(libavutil NAMES avutil libavutil.a)
-message(STATUS "avutil: ${libavutil}")
+if (USE_PKG_CONFIG)
+    find_package(PkgConfig REQUIRED)
 
-find_library(libavcodec NAMES avcodec libavcodec.a)
-message(STATUS "avcodec: ${libavcodec}")
-
-find_library(libavformat NAMES avformat libavformat.a)
-message(STATUS "avformat: ${libavformat}")
-
-find_library(libswscale NAMES swscale libswscale.a)
-message(STATUS "swscale: ${libswscale}")
-
-find_library(libswresample NAMES swresample libswresample.a)
-message(STATUS "swresample: ${libswresample}")
-
-find_library(libzlib NAMES z zlib.lib)
-message(STATUS "zlib: ${libzlib}")
-
-find_library(libxxhash NAMES xxhash xxhash.lib)
-message(STATUS "xxhash: ${libxxhash}")
-
-find_library(libobuparse NAMES obuparse obuparse.lib)
-message(STATUS "obuparse: ${libobuparse}")
-
-find_library(liblsmash NAMES lsmash lsmash.lib)
-message(STATUS "lsmash: ${liblsmash}")
-
-target_link_libraries(LSMASHSource PRIVATE
-    ${libavutil}
-    ${libavcodec}
-    ${libavformat}
-    ${libswscale}
-    ${libswresample}
-    ${libzlib}
-    ${libxxhash}
-    ${libobuparse}
-    ${liblsmash}
-)
-
-if (ENABLE_DAV1D)
-    find_library(libdav1d NAMES dav1d libdav1d.a)
-    message(STATUS "dav1d: ${libdav1d}")
-    target_link_libraries(LSMASHSource PRIVATE ${libdav1d})
-endif()
-
-if (ENABLE_MFX)
-    find_library(libmfx NAMES mfx libmfx.lib)
-    message(STATUS "mfx: ${libmfx}")
-    target_link_libraries(LSMASHSource PRIVATE ${libmfx})
-endif()
-
-if (ENABLE_XML2S)
-    find_library(libxml2s NAMES xml2s libxml2s.lib)
-    message(STATUS "xml2s: ${libxml2s}")
-    target_link_libraries(LSMASHSource PRIVATE ${libxml2s})
-
-    if (WIN32)
-        target_compile_definitions(LSMASHSource PRIVATE "-DLIBXML_STATIC")
+    pkg_search_module(libavutil REQUIRED libavutil QUIET)
+    message(STATUS "avutil: ${libavutil_LIBRARIES}")
+    pkg_search_module(libavcodec REQUIRED libavcodec QUIET)
+    message(STATUS "avcodec: ${libavcodec_LIBRARIES}")
+    pkg_search_module(libavformat REQUIRED libavformat QUIET)
+    message(STATUS "avformat: ${libavformat_LIBRARIES}")
+    pkg_search_module(libswscale REQUIRED libswscale QUIET)
+    message(STATUS "swscale: ${libswscale_LIBRARIES}")
+    pkg_search_module(libswresample REQUIRED libswresample QUIET)
+    message(STATUS "swresample: ${libswresample_LIBRARIES}")
+    
+    pkg_search_module(libzlib REQUIRED zlib QUIET)
+    message(STATUS "zlib: ${libzlib_LIBRARIES}")
+    
+    pkg_search_module(libxxhash REQUIRED libxxhash QUIET)
+    message(STATUS "xxhash: ${libxxhash_LIBRARIES}")
+    
+    pkg_search_module(liblsmash REQUIRED liblsmash QUIET)
+    message(STATUS "lsmash: ${liblsmash_LIBRARIES}")
+    
+    target_link_libraries(LSMASHSource PRIVATE
+        ${libavutil_LIBRARIES}
+        ${libavcodec_LIBRARIES}
+        ${libavformat_LIBRARIES}
+        ${libswscale_LIBRARIES}
+        ${libswresample_LIBRARIES}
+        ${libzlib_LIBRARIES}
+        ${libxxhash_LIBRARIES}
+        ${liblsmash_LIBRARIES}
+    )
+else()
+    find_library(libavutil NAMES avutil libavutil.a)
+    message(STATUS "avutil: ${libavutil}")
+    find_library(libavcodec NAMES avcodec libavcodec.a)
+    message(STATUS "avcodec: ${libavcodec}")
+    find_library(libavformat NAMES avformat libavformat.a)
+    message(STATUS "avformat: ${libavformat}")
+    find_library(libswscale NAMES swscale libswscale.a)
+    message(STATUS "swscale: ${libswscale}")
+    find_library(libswresample NAMES swresample libswresample.a)
+    message(STATUS "swresample: ${libswresample}")
+    
+    find_library(libzlib NAMES z zlib.lib)
+    message(STATUS "zlib: ${libzlib}")
+    
+    find_library(libxxhash NAMES xxhash xxhash.lib)
+    message(STATUS "xxhash: ${libxxhash}")
+    
+    find_library(libobuparse NAMES obuparse obuparse.lib)
+    message(STATUS "obuparse: ${libobuparse}")
+    
+    find_library(liblsmash NAMES lsmash lsmash.lib)
+    message(STATUS "lsmash: ${liblsmash}")
+    
+    target_link_libraries(LSMASHSource PRIVATE
+        ${libavutil}
+        ${libavcodec}
+        ${libavformat}
+        ${libswscale}
+        ${libswresample}
+        ${libzlib}
+        ${libxxhash}
+        ${libobuparse}
+        ${liblsmash}
+    )
+    if (ENABLE_DAV1D)
+        find_library(libdav1d NAMES dav1d libdav1d.a)
+        message(STATUS "dav1d: ${libdav1d}")
+        target_link_libraries(LSMASHSource PRIVATE ${libdav1d})
     endif()
-endif()
-
-if (ENABLE_VPX)
-    find_library(libvpx NAMES vpx vpx.lib vpxmd.lib)
-    message(STATUS "vpx: ${libvpx}")
-    target_link_libraries(LSMASHSource PRIVATE ${libvpx})
+    
+    if (ENABLE_MFX)
+        find_library(libmfx NAMES mfx libmfx.lib)
+        message(STATUS "mfx: ${libmfx}")
+        target_link_libraries(LSMASHSource PRIVATE ${libmfx})
+    endif()
+    
+    if (ENABLE_XML2S)
+        find_library(libxml2s NAMES xml2s libxml2s.lib)
+        message(STATUS "xml2s: ${libxml2s}")
+        target_link_libraries(LSMASHSource PRIVATE ${libxml2s})
+        if (WIN32)
+            target_compile_definitions(LSMASHSource PRIVATE "-DLIBXML_STATIC")
+        endif()
+    endif()
+    
+    if (ENABLE_VPX)
+        find_library(libvpx NAMES vpx vpx.lib vpxmd.lib)
+        message(STATUS "vpx: ${libvpx}")
+        target_link_libraries(LSMASHSource PRIVATE ${libvpx})
+    endif()
 endif()
 
 target_compile_features(LSMASHSource PRIVATE cxx_std_17)
