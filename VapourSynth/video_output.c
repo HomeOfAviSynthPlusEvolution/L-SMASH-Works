@@ -1043,7 +1043,8 @@ void vs_set_frame_properties
             vsapi->propSetInt( props, "_ChromaLocation", av_frame->chroma_location - 1, paReplace );
     }
     /* Picture type */
-    char pict_type = av_get_picture_type_char( av_frame->pict_type );
+    char pict_type = (av_frame->pict_type == 80 || av_frame->pict_type == 73) ? av_frame->pict_type
+        : av_get_picture_type_char(av_frame->pict_type);
     vsapi->propSetData( props, "_PictType", &pict_type, 1, paReplace );
     /* BFF or TFF */
     int field_based = 0;

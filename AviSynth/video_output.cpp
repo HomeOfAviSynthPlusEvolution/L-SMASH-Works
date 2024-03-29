@@ -865,7 +865,8 @@ void avs_set_frame_properties
     env->propSetInt(props, "_DurationNum", duration_num, 0);
     env->propSetInt(props, "_DurationDen", duration_den, 0);
     if (stream)
-        env->propSetFloat(props, "_AbsoluteTime", ((stream->start_time != AV_NOPTS_VALUE) ? (static_cast<double>(stream->start_time) / stream->time_base.den * stream->time_base.num) : 0.0)
+        env->propSetFloat(props, "_AbsoluteTime", ((stream->start_time != AV_NOPTS_VALUE) ?
+            (static_cast<double>(stream->start_time) / stream->time_base.den * stream->time_base.num) : 0.0)
             + static_cast<double>(n * duration_num) / duration_den, 0);
     else
         env->propSetFloat(props, "_AbsoluteTime", static_cast<double>(n * duration_num) / duration_den, 0);
@@ -883,7 +884,8 @@ void avs_set_frame_properties
             env->propSetInt(props, "_ChromaLocation", av_frame->chroma_location - 1, 0);
     }
     /* Picture type */
-    char pict_type = av_get_picture_type_char(av_frame->pict_type);
+    char pict_type = (av_frame->pict_type == 80 || av_frame->pict_type == 73) ? av_frame->pict_type
+        : av_get_picture_type_char(av_frame->pict_type);
     env->propSetData(props, "_PictType", &pict_type, 1, 0);
     /* BFF or TFF */
     int field_based = 0;
