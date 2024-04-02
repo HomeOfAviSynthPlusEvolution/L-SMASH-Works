@@ -2823,7 +2823,6 @@ static int create_index
         if( opt->av_sync && vdhp->stream_index >= 0 )
             lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, audio_sample_rate );
     }
-    av_freep(&vdhp->index_entries);
 #ifdef _WIN32
     lw_free(wname);
 #endif // _WIN32
@@ -3447,7 +3446,6 @@ static int parse_index
             fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", vdhp->stream_index );
             fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index );
         }
-        av_freep(&vdhp->index_entries);
 #ifdef _WIN32
         lw_free(wname);
 #endif // _WIN32
@@ -3455,7 +3453,6 @@ static int parse_index
         return 0;
     }
 fail_parsing:
-    av_freep(&vdhp->index_entries);
 #ifdef _WIN32
     lw_free(wname);
 #endif // _WIN32
