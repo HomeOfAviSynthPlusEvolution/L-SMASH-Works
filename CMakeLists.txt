@@ -105,69 +105,58 @@ if (APPLE)
     target_include_directories(LSMASHSource PRIVATE /usr/local/include)
 endif()
 
-if (WIN32)
-    find_library(bcrypt bcrypt)
-    message(STATUS "bcrypt: ${bcrypt}")
-    target_link_libraries(LSMASHSource PRIVATE ${bcrypt})
-endif()
-
 if (MSVC)
     set(CMAKE_FIND_LIBRARY_SUFFIXES "")
 endif()
 
-find_library(libavutil NAMES avutil libavutil.a)
-message(STATUS "avutil: ${libavutil}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 
-find_library(libavcodec NAMES avcodec libavcodec.a)
-message(STATUS "avcodec: ${libavcodec}")
+find_package(FFMPEG REQUIRED COMPONENTS
+    avcodec
+    avformat
+    swscale
+    swresample
+    avutil
+)
 
-find_library(libavformat NAMES avformat libavformat.a)
-message(STATUS "avformat: ${libavformat}")
-
-find_library(libswscale NAMES swscale libswscale.a)
-message(STATUS "swscale: ${libswscale}")
-
-find_library(libswresample NAMES swresample libswresample.a)
-message(STATUS "swresample: ${libswresample}")
-
-find_library(libzlib NAMES z zlib.lib)
+find_library(libzlib NAMES libz.a z zlib.lib)
 message(STATUS "zlib: ${libzlib}")
 
-find_library(libxxhash NAMES xxhash xxhash.lib)
+find_library(libxxhash NAMES libxxhash.a xxhash xxhash.lib)
 message(STATUS "xxhash: ${libxxhash}")
 
-find_library(libobuparse NAMES obuparse obuparse.lib)
+find_library(libobuparse NAMES libobuparse.a obuparse obuparse.lib)
 message(STATUS "obuparse: ${libobuparse}")
 
-find_library(liblsmash NAMES lsmash lsmash.lib)
+find_library(liblsmash NAMES liblsmash.a lsmash lsmash.lib)
 message(STATUS "lsmash: ${liblsmash}")
 
 target_link_libraries(LSMASHSource PRIVATE
-    ${libavutil}
-    ${libavcodec}
-    ${libavformat}
-    ${libswscale}
-    ${libswresample}
+    FFMPEG::avcodec
+    FFMPEG::avformat
+    FFMPEG::swscale
+    FFMPEG::swresample
+    FFMPEG::avutil
     ${libzlib}
     ${libxxhash}
-    ${libobuparse}
     ${liblsmash}
+    ${libobuparse}
 )
 
 if (ENABLE_DAV1D)
-    find_library(libdav1d NAMES dav1d libdav1d.a)
+    find_library(libdav1d NAMES libdav1d.a dav1d)
     message(STATUS "dav1d: ${libdav1d}")
     target_link_libraries(LSMASHSource PRIVATE ${libdav1d})
 endif()
 
 if (ENABLE_MFX)
-    find_library(libmfx NAMES mfx libmfx.lib)
+    find_library(libmfx NAMES libmfx.a mfx libmfx.lib)
     message(STATUS "mfx: ${libmfx}")
     target_link_libraries(LSMASHSource PRIVATE ${libmfx})
 endif()
 
 if (ENABLE_XML2S)
-    find_library(libxml2s NAMES xml2s libxml2s.lib)
+    find_library(libxml2s NAMES libxml2s.a xml2s libxml2s.lib)
     message(STATUS "xml2s: ${libxml2s}")
     target_link_libraries(LSMASHSource PRIVATE ${libxml2s})
 
@@ -180,6 +169,16 @@ if (ENABLE_VPX)
     find_library(libvpx NAMES vpx vpx.lib vpxmd.lib)
     message(STATUS "vpx: ${libvpx}")
     target_link_libraries(LSMASHSource PRIVATE ${libvpx})
+endif()
+
+if (MINGW)
+    target_link_libraries(LSMASHSource PRIVATE ws2_32)
+endif()
+
+if (WIN32)
+    find_library(bcrypt NAMES bcrypt bcrypt.lib)
+    message(STATUS "bcrypt: ${bcrypt}")
+    target_link_libraries(LSMASHSource PRIVATE ${bcrypt})
 endif()
 
 target_compile_features(LSMASHSource PRIVATE cxx_std_17)
