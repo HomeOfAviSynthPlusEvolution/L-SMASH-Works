@@ -45,7 +45,13 @@ void lwlibav_flush_buffers
     lwlibav_decode_handler_t *dhp
 )
 {
-    if (dhp->index_entries_count <= 1)
+    if (!strcmp(dhp->ctx->codec->name, "libdav1d")
+        && dhp->ctx->level > 9)
+        avcodec_flush_buffers(dhp->ctx);
+    else if (dhp->ctx->codec_type == AVMEDIA_TYPE_VIDEO
+        && strcmp(dhp->ctx->codec->name, "libdav1d"))
+        avcodec_flush_buffers(dhp->ctx);
+    else
     {
         const AVCodecParameters* codecpar = dhp->format->streams[dhp->stream_index]->codecpar;
         const AVCodec* codec = dhp->ctx->codec;
@@ -67,8 +73,6 @@ void lwlibav_flush_buffers
             dhp->ctx->opaque = app_specific;
         }
     }
-    else
-        avcodec_flush_buffers(dhp->ctx);
 
     dhp->exh.delay_count = 0;
 }
