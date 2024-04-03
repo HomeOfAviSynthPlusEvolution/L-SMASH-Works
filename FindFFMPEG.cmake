@@ -30,10 +30,18 @@ are guaranteed to set these variables or provide targets.
 #]==]
 
 function (_ffmpeg_find component headername)
+  if (NOT MSVC)
+    find_package(PkgConfig)
+    if (PKG_CONFIG_FOUND)
+      pkg_check_modules(${component} lib${component})
+    endif (PKG_CONFIG_FOUND)
+  endif (NOT MSVC)
+
   find_path("FFMPEG_${component}_INCLUDE_DIR"
     NAMES
       "lib${component}/${headername}"
     PATHS
+      ${${component}_INCLUDE_DIRS}
       "${FFMPEG_ROOT}/include"
       ~/Library/Frameworks
       /Library/Frameworks
@@ -59,6 +67,7 @@ function (_ffmpeg_find component headername)
     NAMES
       "${component}"
     PATHS
+      ${${component}_LIBRARY_DIRS}
       "${FFMPEG_ROOT}/lib"
       ~/Library/Frameworks
       /Library/Frameworks
