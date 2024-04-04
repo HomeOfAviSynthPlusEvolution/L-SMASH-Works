@@ -30,12 +30,10 @@ are guaranteed to set these variables or provide targets.
 #]==]
 
 function (_ffmpeg_find component headername)
-  if (NOT MSVC)
-    find_package(PkgConfig)
-    if (PKG_CONFIG_FOUND)
-      pkg_check_modules(${component} lib${component})
-    endif (PKG_CONFIG_FOUND)
-  endif (NOT MSVC)
+  find_package(PkgConfig)
+  if (PKG_CONFIG_FOUND)
+    pkg_check_modules(${component} lib${component})
+  endif (PKG_CONFIG_FOUND)
 
   find_path("FFMPEG_${component}_INCLUDE_DIR"
     NAMES
