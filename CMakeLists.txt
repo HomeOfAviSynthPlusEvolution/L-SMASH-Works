@@ -135,6 +135,8 @@ endif (PKG_CONFIG_FOUND)
 find_library(libxxhash NAMES libxxhash.a xxhash xxhash.lib PATHS ${xxhash_LIBRARY_DIRS})
 message(STATUS "xxhash: ${libxxhash}")
 
+find_path(libopurse_include NAMES obuparse.h)
+target_include_directories(LSMASHSource PRIVATE ${libopurse_include})
 find_library(libobuparse NAMES libobuparse.a obuparse obuparse.lib)
 message(STATUS "obuparse: ${libobuparse}")
 
@@ -142,7 +144,7 @@ if (PKG_CONFIG_FOUND)
     pkg_check_modules(lsmash liblsmash)
     target_include_directories(LSMASHSource PRIVATE ${lsmash_INCLUDE_DIRS})
 endif (PKG_CONFIG_FOUND)
-find_library(liblsmash NAMES liblsmash.a lsmash lsmash.lib PATHS ${lsmash_LIBRARY_DIRS})
+find_library(liblsmash NAMES liblsmash.a lsmash liblsmash.lib PATHS ${lsmash_LIBRARY_DIRS})
 message(STATUS "lsmash: ${liblsmash}")
 
 target_link_libraries(LSMASHSource PRIVATE
