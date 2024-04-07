@@ -66,7 +66,11 @@ void as_setup_audio_rendering
     if ( channel_layout != 0 )
         av_channel_layout_from_string(&aohp->output_channel_layout, channel_layout );
     else
-        av_channel_layout_copy(&aohp->output_channel_layout, &ctx->ch_layout );
+    {
+        av_channel_layout_copy(&aohp->output_channel_layout, &ctx->ch_layout);
+        if (aohp->output_channel_layout.order == AV_CHANNEL_ORDER_UNSPEC)
+            av_channel_layout_default(&aohp->output_channel_layout, aohp->output_channel_layout.nb_channels);
+    }
     /* Sample rate. */
     if( sample_rate > 0 )
         aohp->output_sample_rate = sample_rate;
