@@ -925,7 +925,10 @@ void update_configuration
             lsmash_audio_summary_t *audio = (lsmash_audio_summary_t *)summary;
             codecpar->sample_rate           = config->queue.sample_rate     ? config->queue.sample_rate     : audio->frequency;
             codecpar->bits_per_coded_sample = config->queue.bits_per_sample ? config->queue.bits_per_sample : audio->sample_size;
-            av_channel_layout_default(&codecpar->ch_layout, config->queue.channels ? config->queue.channels : audio->channels);
+            if (config->queue.channels)
+                av_channel_layout_default(&codecpar->ch_layout, config->queue.channels);
+            else if (codecpar->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC)
+                av_channel_layout_default(&codecpar->ch_layout, audio->channels);
         }
         if( codec->id == AV_CODEC_ID_DTS )
         {
