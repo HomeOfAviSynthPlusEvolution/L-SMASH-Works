@@ -80,7 +80,7 @@ jobs:
         rm -rf avisynth-build
 
     - name: Setup vapoursynth
-      uses: deadnews/action-setup-vs@latest
+      uses: deadnews/action-setup-vs@v1.0.4
 
     - name: Build AviSynth/VapourSynth plugin
       run: |
