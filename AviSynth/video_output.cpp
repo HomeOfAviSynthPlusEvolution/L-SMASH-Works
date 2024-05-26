@@ -40,8 +40,6 @@ extern "C"
 #include <libavutil/mastering_display_metadata.h>
 }
 
-#include "../common/lwsimd.h"
-
 #include "video_output.h"
 
 static void make_black_background_planar_yuv

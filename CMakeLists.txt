@@ -39,7 +39,6 @@ set(sources
     ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/common/lwsimd.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.c
     ${CMAKE_CURRENT_SOURCE_DIR}/common/utils.c

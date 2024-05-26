@@ -38,7 +38,7 @@ jobs:
         git clone https://github.com/dwbuiten/obuparse --depth 1
         pushd obuparse
         if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            sed -i '' 's/--version-script,/ /g' Makefile
+            sed -i '' 's/--version-script,obuparse.v/ /g' Makefile
         fi
         make -j2
         sudo make install -j2
