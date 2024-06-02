@@ -1022,7 +1022,6 @@ void update_configuration
             AVChannelLayout extended_layout;
             av_channel_layout_default(&extended_layout, ctx->ch_layout.nb_channels);
             extended->channel_layout = extended_layout.u.mask;
-            av_channel_layout_uninit(&extended_layout);
         }
         extended->sample_rate    = ctx->sample_rate;
         extended->sample_format  = ctx->sample_fmt;
@@ -1045,7 +1044,6 @@ void update_configuration
     }
     return;
 fail:
-    av_channel_layout_uninit(&codecpar->ch_layout);
     avcodec_parameters_free( &codecpar );
     config->update_pending    = 0;
     config->delay_count       = 0;
@@ -1157,7 +1155,6 @@ int initialize_decoder_configuration
             ++valid_index_count;
         }
     }
-    av_channel_layout_uninit(&prefer_layout);
     lw_free( index_list );
     /* Reinitialize decoder configuration at the first valid sample. */
     for( uint32_t i = 1; get_sample( root, track_ID, i, config, &dummy ) < 0; i++ );

@@ -56,7 +56,6 @@ int resample_s32_to_s24( uint8_t **out_data, uint8_t *in_data, int data_size )
 
 int flush_resampler_buffers(SwrContext *swr )
 {
-    swr_close( swr );
     return swr_init( swr ) < 0 ? -1 : 0;
 }
 
@@ -66,7 +65,6 @@ int update_resampler_configuration(SwrContext *swr,
                                     int *input_planes, int *input_block_align )
 {
     /* Reopen the resampler. */
-    swr_close( swr );
     av_opt_set_chlayout(   swr, "in_chlayout",         in_channel_layout,  0 );
     av_opt_set_sample_fmt( swr, "in_sample_fmt",       in_sample_fmt,      0 );
     av_opt_set_int(        swr, "in_sample_rate",      in_sample_rate,     0 );

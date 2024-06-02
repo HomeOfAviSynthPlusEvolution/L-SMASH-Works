@@ -211,8 +211,6 @@ void lw_cleanup_audio_output_handler
     lw_audio_output_handler_t *aohp
 )
 {
-    av_channel_layout_uninit(&aohp->output_channel_layout);
-    av_channel_layout_uninit(&aohp->input_channel_layout);
     if( aohp->resampled_buffer )
         av_freep( &aohp->resampled_buffer );
     if( aohp->swr_ctx )
