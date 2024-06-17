@@ -1,0 +1,38 @@
+name: pack
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install tools
+      run: |
+        sudo apt install -y build-essential nasm yasm meson
+
+    - name: Set up Homebrew
+      id: set-up-homebrew
+      uses: Homebrew/actions/setup-homebrew@master
+
+    - name: Install VS
+      run: |
+        brew install vapoursynth
+
+    - name: Build
+      run: |
+        pushd VapourSynth
+        bash build_plugin.sh
+
+    - name: Upload VapourSynth plugin
+      uses: actions/upload-artifact@v4
+      with:
+        name: vslsmashsource
+        path: libvslsmashsource.so
