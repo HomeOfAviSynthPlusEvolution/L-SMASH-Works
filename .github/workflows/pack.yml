@@ -30,9 +30,10 @@ jobs:
       run: |
         pushd VapourSynth
         bash build_plugin.sh
+        popd
 
     - name: Upload VapourSynth plugin
       uses: actions/upload-artifact@v4
       with:
         name: vslsmashsource
-        path: libvslsmashsource.so
+        path: VapourSynth/vs_build/libvslsmashsource.so
