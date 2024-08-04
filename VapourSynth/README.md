@@ -52,6 +52,10 @@
                 Output frame rate numerator for VFR->CFR (Variable Frame Rate to Constant Frame Rate) conversion.
                 If frame rate is set to a valid value, the conversion is achieved by padding and/or dropping frames at the specified frame rate.
                 Otherwise, output frame rate is set to a computed average frame rate and the output process is performed by actual frame-by-frame.
+
+				NOTE: You must explicitly set this if the source is an AVI file that contains null/drop frames that you would like to keep. For
+				example, AVI files captured using VirtualDub commonly contain null/drop frames that were inserted during the capture process.
+				Unless you provide this parameter, these null frames will be discarded, commonly resulting in loss of audio/video sync.
             + fpsden (default : 1)
                 Output frame rate denominator for VFR->CFR (Variable Frame Rate to Constant Frame Rate) conversion.
                 See 'fpsnum' in details.
