@@ -27,6 +27,12 @@ option(ENABLE_VPX "Enable libvpx support" ON)
 message(STATUS "Enable libvpx support: ${ENABLE_VPX}.")
 
 cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+    # sse2neon
+    set(sse2 ON)
+endif()
+
 option(ENABLE_SSE2 "Enable SSE2 support" ${sse2})
 message(STATUS "Enable SSE2 support: ${ENABLE_SSE2}.")
 
@@ -220,10 +226,11 @@ if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
         target_compile_definitions(LSMASHSource PRIVATE DEBUG_BUILD)
     else (build_type STREQUAL release)
         target_compile_definitions(LSMASHSource PRIVATE RELEASE_BUILD)
+        target_compile_options(LSMASHSource PRIVATE -Ofast -funroll-loops)
     endif()
-
     message(STATUS "Build type - ${CMAKE_BUILD_TYPE}")
 endif()
+
 
 if (${sse2})
     target_compile_definitions(LSMASHSource PRIVATE SSE2_ENABLED=1)

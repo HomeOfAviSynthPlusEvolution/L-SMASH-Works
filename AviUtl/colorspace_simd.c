@@ -27,10 +27,17 @@
 #include "../common/utils.h"
 #include "../common/lwsimd.h"
 
+
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#include <tmmintrin.h>
 #ifdef __GNUC__
 #pragma GCC target ("ssse3")
 #endif
-#include <tmmintrin.h>
+#elif defined(__arm__) || defined(__aarch64__)
+#include "../common/sse2neon.h"
+#endif
+
 /* SSSE3 version of func convert_yv12i_to_yuy2 */
 void LW_FUNC_ALIGN convert_yv12i_to_yuy2_ssse3
 (
@@ -204,10 +211,15 @@ void LW_FUNC_ALIGN convert_yv12i_to_yuy2_ssse3
     }
 }
 
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#include <smmintrin.h>
 #ifdef __GNUC__
 #pragma GCC target ("sse4.1")
 #endif
-#include <smmintrin.h>
+#elif defined(__arm__) || defined(__aarch64__)
+#include "../common/sse2neon.h"
+#endif
 
 /* the inner loop branch should be deleted by forced inline expansion and "bit_depth" constant propagation. */
 static void LW_FUNC_ALIGN LW_FORCEINLINE convert_yuv420ple_i_to_yuv444p16le_sse41
