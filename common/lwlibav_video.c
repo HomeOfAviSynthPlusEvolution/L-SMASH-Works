@@ -449,8 +449,9 @@ static uint32_t correct_current_frame_number
     // earlier frame.
     // Therefore, we should not just give up when dts == AV_NOPTS_VALUE, and we have to also check some
     // others fields, especially when lw_seek_flags is more than just SEEK_DTS_BASED.
-    if( (pkt->dts == AV_NOPTS_VALUE && ((vdhp->lw_seek_flags & ~SEEK_DTS_BASED) == 0))
-            || MATCH_DTS( p ) || MATCH_POS( p ) )
+    int undef_timestamp = (vdhp->ctx->codec_id == AV_CODEC_ID_VC1) ? pkt->dts == AV_NOPTS_VALUE :
+        (pkt->dts == AV_NOPTS_VALUE && ((vdhp->lw_seek_flags & ~SEEK_DTS_BASED) == 0));
+    if( undef_timestamp || MATCH_DTS( p ) || MATCH_POS( p ) )
         return i;
     if( pkt->dts > info[p].dts )
     {
