@@ -865,7 +865,7 @@ void avs_set_frame_properties
     if (stream)
         env->propSetFloat(props, "_AbsoluteTime", ((stream->start_time != AV_NOPTS_VALUE) ?
             (static_cast<double>(stream->start_time) / stream->time_base.den * stream->time_base.num) : 0.0)
-            + static_cast<double>(n * duration_num) / duration_den, 0);
+            + static_cast<double>(stream->time_base.num) * av_frame->pts / stream->time_base.den, 0);
     else
         env->propSetFloat(props, "_AbsoluteTime", static_cast<double>(n * duration_num) / duration_den, 0);
     /* Color format
