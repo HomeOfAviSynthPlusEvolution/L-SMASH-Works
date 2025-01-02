@@ -46,7 +46,7 @@ extern "C"
 #define SEEK_MODE_UNSAFE     1
 #define SEEK_MODE_AGGRESSIVE 2
 
-#if LIBAVCODEC_VERSION_MICRO < 100
+#if LIBAVCODEC_VERSION_MICRO < (100)
 #define avcodec_find_best_pix_fmt_of_list( _0, _1, _2, _3 ) avcodec_find_best_pix_fmt2( (enum AVPixelFormat *)(_0), _1, _2, _3 )
 #endif
 
