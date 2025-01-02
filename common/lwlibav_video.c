@@ -1386,9 +1386,11 @@ static void handle_decoder_pix_fmt
 )
 {
     assert( codecpar && codec );
+#if LIBAVCODEC_VERSION_MICRO < 100
     if( codec->pix_fmts )
         codecpar->format = (int)avcodec_find_best_pix_fmt_of_list( codec->pix_fmts, pix_fmt, 1, NULL );
     else
+#endif
         codecpar->format = (int)pix_fmt;
 }
 
