@@ -32,6 +32,12 @@ typedef struct
     int      sample_rate;
 } audio_frame_info_t;
 
+typedef struct
+{
+    int64_t pts_in_samples;
+    int length;
+} lw_audio_gap_info_t;
+
 struct lwlibav_audio_decode_handler_tag
 {
     /* common */
@@ -62,4 +68,6 @@ struct lwlibav_audio_decode_handler_tag
     uint32_t            last_frame_number;
     uint64_t            pcm_sample_count;
     uint64_t            next_pcm_sample_number;
+    lw_audio_gap_info_t *gap_list;
+    int                 gap_count;
 };

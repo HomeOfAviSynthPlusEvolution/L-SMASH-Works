@@ -41,6 +41,7 @@ typedef struct
     uint64_t                request_length;
     uint64_t                skip_decoded_samples;   /* Upsampling by the decoder is considered. */
     uint64_t                output_sample_offset;
+    int                     fill_audio_gaps;
 } lw_audio_output_handler_t;
 
 enum audio_output_flag

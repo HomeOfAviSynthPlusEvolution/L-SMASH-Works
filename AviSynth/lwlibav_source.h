@@ -82,6 +82,8 @@ class LWLibavAudioSource : public LWLibavSource
 private:
     LWLibavAudioSource() = default;
     int delay_audio( int64_t *start, int64_t wanted_length );
+    int fill_audio_gaps(void* buf, int64_t* start, int64_t wanted_length, lwlibav_audio_decode_handler_t* adhp,
+        lwlibav_audio_output_handler_t* aohp, VideoInfo& vi);
 public:
     LWLibavAudioSource
     (
@@ -92,6 +94,7 @@ public:
         bool                progress,
         const double        drc,
         const char         *ff_options,
+        bool                fill_audio_gaps,
         IScriptEnvironment *env
     );
     ~LWLibavAudioSource();

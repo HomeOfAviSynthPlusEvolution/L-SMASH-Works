@@ -357,3 +357,6 @@
                 If `ff_options="drc_scale=x"` is used, `drc_scale` is ignored.
             + ff_options (defalut: "")
                 Same as 'ff_options' of LSMASHVideoSource().
+            + fill_audio_gaps (defalut: false)
+                Simple filling of audio gaps with silence.
+                This relies on PTS so the audio must have trustworthy PTS.
