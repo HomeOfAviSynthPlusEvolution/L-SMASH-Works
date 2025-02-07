@@ -44,7 +44,7 @@ extern "C"
 #include "decode.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include "osdep.h"
 #endif // _WIN32
 

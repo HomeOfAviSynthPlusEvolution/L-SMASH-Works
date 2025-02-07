@@ -21,7 +21,7 @@
 /* This file is available under an ISC license. */
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include "osdep.h"
 #endif // _WIN32
 
