@@ -33,10 +33,15 @@ typedef unsigned char BYTE;
 typedef unsigned short USHORT;
 #endif
 
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#include <smmintrin.h>
 #ifdef __GNUC__
 #pragma GCC target ("sse4.1")
 #endif
-#include <smmintrin.h>
+#elif defined(__arm__) || defined(__aarch64__)
+#include "sse2neon.h"
+#endif
 
 static LW_FORCEINLINE void fill_rgb_buffer_sse41( BYTE *rgb_buffer, BYTE *lw48_ptr )
 {

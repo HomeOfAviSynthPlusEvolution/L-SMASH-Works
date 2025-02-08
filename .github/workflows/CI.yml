@@ -1,6 +1,6 @@
 name: CI
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
@@ -88,3 +88,9 @@ jobs:
         cmake --build build_avs -j 2
         cmake -S . -B build_vs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DBUILD_AVS_PLUGIN=OFF -DENABLE_VPX=OFF
         cmake --build build_vs -j 2
+    - name: Upload dylib
+      if: matrix.os == ${{'macos-latest'}}
+      uses: actions/upload-artifact@v3
+      with:
+        name: libvslsmashsource
+        path: build_vs/liblsmashsource.1.dylib

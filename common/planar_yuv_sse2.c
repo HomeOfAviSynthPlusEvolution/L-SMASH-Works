@@ -1,4 +1,8 @@
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
 #include <emmintrin.h>
+#elif defined(__arm__) || defined(__aarch64__)
+#include "sse2neon.h"
+#endif
 #include  <stdint.h>
 
 static inline __m128i _MM_PACKUS_EPI32(const __m128i* low, const __m128i* high)

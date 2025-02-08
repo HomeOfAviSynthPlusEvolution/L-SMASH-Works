@@ -56,6 +56,8 @@ deps = [
   version_h
 ]
 
+add_project_arguments('-Ofast', '-funroll-loops', language: 'c')
+
 if host_machine.cpu_family().startswith('x86')
   add_project_arguments('-mfpmath=sse', '-msse2', language: 'c')
 endif
