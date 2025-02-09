@@ -25,7 +25,7 @@
 
 #define PARSE_OR_RETURN(buf, needle, out, type) \
     if (strncmp(buf, needle, strlen(needle)) != 0) \
-        return 0; \
+        return parsed_count; \
     buf += strlen(needle); \
     out = my_strto_##type(buf, &buf); \
     parsed_count++;
@@ -40,6 +40,12 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
     int64_t acc;
     int c;
     int neg = 0;
+
+    const char* min_str = "-9223372036854775808";
+    if (strncmp(s, min_str, strlen(min_str)) == 0) {
+        *endptr = (char*)s + strlen(min_str);
+        return LLONG_MIN;
+    }
 
     /* Process sign. */
     if (*s == '-') {
@@ -75,6 +81,12 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
     int acc;
     int c;
     int neg = 0;
+
+    const char* min_str = "-2147483648";
+    if (strncmp(s, min_str, strlen(min_str)) == 0) {
+        *endptr = (char*)s + strlen(min_str);
+        return INT_MIN;
+    }
 
     /* Process sign. */
     if (*s == '-') {
