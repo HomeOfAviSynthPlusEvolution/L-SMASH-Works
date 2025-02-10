@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 
 #define PARSE_OR_RETURN(buf, needle, out, type) \
     if (strncmp(buf, needle, strlen(needle)) != 0) \

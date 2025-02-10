@@ -145,13 +145,11 @@ typedef struct {
 
 typedef struct {
     char lsmash_works_index_version[16];
-
     int libav_reader_index_file;
     char input_file_path[MAX_FILE_PATH_LENGTH];
     uint64_t file_size;
     int64_t file_last_modification_time;
     uint64_t file_hash;
-    char libav_reader_index[64]; // Store as string
     char format_name[256];
     int format_flags;
     int raw_demuxer;

@@ -238,7 +238,7 @@ static int parse_stream_info(char *content, char *line, stream_info_entry_t *str
     }
     else if (stream_info->codec_type == AV_STREAM_TYPE_AUDIO) {
         // Codec=86019,TimeBase=1/90000,Channels=6:0x60f,Rate=48000,Format=fltp,BPS=32
-        if (sscanf(line, "Codec=%d,TimeBase=%d/%d,Channels=%d:0x%llx,Rate=%d,Format=%[^,],BPS=%d",
+        if (sscanf(line, "Codec=%d,TimeBase=%d/%d,Channels=%d:0x%" SCNx64 ",Rate=%d,Format=%[^,],BPS=%d",
             &stream_info->codec,
             &stream_info->time_base.num, &stream_info->time_base.den,
             &stream_info->data.type1.channels,
@@ -265,7 +265,7 @@ static int parse_extra_data_entry(char *line, int codec_type, extra_data_entry_t
     }
     else if (codec_type == AV_STREAM_TYPE_AUDIO) {
         // Size=0,Codec=86060,4CC=0x332d4341,Layout=0x63f,Rate=48000,Format=s32,BPS=24,Align=0
-        if (sscanf(line, "Size=%d,Codec=%d,4CC=0x%x,Layout=%llx,Rate=%d,Format=%[^,],BPS=%d,Align=%" SCNu16,
+        if (sscanf(line, "Size=%d,Codec=%d,4CC=0x%x,Layout=0x%" SCNx64 ",Rate=%d,Format=%[^,],BPS=%d,Align=%" SCNu16,
             &extra_data->size, &extra_data->codec, &extra_data->fourcc,
             &extra_data->data.type1.layout, &extra_data->data.type1.sample_rate, extra_data->format,
             &extra_data->bits_per_sample, &extra_data->data.type1.block_align) != 8) {
