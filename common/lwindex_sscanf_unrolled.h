@@ -57,7 +57,7 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
     acc = 0;
     for (;;s++) {
         c = *s;
-        if (isdigit(c))
+        if (c >= '0' && c <= '9')
             c -= '0';
         else
             break;
@@ -98,7 +98,7 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
     acc = 0;
     for (;;s++) {
         c = *s;
-        if (isdigit(c))
+        if (c >= '0' && c <= '9')
             c -= '0';
         else
             break;
@@ -122,8 +122,7 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
     sscanf( buf, "Index=%d,POS=%" SCNd64 ",PTS=%" SCNd64 ",DTS=%" SCNd64 ",EDI=%d",
             &stream_index, &pos, &pts, &dts, &extradata_index )
 */
-static inline int sscanf_unrolled1( const char *buf, int *stream_index, int64_t *pos, int64_t *pts, int64_t *dts, int *extradata_index )
-{
+static inline int sscanf_unrolled_main_index(const char *buf, int *stream_index, int64_t *pos, int64_t *pts, int64_t *dts, int *extradata_index) {
     char *p = (char *)buf;
     int parsed_count = 0;
 
@@ -145,8 +144,7 @@ static inline int sscanf_unrolled1( const char *buf, int *stream_index, int64_t 
     sscanf( buf, "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d",
             &key, &pict_type, &poc, &repeat_pict, &field_info )
 */
-static inline int sscanf_unrolled2( const char *buf, int *key, int *pict_type, int *poc, int *repeat_pict, int *field_info )
-{
+static inline int sscanf_unrolled_video_index(const char *buf, int *key, int *pict_type, int *poc, int *repeat_pict, int *field_info) {
     char *p = (char *)buf;
     int parsed_count = 0;
 
@@ -167,8 +165,7 @@ static inline int sscanf_unrolled2( const char *buf, int *key, int *pict_type, i
     Unroll the following sscanf:
     sscanf( buf, "Length=%d", &frame_length )
 */
-static inline int sscanf_unrolled3( const char *buf, int *frame_length )
-{
+static inline int sscanf_unrolled_audio_index(const char *buf, int *frame_length) {
     char *p = (char *)buf;
     int parsed_count = 0;
 
