@@ -20,8 +20,10 @@
 
 /* This file is available under an ISC license. */
 
-#include <ctype.h>
 #include <limits.h>
+#include <errno.h>
+#include <stdint.h>
+#include <immintrin.h>
 
 #define PARSE_OR_RETURN(buf, needle, out, type) \
     if (strncmp(buf, needle, strlen(needle)) != 0) \
@@ -41,12 +43,6 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
     int c;
     int neg = 0;
 
-    const char* min_str = "-9223372036854775808";
-    if (strncmp(s, min_str, strlen(min_str)) == 0) {
-        *endptr = (char*)s + strlen(min_str);
-        return LLONG_MIN;
-    }
-
     /* Process sign. */
     if (*s == '-') {
         neg = 1;
@@ -55,6 +51,43 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
         s++;
 
     acc = 0;
+
+    #if defined(__SSE4_1__)
+        __m128i zero = _mm_set1_epi8('0');
+        __m128i data = _mm_loadu_si128((const __m128i *)s);
+        __m128i add_208 = _mm_sub_epi8(data, _mm_set1_epi8('0'));
+        __m128i min_9 = _mm_min_epu8(add_208, _mm_set1_epi8(9));
+        __m128i is_digit = _mm_cmpeq_epi8(add_208, min_9);
+        int mask = _mm_movemask_epi8(is_digit);
+
+        if ((mask & 0xFF) == 0xFF) {
+            __m128i digits = _mm_sub_epi8(data, zero);
+            __m128i input = _mm_cvtepi8_epi32(digits);
+            __m128i multipliers = _mm_set_epi32(10000, 100000, 1000000, 10000000);
+            __m128i results = _mm_mullo_epi32(input, multipliers);
+            __m128i sum_vec = _mm_hadd_epi32(results, results);
+            sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
+            acc -= _mm_extract_epi32(sum_vec, 0);
+            input = _mm_cvtepi8_epi32(_mm_srli_si128(digits, 4));
+            multipliers = _mm_set_epi32(1, 10, 100, 1000);
+            results = _mm_mullo_epi32(input, multipliers);
+            sum_vec = _mm_hadd_epi32(results, results);
+            sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
+            acc -= _mm_extract_epi32(sum_vec, 0);
+            s += 8;
+        }
+        else if ((mask & 0xF) == 0xF) {
+            __m128i digits = _mm_sub_epi8(data, zero);
+            __m128i input = _mm_cvtepi8_epi32(digits);
+            __m128i multipliers = _mm_set_epi32(1, 10, 100, 1000);
+            __m128i results = _mm_mullo_epi32(input, multipliers);
+            __m128i sum_vec = _mm_hadd_epi32(results, results);
+            sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
+            acc -= _mm_extract_epi32(sum_vec, 0);
+            s += 4;
+        }
+    #endif
+
     for (;;s++) {
         c = *s;
         if (c >= '0' && c <= '9')
@@ -63,17 +96,28 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
             break;
         if (c >= 10)
             break;
-        if (acc > (LLONG_MAX - c) / 10) {
-            acc = LLONG_MAX;
+
+        if (acc < LLONG_MIN / 10) {
             errno = ERANGE;
             return neg ? LLONG_MIN : LLONG_MAX;
         }
         acc *= 10;
-        acc += c;
+
+        if (acc < LLONG_MIN + c) {
+            errno = ERANGE;
+            return neg ? LLONG_MIN : LLONG_MAX;
+        }
+        acc -= c;
     }
     if (endptr != NULL)
         *endptr = (char *)s;
-    return (neg ? -acc : acc);
+
+    if (!neg && acc == LLONG_MIN) {
+        errno = ERANGE;
+        return LLONG_MAX;
+    }
+
+    return (neg ? acc : -acc);
 }
 
 static inline int my_strto_int(const char *nptr, char **endptr) {
@@ -82,10 +126,9 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
     int c;
     int neg = 0;
 
-    const char* min_str = "-2147483648";
-    if (strncmp(s, min_str, strlen(min_str)) == 0) {
-        *endptr = (char*)s + strlen(min_str);
-        return INT_MIN;
+    if (s[0] >= '0' && s[0] <= '9' && s[1] == ',') {
+        *endptr = (char *)s + 1;
+        return s[0] - '0';
     }
 
     /* Process sign. */
@@ -104,17 +147,28 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
             break;
         if (c >= 10)
             break;
-        if (acc > (INT_MAX - c) / 10) {
-            acc = INT_MAX;
+
+        if (acc < INT_MIN / 10) {
             errno = ERANGE;
             return neg ? INT_MIN : INT_MAX;
         }
         acc *= 10;
-        acc += c;
+
+        if (acc < INT_MIN + c) {
+            errno = ERANGE;
+            return neg ? INT_MIN : INT_MAX;
+        }
+        acc -= c;
     }
     if (endptr != NULL)
         *endptr = (char *)s;
-    return (neg ? -acc : acc);
+
+    if (!neg && acc == INT_MIN) {
+        errno = ERANGE;
+        return INT_MAX;
+    }
+
+    return (neg ? acc : -acc);
 }
 
 /*
