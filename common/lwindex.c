@@ -61,7 +61,7 @@ extern "C"
 #include <windows.h>
 #endif
 
-#include "lwindex_sscanf_unrolled.h"
+#include "lwindex_parser.h"
 
 typedef struct
 {
@@ -2910,7 +2910,7 @@ fail_index:
     return -1;
 }
 
-static int parse_index
+static int parse_index_real
 (
     lwlibav_file_handler_t         *lwhp,
     lwlibav_video_decode_handler_t *vdhp,
@@ -2918,13 +2918,16 @@ static int parse_index
     lwlibav_audio_decode_handler_t *adhp,
     lwlibav_audio_output_handler_t *aohp,
     lwlibav_option_t               *opt,
+    lwindex_data_t                 *data,
     FILE                           *index
 )
 {
-    /* Test to open the target file. */
-    char file_path[512] = { 0 };
-    if( fscanf( index, "<InputFilePath>%[^\n<]</InputFilePath>\n", file_path ) != 1 )
+    lwindex_stream_info_t *stream_info = NULL;
+    if (!data) {
         return -1;
+    }
+    /* Test to open the target file. */
+    char* file_path = data->input_file_path;
     size_t file_path_length = strlen( opt->file_path );
     const char *ext = file_path_length >= 5 ? &opt->file_path[file_path_length - 4] : NULL;
     if( ext && !strncmp( ext, ".lwi", strlen( ".lwi" ) ) )
@@ -2947,14 +2950,6 @@ static int parse_index
         memcpy( lwhp->file_path, opt->file_path, file_path_length );
     }
     /* Parse the index file. */
-    int64_t file_size;
-    int64_t file_last_modification_time;
-    uint64_t file_hash = 0;
-    unsigned file_hash_32 = 0;
-    char format_name[256];
-    int active_video_index;
-    int active_audio_index;
-    int default_audio;
 #ifdef _WIN32
     wchar_t *wname = NULL;
     struct _stat64 file_stat;
@@ -2976,47 +2971,30 @@ static int parse_index
     if( stat( lwhp->file_path, &file_stat ) )
         return -1;
 #endif
-    if( fscanf( index, "<FileSize=%" SCNd64 ">\n", &file_size ) != 1
-     || fscanf( index, "<FileLastModificationTime=%" SCNd64 ">\n", &file_last_modification_time ) != 1 )
+    if( data->file_size != file_stat.st_size )
         return -1;
-    if( file_size != file_stat.st_size )
-        return -1;
-    int32_t pos = ftell( index );
-    if( fscanf( index, "<FileHash=0x%" SCNx64 ">\n", &file_hash ) != 1 )
-        fseek( index, pos, SEEK_SET);
-    pos = ftell( index );
-    if( fscanf( index, "<FileHash=0x%x>\n", &file_hash_32 ) != 1 )
-        fseek( index, pos, SEEK_SET);
-    if( file_last_modification_time != file_stat.st_mtime )
+    if( data->file_last_modification_time != file_stat.st_mtime )
     {
         // Also check hashsum
-        if( ( !file_hash
-             || file_hash != xxhash_file( lwhp->file_path, file_stat.st_size ) )
+        if( ( !data->file_hash
+             || data->file_hash != xxhash_file( lwhp->file_path, file_stat.st_size ) )
          &&
-            ( !file_hash_32
-             || file_hash_32 != xxhash32_file( lwhp->file_path, file_stat.st_size ) ) )
+            ( !data->file_hash
+             || data->file_hash != xxhash32_file( lwhp->file_path, file_stat.st_size ) ) )
             return -1;
     }
-    if( fscanf( index, "<LibavReaderIndex=0x%x,%d,%[^>]>\n",
-                (unsigned int *)&lwhp->format_flags, &lwhp->raw_demuxer, format_name ) != 3 )
-        return -1;
-    int fill_audio_gaps;
-    int32_t active_index_pos = ftell( index );
-    if( fscanf( index, "<ActiveVideoStreamIndex>%d</ActiveVideoStreamIndex>\n", &active_video_index ) != 1
-     || fscanf( index, "<ActiveAudioStreamIndex>%d</ActiveAudioStreamIndex>\n", &active_audio_index ) != 1
-     || fscanf( index, "<DefaultAudioStreamIndex>%d</DefaultAudioStreamIndex>\n", &default_audio ) != 1 
-     || fscanf( index, "<FillAudioGaps>%d</FillAudioGaps>\n", &fill_audio_gaps ) != 1 )
-        return -1;
-    lwhp->format_name = format_name;
+    lwhp->format_flags = data->format_flags;
+    lwhp->raw_demuxer = data->raw_demuxer;
+    lwhp->format_name = strdup(data->format_name);
     adhp->dv_in_avi = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
-    int video_present = (active_video_index >= 0);
-    int audio_present = (active_audio_index >= 0);
-    vdhp->stream_index = opt->force_video ? opt->force_video_index : active_video_index;
+    int video_present = (data->active_video_stream_index >= 0);
+    int audio_present = (data->active_audio_stream_index >= 0);
+    vdhp->stream_index = opt->force_video ? opt->force_video_index : data->active_video_stream_index;
     switch (opt->force_audio_index)
     {
         case -1:
         {
-            if (default_audio != active_audio_index)
+            if (data->default_audio_stream_index != data->active_audio_stream_index)
             {
 #ifdef _WIN32
                 lw_free(wname);
@@ -3024,14 +3002,13 @@ static int parse_index
                 return -1;
             }
         }
-        case -2: adhp->stream_index = active_audio_index; break;
+        case -2: adhp->stream_index = data->active_audio_stream_index; break;
         default: adhp->stream_index = opt->force_audio_index; break;
     }
     uint32_t video_info_count = 1 << 16;
     uint32_t audio_info_count = 1 << 16;
     video_frame_info_t *video_info = NULL;
     audio_frame_info_t *audio_info = NULL;
-    lwindex_stream_info_t *stream_info = NULL;
     if( vdhp->stream_index >= 0 )
     {
         video_info = (video_frame_info_t *)malloc( video_info_count * sizeof(video_frame_info_t) );
@@ -3044,13 +3021,10 @@ static int parse_index
         if( !audio_info )
             goto fail_parsing;
     }
-    if( active_audio_index == -2 && opt->force_audio_index != -2 ) // Maybe redundant.
+    if( data->active_audio_stream_index == -2 && opt->force_audio_index != -2 ) // Maybe redundant.
         goto fail_parsing;
-    if (opt->force_audio_index != -2)
-    {
-        if (fill_audio_gaps != aohp->fill_audio_gaps)
-            goto fail_parsing;
-    }        
+    if (opt->force_audio_index != -2 && data->fill_audio_gaps != aohp->fill_audio_gaps)
+        goto fail_parsing;
     vdhp->codec_id             = AV_CODEC_ID_NONE;
     adhp->codec_id             = AV_CODEC_ID_NONE;
     vdhp->initial_pix_fmt      = AV_PIX_FMT_NONE;
@@ -3063,58 +3037,54 @@ static int parse_index
     int      audio_sample_rate     = 0;
     int      constant_frame_length = 1;
     uint64_t audio_duration        = 0;
-    int consistent_field_and_repeat = 0;
-    char buf[1024];
-    if( !fgets( buf, sizeof(buf), index ) )
+
+    int max_stream_index = 0;
+    for( int i = 0; i < data->num_streams; i++ )
+        if( data->stream_info[i].stream_index > max_stream_index )
+            max_stream_index = data->stream_info[i].stream_index;
+    stream_info = (lwindex_stream_info_t *)malloc( (max_stream_index + 1) * sizeof(lwindex_stream_info_t) );
+    if( !stream_info )
         goto fail_parsing;
-    while( !strncmp( buf, "<StreamInfo=", strlen( "<StreamInfo=" ) ) )
+    for( int i = 0; i < data->num_streams; i++ )
     {
-        int stream_index;
-        int codec_type;
-        if( sscanf( buf, "<StreamInfo=%d,%d>", &stream_index, &codec_type ) != 2 )
-            goto fail_parsing;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
-        lwindex_stream_info_t *temp = (lwindex_stream_info_t *)realloc( stream_info, (stream_index + 1) * sizeof(lwindex_stream_info_t) );
-        if( !temp )
-            goto fail_parsing;
-        stream_info = temp;
-        lwindex_stream_info_t *info = &stream_info[stream_index];
-        info->codec_type = codec_type;
-        if( codec_type == AVMEDIA_TYPE_VIDEO )
+        lwindex_stream_info_t *info = &stream_info[data->stream_info[i].stream_index];
+        info->codec_type = data->stream_info[i].codec_type;
+        if( info->codec_type == AVMEDIA_TYPE_VIDEO )
         {
-            if( sscanf( buf, "Codec=%d,TimeBase=%d/%d,Width=%d,Height=%d,Format=%[^,],ColorSpace=%d",
-                        &info->codec_id, &info->time_base.num, &info->time_base.den, &info->width, &info->height, info->fmt, &info->colorspace ) != 7 )
-                goto fail_parsing;
+            info->codec_id = data->stream_info[i].codec;
+            info->time_base.num = data->stream_info[i].time_base.num;
+            info->time_base.den = data->stream_info[i].time_base.den;
+            info->width = data->stream_info[i].data.type0.width;
+            info->height = data->stream_info[i].data.type0.height;
+            strncpy(info->fmt, data->stream_info[i].format, FORMAT_LENGTH);
+            info->fmt[FORMAT_LENGTH-1] = '\0';
+            info->colorspace = data->stream_info[i].data.type0.color_space;
+
+            if( data->stream_info[i].stream_index == vdhp->stream_index )
+                vdhp->stream_duration = data->stream_info[i].stream_duration;
         }
-        else if( codec_type == AVMEDIA_TYPE_AUDIO )
+        else if( info->codec_type == AVMEDIA_TYPE_AUDIO )
         {
-            if( sscanf( buf, "Codec=%d,TimeBase=%d/%d,Channels=%d:0x%" SCNx64 ",Rate=%d,Format=%[^,],BPS=%d",
-                        &info->codec_id, &info->time_base.num, &info->time_base.den, &info->channels, &info->layout, &info->sample_rate, info->fmt, &info->bits_per_sample ) != 8 )
-                goto fail_parsing;
+            info->codec_id = data->stream_info[i].codec;
+            info->time_base.num = data->stream_info[i].time_base.num;
+            info->time_base.den = data->stream_info[i].time_base.den;
+            info->channels = data->stream_info[i].data.type1.channels;
+            info->layout = data->stream_info[i].data.type1.layout;
+            info->sample_rate = data->stream_info[i].data.type1.sample_rate;
+            strncpy(info->fmt, data->stream_info[i].format, FORMAT_LENGTH);
+            info->fmt[FORMAT_LENGTH-1] = '\0';
+            info->bits_per_sample = data->stream_info[i].bits_per_sample;
         }
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
-        if( strncmp( buf, "</StreamInfo>", strlen( "</StreamInfo>" ) ) )
-            goto fail_parsing;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
     }
-    while( !strncmp( buf, "Index=", strlen( "Index=" ) ) )
+
+    for( int i = 0; i < data->num_index_entries; i++ )
     {
-        int stream_index;
-        int extradata_index;
-        int64_t pos;
-        int64_t pts;
-        int64_t dts;
-        if( sscanf_unrolled_main_index( buf, // "Index=%d,POS=%" SCNd64 ",PTS=%" SCNd64 ",DTS=%" SCNd64 ",EDI=%d",
-                    &stream_index, &pos, &pts, &dts, &extradata_index ) != 5 )
-            goto fail_parsing;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
-        int        codec_type = stream_info[stream_index].codec_type;
-        int        codec_id   = stream_info[stream_index].codec_id;
-        AVRational time_base  = stream_info[stream_index].time_base;
+        index_entry_t *entry = &data->index_entries[i];
+        int stream_index = entry->stream_index;
+        int codec_type = stream_info[stream_index].codec_type;
+        int codec_id = stream_info[stream_index].codec_id;
+        AVRational time_base = stream_info[stream_index].time_base;
+
         if( codec_type == AVMEDIA_TYPE_VIDEO )
         {
             if( adhp->dv_in_avi == -1 && codec_id == AV_CODEC_ID_DVVIDEO && !opt->force_audio )
@@ -3134,14 +3104,9 @@ static int parse_index
                 int   height     = stream_info[stream_index].height;
                 char *pix_fmt    = stream_info[stream_index].fmt;
                 int   colorspace = stream_info[stream_index].colorspace;
-                int   key;
-                int   pict_type;
-                int   poc;
-                int   repeat_pict;
-                int   field_info;
-                if( sscanf_unrolled_video_index( buf, // "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d",
-                            &key, &pict_type, &poc, &repeat_pict, &field_info ) != 5 )
-                    goto fail_parsing;
+
+                int   key         = entry->data.type0.key;
+                int   pict_type   = entry->data.type0.pic;
                 if( vdhp->codec_id == AV_CODEC_ID_NONE )
                     vdhp->codec_id = (enum AVCodecID)codec_id;
                 if( (key | width | height) || pict_type == -1 || colorspace != AVCOL_SPC_NB )
@@ -3157,7 +3122,7 @@ static int parse_index
                     {
                         if( vdhp->max_width  < width )
                             vdhp->max_width  = width;
-                        if( vdhp->max_height < width )
+                        if( vdhp->max_height < height )
                             vdhp->max_height = height;
                     }
                     if( vdhp->initial_pix_fmt == AV_PIX_FMT_NONE )
@@ -3172,29 +3137,29 @@ static int parse_index
                     ++video_sample_count;
                     video_frame_info_t *info = &video_info[video_sample_count];
                     memset( info, 0, sizeof(video_frame_info_t) );
-                    info->pts             = pts;
-                    info->dts             = dts;
-                    info->file_offset     = pos;
+                    info->pts             = entry->pts;
+                    info->dts             = entry->dts;
+                    info->file_offset     = entry->pos;
                     info->sample_number   = video_sample_count;
-                    info->extradata_index = extradata_index;
-                    info->pict_type       = pict_type;
-                    info->poc             = poc;
-                    info->repeat_pict     = repeat_pict;
-                    info->field_info      = (lw_field_info_t)field_info;
-                    if( pts != AV_NOPTS_VALUE && last_keyframe_pts != AV_NOPTS_VALUE && pts < last_keyframe_pts )
+                    info->extradata_index = entry->edi;
+                    info->pict_type       = entry->data.type0.pic;
+                    info->poc             = entry->data.type0.poc;
+                    info->repeat_pict     = entry->data.type0.repeat;
+                    info->field_info      = (lw_field_info_t)entry->data.type0.field;
+                    if( entry->pts != AV_NOPTS_VALUE && last_keyframe_pts != AV_NOPTS_VALUE && entry->pts < last_keyframe_pts )
                         info->flags |= LW_VFRAME_FLAG_LEADING;
                     if( key )
                     {
                         info->flags |= LW_VFRAME_FLAG_KEY;
-                        last_keyframe_pts = pts;
+                        last_keyframe_pts = entry->pts;
                     }
-                    if( repeat_pict == 0 && field_info == LW_FIELD_INFO_UNKNOWN
+                    if( info->repeat_pict == 0 && info->field_info == LW_FIELD_INFO_UNKNOWN
                      && av_get_pix_fmt( pix_fmt ) == AV_PIX_FMT_NONE
                      && ((enum AVCodecID)codec_id == AV_CODEC_ID_H264 || (enum AVCodecID)codec_id == AV_CODEC_ID_HEVC)
                      && (width == 0 || height == 0) )
                         info->flags |= LW_VFRAME_FLAG_CORRUPT;
                     if( (enum AVCodecID)codec_id == AV_CODEC_ID_VP8
-                     && pts == AV_NOPTS_VALUE && dts == AV_NOPTS_VALUE && pos == -1 )
+                     && info->pts == AV_NOPTS_VALUE && info->dts == AV_NOPTS_VALUE && info->file_offset == -1 )
                     {
                         /* VPx invisible altref frame. */
                         info->flags |= LW_VFRAME_FLAG_INVISIBLE;
@@ -3220,13 +3185,10 @@ static int parse_index
                 int      sample_rate     = stream_info[stream_index].sample_rate;
                 char    *sample_fmt      = stream_info[stream_index].fmt;
                 int      bits_per_sample = stream_info[stream_index].bits_per_sample;
-                int      frame_length;
-                if( sscanf_unrolled_audio_index( buf, // "Length=%d",
-                            &frame_length ) != 1 )
-                    goto fail_parsing;
+                int      frame_length    = entry->data.type1.length;
                 if( adhp->codec_id == AV_CODEC_ID_NONE )
                     adhp->codec_id = (enum AVCodecID)codec_id;
-                if( (channels | layout | sample_rate | bits_per_sample) && extradata_index != -1 && audio_duration <= INT32_MAX )
+                if( (channels | layout | sample_rate | bits_per_sample) && entry->edi != -1 && audio_duration <= INT32_MAX )
                 {
                     if( audio_sample_rate == 0 )
                         audio_sample_rate = sample_rate;
@@ -3244,11 +3206,11 @@ static int parse_index
                     ++audio_sample_count;
                     audio_frame_info_t *info = &audio_info[audio_sample_count];
                     memset( info, 0, sizeof(audio_frame_info_t) );
-                    info->pts             = pts;
-                    info->dts             = dts;
-                    info->file_offset     = pos;
+                    info->pts             = entry->pts;
+                    info->dts             = entry->dts;
+                    info->file_offset     = entry->pos;
                     info->sample_number   = audio_sample_count;
-                    info->extradata_index = extradata_index;
+                    info->extradata_index = entry->edi;
                     info->sample_rate     = sample_rate;
                 }
                 else
@@ -3282,50 +3244,21 @@ static int parse_index
                 }
             }
         }
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
     }
     if( video_present && opt->force_video && opt->force_video_index != -1
      && (video_sample_count == 0 || vdhp->initial_pix_fmt == AV_PIX_FMT_NONE || vdhp->initial_width == 0 || vdhp->initial_height == 0) )
         goto fail_parsing;  /* Need to re-create the index file. */
     if( audio_present && opt->force_audio && opt->force_audio_index != -1 && (audio_sample_count == 0 || audio_duration == 0) )
         goto fail_parsing;  /* Need to re-create the index file. */
-    if( strncmp( buf, "</LibavReaderIndex>", strlen( "</LibavReaderIndex>" ) ) )
-        goto fail_parsing;
-    if (!fgets(buf, sizeof(buf), index))
-        goto fail_parsing;
-    if (!strncmp(buf, "<VideoConsistentFieldRepeatPict>", strlen("<VideoConsistentFieldRepeatPict>")))
-    {
-        if (sscanf(buf, "<VideoConsistentFieldRepeatPict>%d</VideoConsistentFieldRepeatPict>", &consistent_field_and_repeat) != 1)
-            goto fail_parsing;
-    }
-    else
-        goto fail_parsing;
     /* Parse stream durations. */
-    if( !fgets( buf, sizeof(buf), index ) )
-        goto fail_parsing;
-    while( !strncmp( buf, "<StreamDuration=", strlen( "<StreamDuration=" ) ) )
-    {
-        int     stream_index;
-        int     codec_type;
-        int64_t stream_duration;
-        if( sscanf( buf, "<StreamDuration=%d,%d>%" SCNd64 "</StreamDuration>", &stream_index, &codec_type, &stream_duration ) != 3 )
-            goto fail_parsing;
-        if( codec_type == AVMEDIA_TYPE_VIDEO && stream_index == vdhp->stream_index )
-            vdhp->stream_duration = stream_duration;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
-    }
+
     /* Parse AVIndexEntry. */
-    while( !strncmp( buf, "<StreamIndexEntries=", strlen( "<StreamIndexEntries=" ) ) )
+    for( int i = 0; i < data->num_streams; i++ )
     {
-        int stream_index;
-        int codec_type;
-        int index_entries_count;
-        if( sscanf( buf, "<StreamIndexEntries=%d,%d,%d>", &stream_index, &codec_type, &index_entries_count ) != 3 )
-            goto fail_parsing;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
+        stream_info_entry_t *info = &data->stream_info[i];
+        int stream_index = info->stream_index;
+        int codec_type = info->codec_type;
+        int index_entries_count = info->num_stream_index_entries;
         if( index_entries_count > 0 )
         {
             if( codec_type == AVMEDIA_TYPE_VIDEO && stream_index == vdhp->stream_index )
@@ -3336,17 +3269,11 @@ static int parse_index
                     goto fail_parsing;
                 for( int i = 0; i < vdhp->index_entries_count; i++ )
                 {
-                    AVIndexEntry ie;
-                    int size;
-                    int flags;
-                    if( sscanf( buf, "POS=%" SCNd64 ",TS=%" SCNd64 ",Flags=%x,Size=%d,Distance=%d",
-                                &ie.pos, &ie.timestamp, (unsigned int *)&flags, &size, &ie.min_distance ) != 5 )
-                        break;
-                    ie.size  = size;
-                    ie.flags = flags;
-                    vdhp->index_entries[i] = ie;
-                    if( !fgets( buf, sizeof(buf), index ) )
-                        goto fail_parsing;
+                    vdhp->index_entries[i].pos = info->stream_index_entries[i].pos;
+                    vdhp->index_entries[i].timestamp = info->stream_index_entries[i].ts;
+                    vdhp->index_entries[i].flags = info->stream_index_entries[i].flags;
+                    vdhp->index_entries[i].size = info->stream_index_entries[i].size;
+                    vdhp->index_entries[i].min_distance = info->stream_index_entries[i].distance;
                 }
             }
             else if( codec_type == AVMEDIA_TYPE_AUDIO && stream_index == adhp->stream_index )
@@ -3357,39 +3284,21 @@ static int parse_index
                     goto fail_parsing;
                 for( int i = 0; i < adhp->index_entries_count; i++ )
                 {
-                    AVIndexEntry ie;
-                    int size;
-                    int flags;
-                    if( sscanf( buf, "POS=%" SCNd64 ",TS=%" SCNd64 ",Flags=%x,Size=%d,Distance=%d",
-                                &ie.pos, &ie.timestamp, (unsigned int *)&flags, &size, &ie.min_distance ) != 5 )
-                        break;
-                    ie.size  = size;
-                    ie.flags = flags;
-                    adhp->index_entries[i] = ie;
-                    if( !fgets( buf, sizeof(buf), index ) )
-                        goto fail_parsing;
+                    adhp->index_entries[i].pos = info->stream_index_entries[i].pos;
+                    adhp->index_entries[i].timestamp = info->stream_index_entries[i].ts;
+                    adhp->index_entries[i].flags = info->stream_index_entries[i].flags;
+                    adhp->index_entries[i].size = info->stream_index_entries[i].size;
+                    adhp->index_entries[i].min_distance = info->stream_index_entries[i].distance;
                 }
             }
-            else
-                for( int i = 0; i < index_entries_count; i++ )
-                    if( !fgets( buf, sizeof(buf), index ) )
-                        goto fail_parsing;
         }
-        if( strncmp( buf, "</StreamIndexEntries>", strlen( "</StreamIndexEntries>" ) ) )
-            goto fail_parsing;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
     }
-    /* Parse extradata. */
-    while( !strncmp( buf, "<ExtraDataList=", strlen( "<ExtraDataList=" ) ) )
+    for( int i = 0; i < data->num_extra_data_list; i++ )
     {
-        int stream_index;
-        int codec_type;
-        int entry_count;
-        if( sscanf( buf, "<ExtraDataList=%d,%d,%d>", &stream_index, &codec_type, &entry_count ) != 3 )
-            goto fail_parsing;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
+        extra_data_list_t *info = &data->extra_data_list[i];
+        int stream_index = info->stream_index;
+        int codec_type = info->codec_type;
+        int entry_count = info->entry_count;
         if( entry_count > 0 )
         {
             if( (codec_type == AVMEDIA_TYPE_VIDEO && stream_index == vdhp->stream_index)
@@ -3405,131 +3314,111 @@ static int parse_index
                 {
                     lwlibav_extradata_t *entry = &exhp->entries[i];
                     /* Get extradata size and others. */
-                    int codec_id;
                     if( codec_type == AVMEDIA_TYPE_VIDEO )
                     {
-                        char pix_fmt[64];
-                        if( sscanf( buf, "Size=%d,Codec=%d,4CC=0x%x,Width=%d,Height=%d,Format=%[^,],BPS=%d",
-                                    &entry->extradata_size, &codec_id, &entry->codec_tag,
-                                    &entry->width, &entry->height,
-                                    pix_fmt, &entry->bits_per_sample ) != 7 )
-                            break;
-                        entry->pixel_format = av_get_pix_fmt( (const char *)pix_fmt );
+                        entry->extradata_size = info->entries[i].size;
+                        entry->codec_tag = info->entries[i].fourcc;
+                        entry->width = info->entries[i].data.type0.width;
+                        entry->height = info->entries[i].data.type0.height;
+                        entry->bits_per_sample = info->entries[i].bits_per_sample;
+                        entry->pixel_format = av_get_pix_fmt( info->entries[i].format );
                     }
                     else
                     {
-                        char sample_fmt[64];
-                        if( sscanf( buf, "Size=%d,Codec=%d,4CC=0x%x,Layout=0x%" SCNx64 ",Rate=%d,Format=%[^,],BPS=%d,Align=%d",
-                                    &entry->extradata_size, &codec_id, &entry->codec_tag,
-                                    &entry->channel_layout, &entry->sample_rate,
-                                    sample_fmt, &entry->bits_per_sample, &entry->block_align ) != 8 )
-                            break;
-                        entry->sample_format = av_get_sample_fmt( (const char *)sample_fmt );
+                        entry->extradata_size = info->entries[i].size;
+                        entry->codec_tag = info->entries[i].fourcc;
+                        entry->channel_layout = info->entries[i].data.type1.layout;
+                        entry->sample_rate = info->entries[i].data.type1.sample_rate;
+                        entry->bits_per_sample = info->entries[i].bits_per_sample;
+                        entry->block_align = info->entries[i].data.type1.block_align;
+                        entry->sample_format = av_get_sample_fmt( info->entries[i].format );
                     }
-                    entry->codec_id = (enum AVCodecID)codec_id;
+                    entry->codec_id = (enum AVCodecID)info->entries[i].codec;
                     /* Get extradata. */
                     if( entry->extradata_size > 0 )
                     {
                         entry->extradata = (uint8_t *)av_malloc( entry->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE );
                         if( !entry->extradata )
                             goto fail_parsing;
-                        if( fread( entry->extradata, 1, entry->extradata_size, index ) != entry->extradata_size )
-                        {
-                            av_free( entry->extradata );
-                            goto fail_parsing;
-                        }
+                        memcpy( entry->extradata, info->entries[i].binary_data, entry->extradata_size );
                         memset( entry->extradata + entry->extradata_size, 0, AV_INPUT_BUFFER_PADDING_SIZE );
                     }
-                    if( !fgets( buf, sizeof(buf), index )   /* new line ('\n') */
-                     || !fgets( buf, sizeof(buf), index ) ) /* the first line of the next entry */
-                        goto fail_parsing;
                 }
             }
-            else
-                for( int i = 0; i < entry_count; i++ )
-                {
-                    /* extradata size */
-                    int extradata_size;
-                    if( sscanf( buf, "Size=%d", &extradata_size ) != 1 )
-                        goto fail_parsing;
-                    /* extradata */
-                    for( int i = 0; i < extradata_size; i++ )
-                        if( fgetc( index ) == EOF )
-                            goto fail_parsing;
-                    if( !fgets( buf, sizeof(buf), index )   /* new line ('\n') */
-                     || !fgets( buf, sizeof(buf), index ) ) /* the first line of the next entry */
-                        goto fail_parsing;
-                }
         }
-        if( strncmp( buf, "</ExtraDataList>", strlen( "</ExtraDataList>" ) ) )
-            goto fail_parsing;
-        if( !fgets( buf, sizeof(buf), index ) )
-            goto fail_parsing;
     }
-    if( !strncmp( buf, "</LibavReaderIndexFile>", strlen( "</LibavReaderIndexFile>" ) ) )
+    if( vdhp->stream_index >= 0 )
     {
-        if( vdhp->stream_index >= 0 )
-        {
-            vdhp->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
-            if( !vdhp->keyframe_list )
-                goto fail_parsing;
-            vdhp->frame_list  = video_info;
-            vdhp->frame_count = video_sample_count;
-            if( decide_video_seek_method( lwhp, vdhp, video_sample_count ) )
-                goto fail_parsing;
-            /* Compute the stream duration. */
-            compute_stream_duration( lwhp, vdhp, vdhp->stream_duration );
-            /* Create the repeat control info. */
-            create_video_frame_order_list( vdhp, vohp, opt, consistent_field_and_repeat );
-            /* Exclude invisible frames from the output handler. */
-            create_video_visible_frame_list( vdhp, vohp, invisible_count );
-        }
-        if( adhp->stream_index >= 0 )
-        {
-            if( adhp->dv_in_avi == 1 && adhp->index_entries_count == 0 )
-            {
-                /* DV in AVI Type-1 */
-                audio_sample_count = MIN( video_sample_count, audio_sample_count );
-                for( uint32_t i = 0; i <= audio_sample_count; i++ )
-                {
-                    audio_info[i].keyframe        = !!(video_info[i].flags & LW_VFRAME_FLAG_KEY);
-                    audio_info[i].sample_number   = video_info[i].sample_number;
-                    audio_info[i].pts             = video_info[i].pts;
-                    audio_info[i].dts             = video_info[i].dts;
-                    audio_info[i].file_offset     = video_info[i].file_offset;
-                    audio_info[i].extradata_index = video_info[i].extradata_index;
-                }
-            }
-            else
-            {
-                if( adhp->dv_in_avi == 1 && ((!opt->force_video && active_video_index == -1) || (opt->force_video && opt->force_video_index == -1)) )
-                {
-                    /* Disable DV video stream. */
-                    disable_video_stream( vdhp );
-                    video_info = NULL;
-                }
-                adhp->dv_in_avi = 0;
-            }
-            adhp->frame_list   = audio_info;
-            adhp->frame_count  = audio_sample_count;
-            adhp->frame_length = constant_frame_length ? audio_info[1].length : 0;
-            decide_audio_seek_method( lwhp, adhp, audio_sample_count );
-            if( opt->av_sync && vdhp->stream_index >= 0 )
-                lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, audio_sample_rate );
-        }
-        if( vdhp->stream_index != active_video_index || adhp->stream_index != active_audio_index )
-        {
-            /* Update the active stream indexes when specifying different stream indexes. */
-            fseek( index, active_index_pos, SEEK_SET );
-            fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", vdhp->stream_index );
-            fprintf( index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index );
-        }
-#ifdef _WIN32
-        lw_free(wname);
-#endif // _WIN32
-        free( stream_info );
-        return 0;
+        vdhp->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
+        if( !vdhp->keyframe_list )
+            goto fail_parsing;
+        vdhp->frame_list  = video_info;
+        vdhp->frame_count = video_sample_count;
+        if( decide_video_seek_method( lwhp, vdhp, video_sample_count ) )
+            goto fail_parsing;
+        /* Compute the stream duration. */
+        compute_stream_duration( lwhp, vdhp, vdhp->stream_duration );
+        /* Create the repeat control info. */
+        create_video_frame_order_list( vdhp, vohp, opt, data->consistent_field_and_repeat );
+        /* Exclude invisible frames from the output handler. */
+        create_video_visible_frame_list( vdhp, vohp, invisible_count );
     }
+    if( adhp->stream_index >= 0 )
+    {
+        if( adhp->dv_in_avi == 1 && adhp->index_entries_count == 0 )
+        {
+            /* DV in AVI Type-1 */
+            audio_sample_count = MIN( video_sample_count, audio_sample_count );
+            for( uint32_t i = 0; i <= audio_sample_count; i++ )
+            {
+                audio_info[i].keyframe        = !!(video_info[i].flags & LW_VFRAME_FLAG_KEY);
+                audio_info[i].sample_number   = video_info[i].sample_number;
+                audio_info[i].pts             = video_info[i].pts;
+                audio_info[i].dts             = video_info[i].dts;
+                audio_info[i].file_offset     = video_info[i].file_offset;
+                audio_info[i].extradata_index = video_info[i].extradata_index;
+            }
+        }
+        else
+        {
+            if( adhp->dv_in_avi == 1 && ((!opt->force_video && data->active_video_stream_index == -1) || (opt->force_video && opt->force_video_index == -1)) )
+            {
+                /* Disable DV video stream. */
+                disable_video_stream( vdhp );
+                video_info = NULL;
+            }
+            adhp->dv_in_avi = 0;
+        }
+        adhp->frame_list   = audio_info;
+        adhp->frame_count  = audio_sample_count;
+        adhp->frame_length = constant_frame_length ? audio_info[1].length : 0;
+        decide_audio_seek_method( lwhp, adhp, audio_sample_count );
+        if( opt->av_sync && vdhp->stream_index >= 0 )
+            lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, audio_sample_rate );
+    }
+    int video_index_changed = (vdhp->stream_index != data->active_video_stream_index);
+    int audio_index_changed = (adhp->stream_index != data->active_audio_stream_index);
+    if (index) {
+        if (video_index_changed && data->active_video_stream_index_pos != -1) {
+            fflush(index);
+            if (fseek(index, data->active_video_stream_index_pos, SEEK_SET) == 0) {
+                fprintf(index, "%+011d", vdhp->stream_index);
+                fflush(index);
+            }
+        }
+        if (audio_index_changed && data->active_audio_stream_index_pos != -1) {
+            fflush(index);
+            if (fseek(index, data->active_audio_stream_index_pos, SEEK_SET) == 0) {
+                fprintf(index, "%+011d", adhp->stream_index);
+                fflush(index);
+            }
+        }
+    }
+#ifdef _WIN32
+    lw_free(wname);
+#endif // _WIN32
+    free( stream_info );
+    return 0;
 fail_parsing:
 #ifdef _WIN32
     lw_free(wname);
@@ -3542,6 +3431,26 @@ fail_parsing:
         free( audio_info );
     free( stream_info );
     return -1;
+}
+
+static int parse_index
+(
+    lwlibav_file_handler_t         *lwhp,
+    lwlibav_video_decode_handler_t *vdhp,
+    lwlibav_video_output_handler_t *vohp,
+    lwlibav_audio_decode_handler_t *adhp,
+    lwlibav_audio_output_handler_t *aohp,
+    lwlibav_option_t               *opt,
+    FILE                           *index
+) {
+    rewind(index);
+    lwindex_data_t *data = lwindex_parse(index, 1, 1);
+    if (!data) {
+        return -1;
+    }
+    int ret = parse_index_real(lwhp, vdhp, vohp, adhp, aohp, opt, data, index);
+    lwindex_free(data);
+    return ret;
 }
 
 int lwlibav_construct_index
@@ -3576,14 +3485,7 @@ int lwlibav_construct_index
     }
     if( index )
     {
-        uint8_t lwindex_version[4] = { 0 };
-        int index_file_version = 0;
-        if( 4 == fscanf( index, "<LSMASHWorksIndexVersion=%" SCNu8 ".%" SCNu8 ".%" SCNu8 ".%" SCNu8 ">\n",
-                         &lwindex_version[0], &lwindex_version[1], &lwindex_version[2], &lwindex_version[3] )
-         && ((lwindex_version[0] << 24) | (lwindex_version[1] << 16) | (lwindex_version[2] << 8) | lwindex_version[3]) == LWINDEX_VERSION
-         && 1 == fscanf( index, "<LibavReaderIndexFile=%d>\n", &index_file_version )
-         && index_file_version == LWINDEX_INDEX_FILE_VERSION
-         && parse_index( lwhp, vdhp, vohp, adhp, aohp, opt, index ) == 0 )
+        if( parse_index( lwhp, vdhp, vohp, adhp, aohp, opt, index ) == 0 )
         {
             /* Opening and parsing the index file succeeded. */
             fclose( index );
