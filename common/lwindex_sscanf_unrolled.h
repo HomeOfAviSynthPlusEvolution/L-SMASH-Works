@@ -23,7 +23,12 @@
 #include <limits.h>
 #include <errno.h>
 #include <stdint.h>
+#if defined(__SSE4_1__)
 #include <immintrin.h>
+#endif
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 #define PARSE_OR_RETURN(buf, needle, out, type) \
     if (strncmp(buf, needle, strlen(needle)) != 0) \
@@ -84,6 +89,40 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
             __m128i sum_vec = _mm_hadd_epi32(results, results);
             sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
             acc -= _mm_extract_epi32(sum_vec, 0);
+            s += 4;
+        }
+    #endif
+
+    #if defined(__ARM_NEON)
+        uint32_t multipliers1[4] = {10000000, 1000000, 100000, 10000};
+        uint32_t multipliers2[4] = {1000, 100, 10, 1};
+        uint8x16_t zero = vdupq_n_u8('0');
+        uint8x16_t data = vld1q_u8((const uint8_t*)s);
+        uint8x16_t add_208 = vsubq_u8(data, vdupq_n_u8('0'));
+        uint8x16_t min_9 = vminq_u8(add_208, vdupq_n_u8(9));
+        uint8x16_t is_digit = vceqq_u8(add_208, min_9);
+        uint32x2_t sum_pairwise2 = vpaddl_u16(vpaddl_u8(vget_low_u8(is_digit)));
+        uint64x1_t sum_pairwise3 = vpaddl_u32(sum_pairwise2);
+
+        if (vget_lane_u64(sum_pairwise3, 0) == 2040) {
+            uint32x4_t digits = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
+            uint32x4_t multipliers = vld1q_u32(multipliers1);
+            uint32x4_t results = vmulq_u32(digits, multipliers);
+            int32_t sum = vaddvq_u32(results);
+            acc -= sum;
+            digits = vmovl_u16(vget_high_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
+            multipliers = vld1q_u32(multipliers2);
+            results = vmulq_u32(digits, multipliers);
+            sum = vaddvq_u32(results);
+            acc -= sum;
+            s += 8;
+        }
+        else if (vget_lane_u32(sum_pairwise2, 0) == 1020) {
+            uint32x4_t digits = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
+            uint32x4_t multipliers = vld1q_u32(multipliers2);
+            uint32x4_t results = vmulq_u32(digits, multipliers);
+            uint32_t sum = vaddvq_u32(results);
+            acc -= sum;
             s += 4;
         }
     #endif
