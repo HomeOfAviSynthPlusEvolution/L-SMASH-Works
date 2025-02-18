@@ -985,13 +985,13 @@ static void create_video_frame_order_list
     int             enable_repeat   = 0;
     int             complete_frame  = 1;
     int             repeat_field    = 1;
-    int             consistent_filed_order = 1;
+    int             consistent_field_order = 1;
     lw_field_info_t next_field_info = info[1].field_info;
     for (uint32_t i = 2; i <= frame_count; ++i)
     {
         if (info[i].field_info != next_field_info)
         {
-            consistent_filed_order = 0;
+            consistent_field_order = 0;
             break;
         }
     }
@@ -1042,7 +1042,7 @@ static void create_video_frame_order_list
                 default :
                     break;
             }
-        if( consistent_filed_order == 0 && repeat_pict == 0 && !(info[i].flags & (LW_VFRAME_FLAG_CORRUPT | LW_VFRAME_FLAG_COUNTERPART_MISSING)) )
+        if( consistent_field_order == 0 && repeat_pict == 0 && !(info[i].flags & (LW_VFRAME_FLAG_CORRUPT | LW_VFRAME_FLAG_COUNTERPART_MISSING)) )
         {
             /* PAFF field coded picture */
             complete_frame ^= 1;

@@ -875,9 +875,14 @@ static int get_frame
                 uint32_t picture_number = (uint32_t)output_id;
                 vdhp->last_half_frame = is_half_frame( vdhp, picture_number );
                 correct_output_delay( vdhp, &goal, picture_number, estimated_picture_number );
-                if( picture_number == requested_picture_number )
+                if (picture_number == requested_picture_number)
+                {
+                    vdhp->last_half_frame = is_half_frame(vdhp, picture_number);
+                    vdhp->last_frame_number = picture_number;
+                    vdhp->last_req_frame = frame;
                     /* Got the requested output frame. */
                     return 0;
+                }
                 else if( vdhp->last_half_frame && (picture_number == requested_picture_number + 1)
                       && field_number_of_picture_in_frame( vdhp, frame, picture_number ) == 2 )
                     /* Got the requested output frame but the output timestamp is from one of the second displayed field. */
@@ -1016,8 +1021,18 @@ static int get_requested_picture
         picture_number = vdhp->frame_count;
     uint32_t extradata_index;
     uint32_t last_half_offset = get_last_half_offset( vdhp );
+    int reuse_last_frame = 0;
+    if (vdhp->frame_list[picture_number].repeat_pict > 0)
+        reuse_last_frame = 1;
+    else if (vdhp->last_frame_number <= vdhp->frame_count
+        && vdhp->frame_list[picture_number].dts != vdhp->frame_list[vdhp->last_frame_number].dts)
+        reuse_last_frame = 0;
+    else if (vdhp->last_frame_number <= vdhp->frame_count
+        && vdhp->frame_list[picture_number].file_offset == vdhp->frame_list[vdhp->last_frame_number].file_offset)
+        reuse_last_frame = 1;
     if( picture_number == vdhp->last_frame_number
-     || picture_number == vdhp->last_frame_number + last_half_offset )
+     || picture_number == vdhp->last_frame_number + last_half_offset 
+     && reuse_last_frame )
     {
         /* The last frame is the requested frame. */
         if( copy_last_req_frame( vdhp, frame ) < 0 )
