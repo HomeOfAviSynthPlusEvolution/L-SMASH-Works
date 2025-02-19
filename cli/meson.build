@@ -5,6 +5,8 @@ project('L-SMASH-Works', 'c',
 
 add_project_arguments('-Wno-deprecated-declarations', '-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', language: 'c')
 
+incdir = include_directories('../common')
+
 sources = [
   'index.c',
   '../common/audio_output.c',
@@ -52,6 +54,7 @@ if host_machine.system() == 'windows'
 endif
 
 executable('lwindex', sources,
+  include_directories: incdir,
   dependencies: deps,
   gnu_symbol_visibility: 'hidden'
 )

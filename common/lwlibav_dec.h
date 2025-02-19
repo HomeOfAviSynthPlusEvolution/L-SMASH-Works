@@ -31,6 +31,9 @@
 #define SEEK_POS_CORRECTION 0x00000008
 #define SEEK_PTS_GENERATED  0x00000010
 
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+
 typedef struct
 {
     char   *file_path;

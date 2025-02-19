@@ -1,3 +1,5 @@
+#pragma once
+
 /*****************************************************************************
  * audio_output.h
  *****************************************************************************
@@ -21,6 +23,8 @@
 /* This file is available under an ISC license. */
 
 #include "cpp_compat.h"
+
+#include "libswresample/swresample.h"
 
 typedef struct
 {
