@@ -20,6 +20,7 @@
 
 /* This file is available under an ISC license. */
 
+#include <string.h>
 #include <limits.h>
 #include <errno.h>
 #include <stdint.h>
@@ -215,7 +216,7 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
     sscanf( buf, "Index=%d,POS=%" SCNd64 ",PTS=%" SCNd64 ",DTS=%" SCNd64 ",EDI=%d",
             &stream_index, &pos, &pts, &dts, &extradata_index )
 */
-static inline int sscanf_unrolled_main_index(const char *buf, int *stream_index, int64_t *pos, int64_t *pts, int64_t *dts, int *extradata_index) {
+static inline int sscanf_unrolled_main_index(const char *buf, int32_t *stream_index, int64_t *pos, int64_t *pts, int64_t *dts, int32_t *extradata_index) {
     char *p = (char *)buf;
     int parsed_count = 0;
 
@@ -237,7 +238,7 @@ static inline int sscanf_unrolled_main_index(const char *buf, int *stream_index,
     sscanf( buf, "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d",
             &key, &pict_type, &poc, &repeat_pict, &field_info )
 */
-static inline int sscanf_unrolled_video_index(const char *buf, int *key, int *pict_type, int *poc, int *repeat_pict, int *field_info) {
+static inline int sscanf_unrolled_video_index(const char *buf, int32_t *key, int32_t *pict_type, int32_t *poc, int32_t *repeat_pict, int32_t *field_info) {
     char *p = (char *)buf;
     int parsed_count = 0;
 
@@ -258,11 +259,38 @@ static inline int sscanf_unrolled_video_index(const char *buf, int *key, int *pi
     Unroll the following sscanf:
     sscanf( buf, "Length=%d", &frame_length )
 */
-static inline int sscanf_unrolled_audio_index(const char *buf, int *frame_length) {
+static inline int sscanf_unrolled_audio_index(const char *buf, int32_t *frame_length) {
     char *p = (char *)buf;
     int parsed_count = 0;
 
     PARSE_OR_RETURN(p, "Length=", *frame_length, int);
+
+    return parsed_count;
+}
+
+/*
+    Unroll the following sscanf:
+    POS=3147,TS=-2002,Flags=0,Size=118,Distance=2
+    sscanf( buf, "POS=%" SCNd64 ",TS=%" SCNd64 ",Flags=%x,Size=%d,Distance=%d",
+            &ie.pos, &ie.timestamp, (unsigned int *)&flags, &size, &ie.min_distance )
+*/
+static inline int sscanf_unrolled_stream_index_entry(const char *buf, int64_t *pos, int64_t *ts, uint32_t *flags, uint32_t *size, uint32_t *distance) {
+    char *p = (char *)buf;
+    int parsed_count = 0;
+
+    PARSE_OR_RETURN(p, "POS=", *pos, int64_t);
+    CHECK_COMMA_OR_RETURN(p, parsed_count);
+    PARSE_OR_RETURN(p, "TS=", *ts, int64_t);
+    CHECK_COMMA_OR_RETURN(p, parsed_count);
+    if (strncmp(p, "Flags=", strlen("Flags=")) != 0)
+        return parsed_count;
+    p += strlen("Flags=");
+    *flags = strtol(p, &p, 16);
+    parsed_count++;
+    CHECK_COMMA_OR_RETURN(p, parsed_count);
+    PARSE_OR_RETURN(p, "Size=", *size, int);
+    CHECK_COMMA_OR_RETURN(p, parsed_count);
+    PARSE_OR_RETURN(p, "Distance=", *distance, int);
 
     return parsed_count;
 }

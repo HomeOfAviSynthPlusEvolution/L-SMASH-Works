@@ -110,6 +110,7 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_parser.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.c
