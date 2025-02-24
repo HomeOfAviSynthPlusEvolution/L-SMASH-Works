@@ -61,6 +61,8 @@ extern "C"
 #include <windows.h>
 #endif
 
+#include "lwindex_sscanf_unrolled.h"
+
 typedef struct
 {
     lwlibav_extradata_handler_t exh;
@@ -3086,7 +3088,7 @@ static int parse_index
         int64_t pos;
         int64_t pts;
         int64_t dts;
-        if( sscanf( buf, "Index=%d,POS=%" SCNd64 ",PTS=%" SCNd64 ",DTS=%" SCNd64 ",EDI=%d",
+        if( sscanf_unrolled_main_index( buf, // "Index=%d,POS=%" SCNd64 ",PTS=%" SCNd64 ",DTS=%" SCNd64 ",EDI=%d",
                     &stream_index, &pos, &pts, &dts, &extradata_index ) != 5 )
             goto fail_parsing;
         if( !fgets( buf, sizeof(buf), index ) )
@@ -3118,7 +3120,7 @@ static int parse_index
                 int   poc;
                 int   repeat_pict;
                 int   field_info;
-                if( sscanf( buf, "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d",
+                if( sscanf_unrolled_video_index( buf, // "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d",
                             &key, &pict_type, &poc, &repeat_pict, &field_info ) != 5 )
                     goto fail_parsing;
                 if( vdhp->codec_id == AV_CODEC_ID_NONE )
@@ -3200,7 +3202,8 @@ static int parse_index
                 char    *sample_fmt      = stream_info[stream_index].fmt;
                 int      bits_per_sample = stream_info[stream_index].bits_per_sample;
                 int      frame_length;
-                if( sscanf( buf, "Length=%d", &frame_length ) != 1 )
+                if( sscanf_unrolled_audio_index( buf, // "Length=%d",
+                            &frame_length ) != 1 )
                     goto fail_parsing;
                 if( adhp->codec_id == AV_CODEC_ID_NONE )
                     adhp->codec_id = (enum AVCodecID)codec_id;
