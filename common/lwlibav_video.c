@@ -1021,18 +1021,8 @@ static int get_requested_picture
         picture_number = vdhp->frame_count;
     uint32_t extradata_index;
     uint32_t last_half_offset = get_last_half_offset( vdhp );
-    int reuse_last_frame = 0;
-    if (vdhp->frame_list[picture_number].repeat_pict > 0)
-        reuse_last_frame = 1;
-    else if (vdhp->last_frame_number <= vdhp->frame_count
-        && vdhp->frame_list[picture_number].dts != vdhp->frame_list[vdhp->last_frame_number].dts)
-        reuse_last_frame = 0;
-    else if (vdhp->last_frame_number <= vdhp->frame_count
-        && vdhp->frame_list[picture_number].file_offset == vdhp->frame_list[vdhp->last_frame_number].file_offset)
-        reuse_last_frame = 1;
     if( picture_number == vdhp->last_frame_number
-     || picture_number == vdhp->last_frame_number + last_half_offset 
-     && reuse_last_frame )
+     || picture_number == vdhp->last_frame_number + last_half_offset )
     {
         /* The last frame is the requested frame. */
         if( copy_last_req_frame( vdhp, frame ) < 0 )

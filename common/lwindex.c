@@ -960,7 +960,8 @@ static void create_video_frame_order_list
 (
     lwlibav_video_decode_handler_t *vdhp,
     lwlibav_video_output_handler_t *vohp,
-    lwlibav_option_t               *opt
+    lwlibav_option_t               *opt,
+    int consistent_field_and_repeat
 )
 {
     /* Eliminate guesswork: first determine if repeat is requested in the source. */
@@ -984,19 +985,15 @@ static void create_video_frame_order_list
     /* Check repeat_pict and order_count. */
     if( specified_field_dominance > 0 && (lw_field_info_t)specified_field_dominance != info[1].field_info )
         ++order_count;
+    if (consistent_field_and_repeat && !info[1].repeat_pict)
+    {
+        for (uint32_t i = 1; i < vdhp->frame_count; ++i)
+            info[i].repeat_pict = 1;
+    }
     int             enable_repeat   = 0;
     int             complete_frame  = 1;
     int             repeat_field    = 1;
-    int             consistent_field_order = 1;
     lw_field_info_t next_field_info = info[1].field_info;
-    for (uint32_t i = 2; i <= frame_count; ++i)
-    {
-        if (info[i].field_info != next_field_info)
-        {
-            consistent_field_order = 0;
-            break;
-        }
-    }
     for( uint32_t i = 1; i <= frame_count; i++, order_count++ )
     {
         int             repeat_pict = info[i].repeat_pict;
@@ -1044,7 +1041,7 @@ static void create_video_frame_order_list
                 default :
                     break;
             }
-        if( consistent_field_order == 0 && repeat_pict == 0 && !(info[i].flags & (LW_VFRAME_FLAG_CORRUPT | LW_VFRAME_FLAG_COUNTERPART_MISSING)) )
+        if( repeat_pict == 0 && !(info[i].flags & (LW_VFRAME_FLAG_CORRUPT | LW_VFRAME_FLAG_COUNTERPART_MISSING)) )
         {
             /* PAFF field coded picture */
             complete_frame ^= 1;
@@ -2124,6 +2121,7 @@ static int create_index
         Index=0,POS=0,PTS=2002,DTS=0,EDI=0
         Key=1,Pic=1,POC=0,Repeat=1,Field=0
         </LibavReaderIndex>
+        <VideoConsistentFieldRepeatPict>1</VideoConsistentFieldRepeatPict>
         <StreamDuration=0,0>5000</StreamDuration>
         <StreamIndexEntries=0,0,1>
         POS=0,TS=2002,Flags=1,Size=1024,Distance=0
@@ -2213,6 +2211,8 @@ static int create_index
     uint64_t  audio_duration        = 0;
     int64_t   first_dts             = AV_NOPTS_VALUE;
     int64_t   filesize              = avio_size( format_ctx->pb );
+    int       consistent_repeat_pict = 1;
+    int       consistent_field_order = 1;
     if( indicator->open )
         indicator->open( php );
     /* Start to read frames and write the index file. */
@@ -2391,6 +2391,17 @@ static int create_index
             {
                 ++video_sample_count;
                 video_frame_info_t *info = &video_info[video_sample_count];
+                if (pkt_ctx->codec_id != AV_CODEC_ID_VP8 && pkt_ctx->codec_id != AV_CODEC_ID_VP9)
+                {
+                    if (video_sample_count > 1)
+                    {
+                        const  video_frame_info_t* const first_info = &video_info[1];
+                        if (consistent_repeat_pict && repeat_pict != first_info->repeat_pict)
+                            consistent_repeat_pict = 0;
+                        if (consistent_field_order && field_info != first_info->field_info)
+                            consistent_field_order = 0;
+                    }
+                }
                 memset( info, 0, sizeof(video_frame_info_t) );
                 info->pts             = pkt.pts;
                 info->dts             = pkt.dts;
@@ -2662,6 +2673,8 @@ static int create_index
         }
     }
     print_index( index, "</LibavReaderIndex>\n" );
+    const int consistent_field_and_repeat = consistent_field_order && consistent_repeat_pict;
+    print_index(index, "<VideoConsistentFieldRepeatPict>%d</VideoConsistentFieldRepeatPict>\n", consistent_field_and_repeat);
     /* Deallocate video frame info if no active video stream. */
     if( vdhp->stream_index < 0 )
         lw_freep( &video_info );
@@ -2855,7 +2868,7 @@ static int create_index
         /* Compute the stream duration. */
         compute_stream_duration( lwhp, vdhp, format_ctx->streams[ vdhp->stream_index ]->duration );
         /* Create the repeat control info. */
-        create_video_frame_order_list( vdhp, vohp, opt );
+        create_video_frame_order_list( vdhp, vohp, opt, consistent_field_and_repeat );
         /* Exclude invisible frames from the output handler. */
         create_video_visible_frame_list( vdhp, vohp, invisible_count );
     }
@@ -2990,7 +3003,7 @@ static int parse_index
     if( fscanf( index, "<ActiveVideoStreamIndex>%d</ActiveVideoStreamIndex>\n", &active_video_index ) != 1
      || fscanf( index, "<ActiveAudioStreamIndex>%d</ActiveAudioStreamIndex>\n", &active_audio_index ) != 1
      || fscanf( index, "<DefaultAudioStreamIndex>%d</DefaultAudioStreamIndex>\n", &default_audio ) != 1 
-     || fscanf(index, "<FillAudioGaps>%d</FillAudioGaps>\n", &fill_audio_gaps) != 1 )
+     || fscanf( index, "<FillAudioGaps>%d</FillAudioGaps>\n", &fill_audio_gaps) != 1 )
         return -1;
     lwhp->format_name = format_name;
     adhp->dv_in_avi = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
@@ -3045,6 +3058,7 @@ static int parse_index
     int      audio_sample_rate     = 0;
     int      constant_frame_length = 1;
     uint64_t audio_duration        = 0;
+    int consistent_field_and_repeat = 0;
     char buf[1024];
     if( !fgets( buf, sizeof(buf), index ) )
         goto fail_parsing;
@@ -3273,6 +3287,15 @@ static int parse_index
         goto fail_parsing;  /* Need to re-create the index file. */
     if( strncmp( buf, "</LibavReaderIndex>", strlen( "</LibavReaderIndex>" ) ) )
         goto fail_parsing;
+    if (!fgets(buf, sizeof(buf), index))
+        goto fail_parsing;
+    if (!strncmp(buf, "<VideoConsistentFieldRepeatPict>", strlen("<VideoConsistentFieldRepeatPict>")))
+    {
+        if (sscanf(buf, "<VideoConsistentFieldRepeatPict>%d</VideoConsistentFieldRepeatPict>", &consistent_field_and_repeat) != 1)
+            goto fail_parsing;
+    }
+    else
+        goto fail_parsing;
     /* Parse stream durations. */
     if( !fgets( buf, sizeof(buf), index ) )
         goto fail_parsing;
@@ -3452,7 +3475,7 @@ static int parse_index
             /* Compute the stream duration. */
             compute_stream_duration( lwhp, vdhp, vdhp->stream_duration );
             /* Create the repeat control info. */
-            create_video_frame_order_list( vdhp, vohp, opt );
+            create_video_frame_order_list( vdhp, vohp, opt, consistent_field_and_repeat );
             /* Exclude invisible frames from the output handler. */
             create_video_visible_frame_list( vdhp, vohp, invisible_count );
         }
