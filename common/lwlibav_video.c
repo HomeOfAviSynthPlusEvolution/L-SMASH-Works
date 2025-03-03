@@ -94,6 +94,7 @@ void lwlibav_video_free_decode_handler
         lw_free( exhp->entries );
     }
     av_packet_unref( &vdhp->packet );
+    av_packet_free( &vdhp->last_packet );
     lw_free( vdhp->frame_list );
     lw_free( vdhp->order_converter );
     lw_free( vdhp->keyframe_list );
@@ -501,7 +502,7 @@ static int decode_video_picture
     /* Get a packet containing a frame. */
     uint32_t picture_number = *current;
     AVPacket *pkt = &vdhp->packet;
-    int ret = lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, picture_number, pkt );
+    int ret = lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, pkt );
     if( ret > 0 )
         return ret;
     /* Correct the current picture number in order to match DTS since libavformat might have sought wrong position. */
@@ -522,7 +523,7 @@ static int decode_video_picture
     /* Avoid decoding frames until the seek correction caused by too backward is done. */
     while( correction_distance )
     {
-        ret = lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, ++picture_number, pkt );
+        ret = lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, pkt );
         if( ret > 0 )
             return ret;
         if( pkt->flags & AV_PKT_FLAG_KEY )
@@ -534,7 +535,72 @@ static int decode_video_picture
     AVFrame *mov_frame = vdhp->movable_frame_buffer;
     av_frame_unref( mov_frame );
     set_output_order_id( vdhp, pkt, picture_number );
-    ret = decode_video_packet( vdhp->ctx, mov_frame, got_picture, pkt );
+    int retry_send = 0;
+    AVPacket* next_packet = NULL;
+    if (vdhp->last_packet)
+    {
+        next_packet = av_packet_alloc();
+        if (!next_packet)
+        {
+            lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to allocate next_packet.");
+            return -1;
+        }
+        av_packet_ref(next_packet, pkt);
+        av_packet_unref(pkt);
+        av_packet_ref(pkt, vdhp->last_packet);
+        av_packet_unref(vdhp->last_packet);
+    }
+    do
+    {
+        retry_send = 0;
+        ret = decode_video_packet(vdhp->ctx, mov_frame, got_picture, pkt);
+        if (ret == AVERROR(EAGAIN))
+        {
+            // Drain frames, and *check* if they are the requested frame.
+            int drain_ret;
+            do
+            {
+                drain_ret = avcodec_receive_frame(vdhp->ctx, mov_frame);
+                if (drain_ret >= 0)
+                {
+                    // We got a frame during draining! Check if it's the one we want.
+                    uint32_t estimated_picture_number = (uint32_t)get_output_order_id(mov_frame) + vdhp->exh.delay_count;
+                    if (estimated_picture_number == goal)
+                    {
+                        vdhp->last_packet = av_packet_alloc();
+                        if (!vdhp->last_packet)
+                        {
+                            lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to allocate last_packet.");
+                            return -1;
+                        }
+                        av_packet_ref(vdhp->last_packet, pkt);
+                        // It's the requested frame (or its counterpart)!  Move it to the output.
+                        av_frame_unref(frame);
+                        av_frame_move_ref(frame, mov_frame);
+                        vdhp->last_dec_frame = frame;
+                        vdhp->last_fed_picture_number = *current;
+                        *got_picture = 1;
+                        *pkt_pts = pkt->pts; // Should be from the *last sent* packet.
+                        return 0; // Success!
+                    }
+                    av_frame_unref(mov_frame); // Not the one we want, discard.
+                }
+            }
+            while (drain_ret >= 0);
+            if (drain_ret == AVERROR(EAGAIN))
+                retry_send = 1;
+            else if (drain_ret < 0 && drain_ret != AVERROR_EOF)
+                return drain_ret;
+        }
+        if (next_packet && retry_send == 0)
+        {
+            av_packet_unref(pkt);
+            av_packet_ref(pkt, next_packet);
+            av_packet_free(&next_packet);
+            retry_send = 1;
+        }
+    }
+    while (retry_send);
     vdhp->last_fed_picture_number = picture_number;
     /* We can't get the requested frame by feeding a picture if that picture is field coded.
      * This branch avoids putting empty data on the frame buffer. */
@@ -1459,6 +1525,7 @@ int lwlibav_video_find_first_valid_frame
     lwlibav_video_decode_handler_t *vdhp
 )
 {
+    vdhp->last_packet = NULL;
     vdhp->movable_frame_buffer = av_frame_alloc();
     if( !vdhp->movable_frame_buffer )
         return -1;
@@ -1484,7 +1551,7 @@ int lwlibav_video_find_first_valid_frame
     AVPacket *pkt = &vdhp->packet;
     for( uint32_t i = 1; i <= vdhp->frame_count + vdhp->exh.delay_count; i++ )
     {
-        lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, i, pkt );
+        lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, pkt );
         av_frame_unref( vdhp->frame_buffer );
         set_output_order_id( vdhp, pkt, i );
         int got_picture;
@@ -1585,7 +1652,7 @@ int try_decode_video_frame
         int extradata_index = vdhp->frame_list[frame_number].extradata_index;
         if( extradata_index != vdhp->exh.current_index )
             break;
-        int ret = lwlibav_get_av_frame( format_ctx, stream_index, frame_number, &pkt );
+        int ret = lwlibav_get_av_frame( format_ctx, stream_index, &pkt );
         if( ret > 0 )
             break;
         else if( ret < 0 )

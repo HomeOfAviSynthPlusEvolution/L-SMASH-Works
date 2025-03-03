@@ -215,6 +215,8 @@ int decode_video_packet
     if( pkt )
     {
         ret = avcodec_send_packet( ctx, pkt );
+        if (ret == AVERROR(EAGAIN))
+            return ret;
         if( ret < 0
          && ret != AVERROR_EOF          /* No more packets can be sent if true. */
          && ret != AVERROR( EAGAIN ) )  /* Must receive output frames before sending new packets if true. */
