@@ -539,16 +539,21 @@ static int decode_video_picture
     AVPacket* next_packet = NULL;
     if (vdhp->last_packet)
     {
-        next_packet = av_packet_alloc();
-        if (!next_packet)
+        if ((vdhp->last_packet->dts + vdhp->last_packet->duration) != pkt->dts)
+            av_packet_free(&vdhp->last_packet);
+        else
         {
-            lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to allocate next_packet.");
-            return -1;
+            next_packet = av_packet_alloc();
+            if (!next_packet)
+            {
+                lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to allocate next_packet.");
+                return -1;
+            }
+            av_packet_ref(next_packet, pkt);
+            av_packet_unref(pkt);
+            av_packet_ref(pkt, vdhp->last_packet);
+            av_packet_unref(vdhp->last_packet);
         }
-        av_packet_ref(next_packet, pkt);
-        av_packet_unref(pkt);
-        av_packet_ref(pkt, vdhp->last_packet);
-        av_packet_unref(vdhp->last_packet);
     }
     do
     {
@@ -592,6 +597,8 @@ static int decode_video_picture
             else if (drain_ret < 0 && drain_ret != AVERROR_EOF)
                 return drain_ret;
         }
+        else if (ret < 0)
+            break;
         if (next_packet && retry_send == 0)
         {
             av_packet_unref(pkt);
