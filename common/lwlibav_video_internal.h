@@ -99,5 +99,5 @@ struct lwlibav_video_decode_handler_tag
     uint32_t            last_ts_frame_number;
     AVRational          actual_time_base;
     int                 strict_cfr;
-    AVPacket           *last_packet;
+    int                 reuse_pkt;
 };
