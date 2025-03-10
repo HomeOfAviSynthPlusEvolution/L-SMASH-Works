@@ -357,6 +357,8 @@
                 If `ff_options="drc_scale=x"` is used, `drc_scale` is ignored.
             + ff_options (defalut: "")
                 Same as 'ff_options' of LSMASHVideoSource().
-            + fill_audio_gaps (defalut: false)
+            + fill_agaps (defalut: 0)
                 Simple filling of audio gaps with silence.
                 This relies on PTS so the audio must have trustworthy PTS.
+                Default `0` means this is disabled.
+                The value is in AVStream->time_base units. For e.g., `fill_agaps=5` with `time_base={1, 1000}` means `5 ms`.

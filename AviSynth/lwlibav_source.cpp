@@ -309,7 +309,7 @@ LWLibavAudioSource::LWLibavAudioSource
     bool                progress,
     const double        drc,
     const char         *ff_options,
-    bool                fill_audio_gaps,
+    int                 fill_audio_gaps,
     IScriptEnvironment *env
 ) : LWLibavAudioSource{}
 {
@@ -546,7 +546,7 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     const bool  progress                = args[10].AsBool( true );
     const double drc                    = args[11].AsFloat(-1.0);
     const char* ff_options              = args[12].AsString(nullptr);
-    const bool  gaps                    = args[13].AsBool(false);
+    const int  fill_audio_gaps          = args[13].AsInt(0);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path         = source;
@@ -565,5 +565,6 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.vfr2cfr.fps_num   = 0;
     opt.vfr2cfr.fps_den   = 0;
     set_av_log_level( ff_loglevel );
-    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, progress, drc, ff_options, gaps, env );
+    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, progress, drc, ff_options,
+        fill_audio_gaps, env );
 }

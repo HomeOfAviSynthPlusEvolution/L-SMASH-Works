@@ -94,7 +94,7 @@ public:
         bool                progress,
         const double        drc,
         const char         *ff_options,
-        bool                fill_audio_gaps,
+        int                 fill_audio_gaps,
         IScriptEnvironment *env
     );
     ~LWLibavAudioSource();

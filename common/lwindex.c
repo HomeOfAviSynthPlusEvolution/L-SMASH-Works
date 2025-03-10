@@ -2504,6 +2504,11 @@ static int create_index
             int bits_per_sample = pkt_ctx->bits_per_raw_sample   > 0 ? pkt_ctx->bits_per_raw_sample
                                 : pkt_ctx->bits_per_coded_sample > 0 ? pkt_ctx->bits_per_coded_sample
                                 : av_get_bytes_per_sample( pkt_ctx->sample_fmt ) << 3;
+            if (adhp->time_base.num == 0 || adhp->time_base.den == 0)
+            {
+                adhp->time_base.num = stream->time_base.num;
+                adhp->time_base.den = stream->time_base.den;
+            }
             /* Get audio frame_length. */
             int frame_length = get_audio_frame_length( helper, pkt_ctx, &pkt );
             int gaps = 1;
@@ -2533,21 +2538,19 @@ static int create_index
                             audio_info[audio_frame_number].length = frame_length;
                             if (audio_frame_number > 1 && audio_info[audio_frame_number].length != audio_info[audio_frame_number - 1].length)
                                 constant_frame_length = 0;
-                            if (audio_sample_count > 1 && aohp->fill_audio_gaps && !added_gaps)
+                            if (aohp->fill_audio_gaps && audio_sample_count > 1 && !added_gaps)
                             {
                                 const audio_frame_info_t* const prev_info = &audio_info[audio_sample_count - 1];
                                 const int64_t prev_pts = prev_info->pts;
                                 if (info->pts != AV_NOPTS_VALUE && prev_pts != AV_NOPTS_VALUE)
                                 {
-                                    const int64_t prev_duration = av_rescale_q_rnd(prev_info->length, (AVRational) { 1, aohp->output_sample_rate },
-                                        adhp->time_base, AV_ROUND_ZERO);
+                                    const int64_t prev_duration = av_rescale_q(prev_info->length, (AVRational) { 1, aohp->output_sample_rate },
+                                        adhp->time_base);
                                     const int64_t prev_end = prev_pts + prev_duration;
-                                    const int64_t time_diff = info->pts - (prev_end + av_rescale_q_rnd(1, adhp->time_base, adhp->time_base,
-                                        AV_ROUND_UP));
-                                    if (time_diff > 5)
+                                    const int64_t time_diff = info->pts - prev_end;
+                                    if (time_diff > aohp->fill_audio_gaps)
                                     {
-                                        info->length = (int)av_rescale_rnd(time_diff, adhp->time_base.num * aohp->output_sample_rate,
-                                            adhp->time_base.den, AV_ROUND_UP);
+                                        info->length = (int)av_rescale_q(time_diff, adhp->time_base, (AVRational) { 1, aohp->output_sample_rate });
                                         info->pts = prev_end;
                                         info->dts = prev_info->dts + prev_duration;
                                         info->file_offset = -1;
@@ -2579,11 +2582,6 @@ static int create_index
                         aohp->output_sample_format = select_better_sample_format(aohp->output_sample_format, pkt_ctx->sample_fmt);
                         aohp->output_sample_rate = MAX(aohp->output_sample_rate, audio_sample_rate);
                         aohp->output_bits_per_sample = MAX(aohp->output_bits_per_sample, bits_per_sample);
-                        if (adhp->time_base.num == 0 || adhp->time_base.den == 0)
-                        {
-                            adhp->time_base.num = stream->time_base.num;
-                            adhp->time_base.den = stream->time_base.den;
-                        }
                     }
                 }
                 /* Set channel_layout, sample_rate, sample_format and bits_per_sample for the current extradata. */
@@ -3003,7 +3001,7 @@ static int parse_index
     if( fscanf( index, "<ActiveVideoStreamIndex>%d</ActiveVideoStreamIndex>\n", &active_video_index ) != 1
      || fscanf( index, "<ActiveAudioStreamIndex>%d</ActiveAudioStreamIndex>\n", &active_audio_index ) != 1
      || fscanf( index, "<DefaultAudioStreamIndex>%d</DefaultAudioStreamIndex>\n", &default_audio ) != 1 
-     || fscanf( index, "<FillAudioGaps>%d</FillAudioGaps>\n", &fill_audio_gaps) != 1 )
+     || fscanf( index, "<FillAudioGaps>%d</FillAudioGaps>\n", &fill_audio_gaps ) != 1 )
         return -1;
     lwhp->format_name = format_name;
     adhp->dv_in_avi = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
@@ -3044,8 +3042,11 @@ static int parse_index
     }
     if( active_audio_index == -2 && opt->force_audio_index != -2 ) // Maybe redundant.
         goto fail_parsing;
-    if (opt->force_audio_index != -2 && fill_audio_gaps != aohp->fill_audio_gaps)
-        goto fail_parsing;
+    if (opt->force_audio_index != -2)
+    {
+        if (fill_audio_gaps != aohp->fill_audio_gaps)
+            goto fail_parsing;
+    }        
     vdhp->codec_id             = AV_CODEC_ID_NONE;
     adhp->codec_id             = AV_CODEC_ID_NONE;
     vdhp->initial_pix_fmt      = AV_PIX_FMT_NONE;
