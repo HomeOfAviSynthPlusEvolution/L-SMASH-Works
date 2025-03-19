@@ -113,7 +113,7 @@
                     "GBRAP12"
                     "GBRAP16"
                     "XYZ12LE"
-            + decoder (defalut : "")
+            + decoder (default : "")
                 Names of preferred decoder candidates separated by comma.
                 For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
                 used 'h264' and 'mpeg2video' decoder, then specify as "h264_qsv,mpeg2_qsv". The evaluations are done
@@ -246,17 +246,17 @@
                 Audio sampling rate or sampling frequency in units of Hz.
                 The value 0 means audio stream is output to the buffer via the resampler at the maximum sampling rate in audio stream.
                 Otherwise, audio stream is output to the buffer via the resampler at specified sampling rate.
-            + decoder (defalut : "")
+            + decoder (default : "")
                 Same as 'decoder' of LSMASHVideoSource().
             + ff_loglevel (default : 0)
                 Same as 'ff_loglevel' of LSMASHVideoSource().
-            + drc_scale (defalut: 1.0)
+            + drc_scale (default: 1.0)
                 Dynamic Range Scale Factor. The factor to apply to dynamic range values from the AC-3 stream. This factor is applied exponentially.
                 0.0 : DRC disabled. Produces full range audio.
                 0.0 < drc_scale <= 1.0 : DRC enabled. Applies a fraction of the stream DRC value. Audio reproduction is between full range and full compression.
                 > 1.0 : DRC enabled. Applies drc_scale asymmetrically. Loud sounds are fully compressed. Soft sounds are enhanced.
                 If `ff_options="drc_scale=x"` is used, `drc_scale` is ignored.
-            + ff_options (defalut: "")
+            + ff_options (default: "")
                 Same as 'ff_options' of LSMASHVideoSource().
 
 ###### LWLibavVideoSource
@@ -306,17 +306,17 @@
                     - There is a video frame consisting of two separated field coded pictures.
             + format (default : "")
                 Same as 'format' of LSMASHVideoSource().
-            + decoder (defalut : "")
+            + decoder (default : "")
                 Same as 'decoder' of LSMASHVideoSource().
             + prefer_hw (default : 0)
                 Same as 'prefer_hw' of LSMASHVideoSource().
             + ff_loglevel (default : 0)
                 Same as 'ff_loglevel' of LSMASHVideoSource().
-            + cachedir (defalut: "")
+            + cachedir (default: "")
                 Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).
             + indexingpr (default: true)
                 Whether to print indexing progress to stderr.
-            + ff_options (defalut: "")
+            + ff_options (default: "")
                 Same as 'ff_options' of LSMASHVideoSource().
 
 ###### LWLibavAudioSource
@@ -333,34 +333,34 @@
                 The path of the source file.
             + stream_index (default : -1)
                 The stream index to open in the source file.
-                The value -1 means the defalut audio stream.
+                The value -1 means the default audio stream.
             + cache (default : true)
                 Same as 'cache' of LWLibavVideoSource().
             + cachefile (default : source + ".lwi")
                 Same as 'cachefile' of LWLibavVideoSource().
             + av_sync (default : false)
                 Try Audio/Visual synchronization at the first video frame of the video stream activated in the index file if set to true.
-            + layout (defalut : "")
+            + layout (default : "")
                 Same as 'layout' of LSMASHAudioSource().
             + rate (default : 0)
                 Same as 'rate' of LSMASHAudioSource().
-            + decoder (defalut : "")
+            + decoder (default : "")
                 Same as 'decoder' of LSMASHVideoSource().
             + ff_loglevel (default : 0)
                 Same as 'ff_loglevel' of LSMASHVideoSource().
-            + cachedir (defalut: "")
+            + cachedir (default: "")
                 Create *.lwi file under this directory with names encoding the full path to avoid collisions. Set to "" to restore the previous behavior (storing *.lwi along side the source video file).
             + indexingpr (default: true)
                 Whether to print indexing progress to stderr.
-            + drc_scale (defalut: 1.0)
+            + drc_scale (default: 1.0)
                 Dynamic Range Scale Factor. The factor to apply to dynamic range values from the AC-3 stream. This factor is applied exponentially.
                 0.0 : DRC disabled. Produces full range audio.
                 0.0 < drc_scale <= 1.0 : DRC enabled. Applies a fraction of the stream DRC value. Audio reproduction is between full range and full compression.
                 > 1.0 : DRC enabled. Applies drc_scale asymmetrically. Loud sounds are fully compressed. Soft sounds are enhanced.
                 If `ff_options="drc_scale=x"` is used, `drc_scale` is ignored.
-            + ff_options (defalut: "")
+            + ff_options (default: "")
                 Same as 'ff_options' of LSMASHVideoSource().
-            + fill_agaps (defalut: 0)
+            + fill_agaps (default: 0)
                 Simple filling of audio gaps with silence.
                 This relies on PTS so the audio must have trustworthy PTS.
                 Default `0` means this is disabled.
