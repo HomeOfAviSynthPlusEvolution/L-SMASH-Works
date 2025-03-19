@@ -93,7 +93,7 @@
                     "RGB48"
                     "RGB64BE"
                     "XYZ12LE"
-            + decoder (defalut : "")
+            + decoder (default : "")
                 Names of preferred decoder candidates separated by comma.
                 For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally
                 used 'h264' and 'mpeg2video' decoder, then specify as "h264_qsv,mpeg2_qsv". The evaluations are done
@@ -181,7 +181,7 @@
                 This option is enabled only if one or more of the following conditions is true.
                     - 'repeat' is set to 1.
                     - There is a video frame consisting of two separated field coded pictures.
-            + decoder (defalut : "")
+            + decoder (default : "")
                 Same as 'decoder' of LibavSMASHSource().
             + prefer_hw (default : 0)
                 Same as 'prefer_hw' of LibavSMASHSource().
@@ -189,5 +189,5 @@
                 Same as 'ff_loglevel' of LibavSMASHSource().
             + cachedir (default : "")
                 Create *.lwi file under this directory with names encoding the full path to avoid collisions.
-            + ff_options (defalut: "")
+            + ff_options (default: "")
                 Same as 'ff_options' of LibavSMASHSource().
