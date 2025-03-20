@@ -80,6 +80,7 @@ void libavsmash_video_free_decode_handler
         return;
     lw_freep( &vdhp->keyframe_list );
     lw_freep( &vdhp->order_converter );
+    av_frame_free( &vdhp->movable_frame_buffer );
     av_frame_free( &vdhp->frame_buffer );
     av_frame_free( &vdhp->first_valid_frame );
     cleanup_configuration( &vdhp->config );
@@ -170,7 +171,7 @@ void libavsmash_video_set_preferred_decoder_names
 void libavsmash_video_set_prefer_hw_decoder
 (
     libavsmash_video_decode_handler_t *vdhp,
-    int                                prefer_hw_decoder
+    int                               *prefer_hw_decoder
 )
 {
     vdhp->config.prefer_hw_decoder = prefer_hw_decoder;
@@ -638,7 +639,13 @@ static int decode_video_sample
         pkt.flags = 0;
     av_frame_unref( picture );
     uint64_t cts = pkt.pts;
-    ret = decode_video_packet( config->ctx, picture, got_picture, &pkt );
+    AVFrame* mov_frame = vdhp->movable_frame_buffer;
+    ret = decode_video_packet( config->ctx, mov_frame, got_picture, &pkt );
+    if (transfer_frame_data(picture, mov_frame))
+    {
+        lw_log_show(&config->lh, LW_LOG_WARNING, "Failed to transfer a video frame.");
+        return -1;
+    }
     picture->pts = cts;
     if( ret < 0 )
     {
@@ -811,9 +818,15 @@ static int get_picture
         {
             AVPacket pkt = { 0 };
             av_frame_unref( picture );
-            if( decode_video_packet( config->ctx, picture, &got_picture, &pkt ) < 0 )
+            AVFrame* mov_frame = vdhp->movable_frame_buffer;
+            if( decode_video_packet( config->ctx, mov_frame, &got_picture, &pkt ) < 0 )
             {
                 lw_log_show( &config->lh, LW_LOG_WARNING, "Failed to decode and flush a video frame." );
+                return -1;
+            }
+            if (transfer_frame_data(picture, mov_frame))
+            {
+                lw_log_show(&config->lh, LW_LOG_WARNING, "Failed to transfer a video frame.");
                 return -1;
             }
             ++current;
@@ -1031,6 +1044,9 @@ int libavsmash_video_find_first_valid_frame
     libavsmash_video_decode_handler_t *vdhp
 )
 {
+    vdhp->movable_frame_buffer = av_frame_alloc();
+    if (!vdhp->movable_frame_buffer)
+        return -1;
     codec_configuration_t *config = &vdhp->config;
     for( uint32_t i = 1; i <= vdhp->sample_count + get_decoder_delay( config->ctx ); i++ )
     {
@@ -1038,8 +1054,13 @@ int libavsmash_video_find_first_valid_frame
         get_sample( vdhp->root, vdhp->track_id, i, config, &pkt );
         av_frame_unref( vdhp->frame_buffer );
         int got_picture;
-        if( decode_video_packet( config->ctx, vdhp->frame_buffer, &got_picture, &pkt ) >= 0 && got_picture )
+        if( decode_video_packet( config->ctx, vdhp->movable_frame_buffer, &got_picture, &pkt ) >= 0 && got_picture )
         {
+            if (transfer_frame_data(vdhp->frame_buffer, vdhp->movable_frame_buffer))
+            {
+                lw_log_show(&config->lh, LW_LOG_WARNING, "Failed to transfer a video frame.");
+                return -1;
+            }
             vdhp->first_valid_frame_number = i - MIN( get_decoder_delay( config->ctx ), config->delay_count );
             if( vdhp->first_valid_frame_number > 1 || vdhp->sample_count == 1 )
             {
@@ -1052,6 +1073,7 @@ int libavsmash_video_find_first_valid_frame
         }
         else if( pkt.data )
             ++ config->delay_count;
+        av_frame_unref(vdhp->movable_frame_buffer);
     }
     return 0;
 }

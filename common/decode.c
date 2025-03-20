@@ -26,6 +26,7 @@ extern "C"
 #endif  /* __cplusplus */
 #include <libavcodec/avcodec.h>
 #include <libavutil/cpu.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/opt.h>
 #ifdef __cplusplus
 }
@@ -68,10 +69,11 @@ const AVCodec *find_decoder
     enum AVCodecID           codec_id,
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
-    const int                prefer_hw_decoder
+    int                     *prefer_hw_decoder
 )
 {
-    const AVCodec *codec = avcodec_find_decoder( codec_id );
+    const AVCodec *codec = (*prefer_hw_decoder > 3 && codec_id == AV_CODEC_ID_AV1) ? avcodec_find_decoder_by_name("av1")
+        : avcodec_find_decoder(codec_id);
     if( !codec )
         return NULL;
     if( preferred_decoder_names
@@ -88,7 +90,7 @@ const AVCodec *find_decoder
             }
         }
     else if( codec->type == AVMEDIA_TYPE_VIDEO
-          && prefer_hw_decoder )
+        && *prefer_hw_decoder && *prefer_hw_decoder < 4 )
     {
         const char *codec_name;
         if (!strcmp(codec->name, "mpeg1video"))
@@ -103,19 +105,77 @@ const AVCodec *find_decoder
         else
             codec_name = codec->name;
         const AVCodec *preferred_decoder;
-        if( prefer_hw_decoder == 3 )
+        if( *prefer_hw_decoder == 3 )
         {
             preferred_decoder = select_hw_decoder( codec_name, 1, codecpar );
-            if( !preferred_decoder )
-                preferred_decoder = select_hw_decoder( codec_name, 2, codecpar );
+            if (!preferred_decoder)
+            {
+                preferred_decoder = select_hw_decoder(codec_name, 2, codecpar);
+                if (preferred_decoder)
+                    *prefer_hw_decoder = 2;
+            }
+            else
+                *prefer_hw_decoder = 1;
         }
         else
-            preferred_decoder = select_hw_decoder( codec_name, prefer_hw_decoder, codecpar );
+            preferred_decoder = select_hw_decoder( codec_name, *prefer_hw_decoder, codecpar );
         if( preferred_decoder )
             codec = preferred_decoder;
     }
     return codec;
 }
+
+static int hw_decoder_init(AVCodecContext* ctx, const enum AVHWDeviceType type, AVBufferRef* hw_device_ctx)
+{
+    int err = 0;
+
+    if ((err = av_hwdevice_ctx_create(&hw_device_ctx, type, NULL, NULL, 0)) < 0)
+        return err;
+
+    ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+
+    return 0;
+}
+
+static enum AVPixelFormat dxva2_get_format(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts)
+{
+    while (*pix_fmts != AV_PIX_FMT_NONE)
+    {
+        if (*pix_fmts == AV_PIX_FMT_DXVA2_VLD)
+            return *pix_fmts;
+        pix_fmts++;
+    }
+    return AV_PIX_FMT_NONE;
+}
+
+static enum AVPixelFormat d3d11va_get_format(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts)
+{
+    while (*pix_fmts != AV_PIX_FMT_NONE)
+    {
+        if (*pix_fmts == AV_PIX_FMT_D3D11)
+            return *pix_fmts;
+        pix_fmts++;
+    }
+    return AV_PIX_FMT_NONE;
+}
+
+static enum AVPixelFormat vulkan_get_format(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts)
+{
+    while (*pix_fmts != AV_PIX_FMT_NONE)
+    {
+        if (*pix_fmts == AV_PIX_FMT_VULKAN)
+            return *pix_fmts;
+        pix_fmts++;
+    }
+    return AV_PIX_FMT_NONE;
+}
+
+static const enum AVHWDeviceType hw_device_types[] =
+{
+    [4] = AV_HWDEVICE_TYPE_DXVA2,
+    [5] = AV_HWDEVICE_TYPE_D3D11VA,
+    [6] = AV_HWDEVICE_TYPE_VULKAN
+};
 
 int open_decoder
 (
@@ -124,7 +184,9 @@ int open_decoder
     const AVCodec           *codec,
     const int                thread_count,
     const double             drc,
-    const char              *ff_options
+    const char              *ff_options,
+    int                     *prefer_hw_decoder,
+    AVBufferRef             *hw_device_ctx
 )
 {
     AVCodecContext *c = avcodec_alloc_context3( codec );
@@ -169,6 +231,52 @@ int open_decoder
         av_dict_free(&ff_d);
         goto fail;
     }
+    if (*prefer_hw_decoder >= 3)
+    {
+        enum AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
+        enum AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
+        while (1)
+        {
+            if (*prefer_hw_decoder == 3)
+                ++*prefer_hw_decoder;
+            type = hw_device_types[*prefer_hw_decoder];
+            if (type != AV_HWDEVICE_TYPE_NONE)
+            {
+                for (int i = 0; ; ++i)
+                {
+                    const AVCodecHWConfig* config = avcodec_get_hw_config(codec, i);
+                    if (!config)
+                        break;
+                    if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config->device_type == type)
+                    {
+                        hw_pix_fmt = config->pix_fmt;
+                        break;
+                    }
+                }
+            }
+            if (hw_pix_fmt != AV_PIX_FMT_NONE)
+            {
+                switch (hw_pix_fmt)
+                {
+                    case AV_PIX_FMT_DXVA2_VLD: c->get_format = dxva2_get_format; break;
+                    case AV_PIX_FMT_D3D11: c->get_format = d3d11va_get_format; break;
+                    default: c->get_format = vulkan_get_format; break;
+                }
+                if (hw_decoder_init(c, type, hw_device_ctx) < 0)
+                    c->get_format = avcodec_default_get_format;
+                break;
+            }
+            else if (*prefer_hw_decoder == 3)
+            {
+                if (*prefer_hw_decoder == 6)
+                    break;
+                else
+                    ++*prefer_hw_decoder;
+            }
+            else
+                break;
+        }
+    }
     ret = avcodec_open2( c, codec, &ff_d );
     av_dict_free( &ff_d );
     if ( ret < 0 )
@@ -188,16 +296,17 @@ int find_and_open_decoder
     AVCodecContext         **ctx,
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
-    const int                prefer_hw_decoder,
+    int                     *prefer_hw_decoder,
     const int                thread_count,
     const double             drc,
-    const char              *ff_options
+    const char              *ff_options,
+    AVBufferRef             *hw_device_ctx
 )
 {
     const AVCodec *codec = find_decoder( codecpar->codec_id, codecpar, preferred_decoder_names, prefer_hw_decoder );
     if( !codec )
         return -1;
-    return open_decoder( ctx, codecpar, codec, thread_count, drc, ff_options );
+    return open_decoder( ctx, codecpar, codec, thread_count, drc, ff_options, prefer_hw_decoder, hw_device_ctx );
 }
 
 /* An incomplete simulator of the old libavcodec video decoder API

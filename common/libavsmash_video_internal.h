@@ -47,4 +47,5 @@ struct libavsmash_video_decode_handler_tag
     uint32_t              media_timescale;
     uint64_t              media_duration;
     uint64_t              min_cts;
+    AVFrame              *movable_frame_buffer;       /* the frame buffer where the decoder outputs temporally stored frame data */
 };

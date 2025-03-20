@@ -134,7 +134,7 @@ LWLibavVideoSource::LWLibavVideoSource
     lwlibav_video_set_seek_mode              ( vdhp, seek_mode );
     lwlibav_video_set_forward_seek_threshold ( vdhp, forward_seek_threshold );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names() );
-    lwlibav_video_set_prefer_hw_decoder      ( vdhp, prefer_hw_decoder );
+    lwlibav_video_set_prefer_hw_decoder      ( vdhp, &prefer_hw_decoder );
     lwlibav_video_set_decoder_options        ( vdhp, ff_options );
     as_video_output_handler_t *as_vohp = (as_video_output_handler_t *)lw_malloc_zero( sizeof(as_video_output_handler_t) );
     if( !as_vohp )
@@ -188,7 +188,16 @@ LWLibavVideoSource::LWLibavVideoSource
     env->SetVar(env->Sprintf("%s", "FFSAR_DEN"), den);
     if (num > 0 && den > 0)
         env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
-    env->SetVar(env->Sprintf("%s", "LWLDECODER"), vdhp->ctx->codec->name);
+    const char* used_decoder = [&]()
+    {
+        switch (prefer_hw_decoder)
+        {
+            case 4: return "HWAccel: DXVA2";
+            case 5: return "HWAccel: D3D11VA";
+            default: return "HWAccel: VULKAN";
+        }
+    }();
+    env->SetVar(env->Sprintf("%s", "LWLDECODER"), (vdhp->ctx->hw_device_ctx) ? used_decoder : vdhp->ctx->codec->name);
 }
 
 LWLibavVideoSource::~LWLibavVideoSource()
@@ -525,7 +534,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
-    prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 3 );
+    prefer_hw_decoder      = CLIP_VALUE( prefer_hw_decoder, 0, 6 );
     set_av_log_level( ff_loglevel );
     return new LWLibavVideoSource( &opt, seek_mode, forward_seek_threshold,
                                    direct_rendering, pixel_format, preferred_decoder_names, prefer_hw_decoder, progress, ff_options, env );

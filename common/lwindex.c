@@ -88,10 +88,11 @@ typedef struct
     int                number_of_helpers;
     lwindex_helper_t **helpers;
     const char       **preferred_video_decoder_names;
-    int                prefer_video_hw_decoder;
+    int               *prefer_video_hw_decoder;
     const char       **preferred_audio_decoder_names;
     int                thread_count;
     char              *format_name;
+    AVBufferRef       *hw_device_ctx;
 } lwindex_indexer_t;
 
 typedef struct
@@ -1345,7 +1346,7 @@ static lwindex_helper_t *get_index_helper
         const char **preferred_decoder_names = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
                                              ? indexer->preferred_video_decoder_names
                                              : indexer->preferred_audio_decoder_names;
-        if( find_and_open_decoder( &helper->codec_ctx, codecpar, preferred_decoder_names, indexer->prefer_video_hw_decoder, indexer->thread_count, -1.0, 0 ) < 0 )
+        if( find_and_open_decoder( &helper->codec_ctx, codecpar, preferred_decoder_names, indexer->prefer_video_hw_decoder, indexer->thread_count, -1.0, 0, indexer->hw_device_ctx ) < 0 )
             /* Failed to find and open an appropriate decoder, but do not abort indexing. */
             return helper;
         helper->mpeg12_video = (codecpar->codec_id == AV_CODEC_ID_MPEG1VIDEO || codecpar->codec_id == AV_CODEC_ID_MPEG2VIDEO);
@@ -2224,7 +2225,8 @@ static int create_index
         vdhp->prefer_hw_decoder,        /* prefer_video_hw_decoder */
         adhp->preferred_decoder_names,  /* preferred_audio_decoder_names */
         lwhp->threads,                  /* thread_count */
-        lwhp->format_name               /* format_name */
+        lwhp->format_name,              /* format_name */
+        vdhp->hw_device_ctx             /* hw device buffer */
     };
     for( unsigned int stream_index = 0; stream_index < format_ctx->nb_streams; stream_index++ )
     {

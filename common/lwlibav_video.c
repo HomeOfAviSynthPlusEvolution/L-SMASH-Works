@@ -101,6 +101,7 @@ void lwlibav_video_free_decode_handler
     av_frame_free( &vdhp->frame_buffer );
     av_frame_free( &vdhp->first_valid_frame );
     av_frame_free( &vdhp->movable_frame_buffer );
+    av_buffer_unref( &vdhp->hw_device_ctx );
     avcodec_free_context( &vdhp->ctx );
     if( vdhp->format )
         lavf_close_file( &vdhp->format );
@@ -173,7 +174,7 @@ void lwlibav_video_set_preferred_decoder_names
 void lwlibav_video_set_prefer_hw_decoder
 (
     lwlibav_video_decode_handler_t *vdhp,
-    int                             prefer_hw_decoder
+    int                            *prefer_hw_decoder
 )
 {
     vdhp->prefer_hw_decoder = prefer_hw_decoder;
@@ -288,7 +289,7 @@ int lwlibav_video_get_desired_track
      || vdhp->frame_count == 0
      || lavf_open_file( &vdhp->format, file_path, &vdhp->lh ) < 0
      || find_and_open_decoder( &ctx, vdhp->format->streams[ vdhp->stream_index ]->codecpar,
-                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads, -1.0, vdhp->ff_options ) < 0 )
+                               vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads, -1.0, vdhp->ff_options, vdhp->hw_device_ctx ) < 0 )
     {
         av_freep( &vdhp->index_entries );
         lw_freep( &vdhp->frame_list );
@@ -596,7 +597,11 @@ got_frame:
     if( *got_picture )
     {
         av_frame_unref( frame );
-        av_frame_move_ref( frame, mov_frame );
+        if (transfer_frame_data(frame, mov_frame))
+        {
+            lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to transfer a video frame.");
+            return -1;
+        }
         vdhp->last_dec_frame = frame;
     }
     *pkt_pts = pkt->pts;
@@ -1021,9 +1026,15 @@ static int get_frame
             }
             AVPacket pkt = { 0 };
             av_frame_unref( frame );
-            if( decode_video_packet( vdhp->ctx, frame, &got_picture, &pkt ) < 0 )
+            AVFrame* mov_frame = vdhp->movable_frame_buffer;
+            if( decode_video_packet( vdhp->ctx, mov_frame, &got_picture, &pkt ) < 0 )
             {
                 lw_log_show( &vdhp->lh, LW_LOG_ERROR, "Failed to decode and flush a video frame." );
+                return -1;
+            }
+            if (transfer_frame_data(frame, mov_frame))
+            {
+                lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to transfer a video frame.");
                 return -1;
             }
             vdhp->last_fed_picture_number = current;
@@ -1516,7 +1527,6 @@ int lwlibav_video_find_first_valid_frame
     lwlibav_video_decode_handler_t *vdhp
 )
 {
-    vdhp->reuse_pkt = 0;
     vdhp->movable_frame_buffer = av_frame_alloc();
     if( !vdhp->movable_frame_buffer )
         return -1;
@@ -1546,7 +1556,12 @@ int lwlibav_video_find_first_valid_frame
         av_frame_unref( vdhp->frame_buffer );
         set_output_order_id( vdhp, pkt, i );
         int got_picture;
-        int ret = decode_video_packet( vdhp->ctx, vdhp->frame_buffer, &got_picture, pkt );
+        int ret = decode_video_packet( vdhp->ctx, vdhp->movable_frame_buffer, &got_picture, pkt );
+        if (transfer_frame_data(vdhp->frame_buffer, vdhp->movable_frame_buffer))
+        {
+            lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to transfer a video frame.");
+            return -1;
+        }
         /* Handle decoder delay derived from PAFF field coded pictures. */
         if( i <= vdhp->frame_count && i > decoder_delay
          && !got_picture && vdhp->frame_list[i].repeat_pict == 0 )

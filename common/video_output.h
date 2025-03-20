@@ -105,6 +105,12 @@ void lw_cleanup_video_output_handler
     lw_video_output_handler_t *vohp
 );
 
+int transfer_frame_data
+(
+    AVFrame* dst,
+    AVFrame* src
+);
+
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */

@@ -203,3 +203,18 @@ void lw_cleanup_video_output_handler
         vohp->scaler.sws_ctx = NULL;
     }
 }
+
+int transfer_frame_data(AVFrame* dst, AVFrame* src)
+{
+    if (src->hw_frames_ctx)
+    {
+        int ret = av_hwframe_transfer_data(dst, src, 0);
+        av_frame_unref(src);
+        return ret;
+    }
+    else
+    {
+        av_frame_move_ref(dst, src);
+        return 0;
+    }
+}

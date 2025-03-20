@@ -36,7 +36,7 @@ const AVCodec *find_decoder
     enum AVCodecID           codec_id,
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
-    const int                prefer_hw_decoder
+    int                     *prefer_hw_decoder
 );
 
 int open_decoder
@@ -46,7 +46,9 @@ int open_decoder
     const AVCodec           *codec,
     const int                thread_count,
     const double             drc,
-    const char              *ff_options
+    const char              *ff_options,
+    int                     *prefer_hw_decoder,
+    AVBufferRef             *hw_device_ctx
 );
 
 int find_and_open_decoder
@@ -54,10 +56,11 @@ int find_and_open_decoder
     AVCodecContext         **ctx,
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
-    const int                prefer_hw_decoder,
+    int                     *prefer_hw_decoder,
     const int                thread_count,
     const double             drc,
-    const char              *ff_options
+    const char              *ff_options,
+    AVBufferRef             *hw_device_ctx
 );
 
 int decode_video_packet

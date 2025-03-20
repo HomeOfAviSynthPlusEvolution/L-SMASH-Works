@@ -88,13 +88,14 @@ typedef struct
     int                         dv_in_avi;
     enum AVCodecID              codec_id;
     const char                **preferred_decoder_names;
-    int                         prefer_hw_decoder;
+    int                        *prefer_hw_decoder;
     AVRational                  time_base;
     uint32_t                    frame_count;
     AVFrame                    *frame_buffer;
     void                       *frame_list;
     const char                 *ff_options;
     double                      drc;
+    AVBufferRef                *hw_device_ctx;
 } lwlibav_decode_handler_t;
 
 static inline int lavf_open_file
@@ -169,10 +170,11 @@ int find_and_open_decoder
     AVCodecContext         **ctx,
     const AVCodecParameters *codecpar,
     const char             **preferred_decoder_names,
-    const int                prefer_hw_decoder,
+    int                     *prefer_hw_decoder,
     const int                thread_count,
     const double             drc,
-    const char              *ff_options
+    const char              *ff_options,
+    AVBufferRef             *hw_device_ctx
 );
 
 void lwlibav_flush_buffers
