@@ -35,7 +35,7 @@ extern "C"
 #include "decode.h"
 #include "qsv.h"
 
-static const enum AVHWdeviceType hw_device_types[] =
+static const enum AVHWDeviceType hw_device_types[] =
 {
     [1] = AV_HWDEVICE_TYPE_CUDA,
     [2] = AV_HWDEVICE_TYPE_QSV
