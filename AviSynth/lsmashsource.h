@@ -34,6 +34,7 @@ class LSMASHSource : public IClip
 protected:
     VideoInfo vi;
     char      preferred_decoder_names_buf[512];
+    int       prefer_hw;
     inline void set_preferred_decoder_names
     (
         const char *preferred_decoder_names
@@ -48,6 +49,13 @@ protected:
     inline const char **tokenize_preferred_decoder_names( void )
     {
         return lw_tokenize_string( preferred_decoder_names_buf, ',', nullptr );
+    }
+    inline void set_prefer_hw
+    (
+        int prefer_hw_decoder
+    )
+    {
+        prefer_hw = prefer_hw_decoder;
     }
     int __stdcall SetCacheHints( int cachehints, int frame_range ) { return cachehints == CACHE_GET_MTMODE ? MT_SERIALIZED : 0; }
     const VideoInfo& __stdcall GetVideoInfo() { return vi; }

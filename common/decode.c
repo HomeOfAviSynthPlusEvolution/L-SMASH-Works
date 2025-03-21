@@ -35,6 +35,12 @@ extern "C"
 #include "decode.h"
 #include "qsv.h"
 
+static const enum AVHWdeviceType hw_device_types[] =
+{
+    [1] = AV_HWDEVICE_TYPE_CUDA,
+    [2] = AV_HWDEVICE_TYPE_QSV
+};
+
 static const AVCodec *select_hw_decoder
 (
     const char              *codec_name,
@@ -42,6 +48,11 @@ static const AVCodec *select_hw_decoder
     const AVCodecParameters *codecpar
 )
 {
+    AVBufferRef* device_ref = NULL;
+    const int ret = av_hwdevice_ctx_create(&device_ref, hw_device_types[prefer_hw_decoder], "auto", NULL, 0); // Try to open hardware device.
+    av_buffer_unref(&device_ref);
+    if (ret < 0)
+        return NULL;
     char hw_decoder_name[32] = { 0 };
     const size_t codec_name_length = strlen( codec_name );
     const char *wrapper = prefer_hw_decoder == 1 ? "_cuvid" : "_qsv";
@@ -50,17 +61,6 @@ static const AVCodec *select_hw_decoder
     const AVCodec *hw_decoder = avcodec_find_decoder_by_name( hw_decoder_name );
     if( !hw_decoder )
         return NULL;
-    AVCodecContext *ctx = avcodec_alloc_context3( hw_decoder );
-    if( !ctx )
-        return NULL;
-    if( (codecpar && avcodec_parameters_to_context( ctx, codecpar ) < 0)
-     || avcodec_open2( ctx, hw_decoder, NULL ) < 0
-     || avcodec_send_packet( ctx, NULL ) < 0 )
-    {
-        avcodec_free_context( &ctx );
-        return NULL;
-    }
-    avcodec_free_context( &ctx );
     return hw_decoder;
 }
 
@@ -72,8 +72,7 @@ const AVCodec *find_decoder
     int                     *prefer_hw_decoder
 )
 {
-    const AVCodec *codec = (*prefer_hw_decoder > 3 && codec_id == AV_CODEC_ID_AV1) ? avcodec_find_decoder_by_name("av1")
-        : avcodec_find_decoder(codec_id);
+    const AVCodec *codec = avcodec_find_decoder(codec_id);
     if( !codec )
         return NULL;
     if( preferred_decoder_names
@@ -170,11 +169,11 @@ static enum AVPixelFormat vulkan_get_format(AVCodecContext* ctx, const enum AVPi
     return AV_PIX_FMT_NONE;
 }
 
-static const enum AVHWDeviceType hw_device_types[] =
+static const char* hw_device_names[] =
 {
-    [4] = AV_HWDEVICE_TYPE_DXVA2,
-    [5] = AV_HWDEVICE_TYPE_D3D11VA,
-    [6] = AV_HWDEVICE_TYPE_VULKAN
+    [4] = "dxva2",
+    [5] = "d3d11va",
+    [6] = "vulkan"
 };
 
 int open_decoder
@@ -189,6 +188,12 @@ int open_decoder
     AVBufferRef             *hw_device_ctx
 )
 {
+    if (*prefer_hw_decoder >= 3 && codecpar->codec_id == AV_CODEC_ID_AV1)
+    {
+        codec = avcodec_find_decoder_by_name("av1");
+        if (!codec)
+            return -1;
+    }
     AVCodecContext *c = avcodec_alloc_context3( codec );
     if( !c )
         return -1;
@@ -233,13 +238,13 @@ int open_decoder
     }
     if (*prefer_hw_decoder >= 3)
     {
-        enum AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
-        enum AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
         while (1)
         {
+            enum AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
+            enum AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
             if (*prefer_hw_decoder == 3)
                 ++*prefer_hw_decoder;
-            type = hw_device_types[*prefer_hw_decoder];
+            type = av_hwdevice_find_type_by_name(hw_device_names[*prefer_hw_decoder]);
             if (type != AV_HWDEVICE_TYPE_NONE)
             {
                 for (int i = 0; ; ++i)

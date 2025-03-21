@@ -223,7 +223,8 @@ LSMASHVideoSource::LSMASHVideoSource
     libavsmash_video_set_seek_mode              ( vdhp, seek_mode );
     libavsmash_video_set_forward_seek_threshold ( vdhp, forward_seek_threshold );
     libavsmash_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names() );
-    libavsmash_video_set_prefer_hw_decoder      ( vdhp, &prefer_hw_decoder );
+    set_prefer_hw( prefer_hw_decoder );
+    libavsmash_video_set_prefer_hw_decoder      ( vdhp, &prefer_hw );
     libavsmash_video_set_decoder_options        ( vdhp, ff_options );
     vohp->vfr2cfr = (fps_num > 0 && fps_den > 0);
     vohp->cfr_num = (uint32_t)fps_num;
@@ -250,7 +251,7 @@ LSMASHVideoSource::LSMASHVideoSource
         env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
     const char* used_decoder = [&]()
     {
-        switch (prefer_hw_decoder)
+        switch (prefer_hw)
         {
             case 4: return "HWAccel: DXVA2";
             case 5: return "HWAccel: D3D11VA";

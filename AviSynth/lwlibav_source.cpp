@@ -134,7 +134,8 @@ LWLibavVideoSource::LWLibavVideoSource
     lwlibav_video_set_seek_mode              ( vdhp, seek_mode );
     lwlibav_video_set_forward_seek_threshold ( vdhp, forward_seek_threshold );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names() );
-    lwlibav_video_set_prefer_hw_decoder      ( vdhp, &prefer_hw_decoder );
+    set_prefer_hw( prefer_hw_decoder );
+    lwlibav_video_set_prefer_hw_decoder      ( vdhp, &prefer_hw );
     lwlibav_video_set_decoder_options        ( vdhp, ff_options );
     as_video_output_handler_t *as_vohp = (as_video_output_handler_t *)lw_malloc_zero( sizeof(as_video_output_handler_t) );
     if( !as_vohp )
@@ -190,7 +191,7 @@ LWLibavVideoSource::LWLibavVideoSource
         env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
     const char* used_decoder = [&]()
     {
-        switch (prefer_hw_decoder)
+        switch (prefer_hw)
         {
             case 4: return "HWAccel: DXVA2";
             case 5: return "HWAccel: D3D11VA";

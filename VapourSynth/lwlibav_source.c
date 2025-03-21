@@ -90,6 +90,7 @@ typedef struct
     lwlibav_audio_decode_handler_t *adhp;
     lwlibav_audio_output_handler_t *aohp;
     char preferred_decoder_names_buf[PREFERRED_DECODER_NAMES_BUFSIZE];
+    int                             prefer_hw;
 } lwlibav_handler_t;
 
 /* Deallocate the handler of this plugin. */
@@ -403,8 +404,8 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     lwlibav_video_set_seek_mode              ( vdhp, CLIP_VALUE( seek_mode,      0, 2 ) );
     lwlibav_video_set_forward_seek_threshold ( vdhp, CLIP_VALUE( seek_threshold, 1, 999 ) );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names( hp->preferred_decoder_names_buf ) );
-    int prefer_hw = CLIP_VALUE(prefer_hw_decoder, 0, 6);
-    lwlibav_video_set_prefer_hw_decoder      ( vdhp, &prefer_hw );
+    set_prefer_hw( hp->prefer_hw, CLIP_VALUE ( prefer_hw_decoder, 0, 6 ) );
+    lwlibav_video_set_prefer_hw_decoder      ( vdhp, &hp->prefer_hw );
     lwlibav_video_set_decoder_options        ( vdhp, ff_options );
     vs_vohp->variable_info          = CLIP_VALUE( variable_info,     0, 1 );
     vs_vohp->direct_rendering       = CLIP_VALUE( direct_rendering,  0, 1 ) && !format;
