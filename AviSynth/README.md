@@ -296,6 +296,7 @@
                 If set to true, and source file requested repeat and the filter is unable to obey the request, this filter will fail explicitly to eliminate any guesswork.
                 If unspecified, and source file requested repeat and the filter is unable to obey the request, silently returning a VFR clip with a constant (but wrong) fps.
                 Note that this option is ignored when VFR->CFR conversion is enabled.
+                Note that if the source is fake interlaced, this option must be set to false.
             + dominance : (default : 0)
                 Which field, top or bottom, is displayed first.
                     - 0 : Obey source flags
