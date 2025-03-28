@@ -1371,6 +1371,14 @@ static uint32_t lwlibav_vfr2cfr
     uint32_t                        frame_number
 )
 {
+    if (vdhp->lw_seek_flags & SEEK_PTS_GENERATED)
+    {
+        // 'frame_number' is the 1-based output frame number [1, vohp->frame_count]
+        uint32_t source_frame_number = (uint32_t)(((uint64_t)(frame_number - 1) * vdhp->frame_count) / vohp->frame_count) + 1;
+        source_frame_number = MIN(source_frame_number, vdhp->frame_count);
+        vdhp->last_ts_frame_number = source_frame_number; // Update the cache hint
+        return source_frame_number;
+    }
     /* Convert VFR to CFR. */
     double target_ts  = (double)((uint64_t)(frame_number - 1) * vohp->cfr_den) / vohp->cfr_num;
     double current_ts = DBL_MAX;

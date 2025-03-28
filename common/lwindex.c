@@ -835,6 +835,8 @@ static void compute_stream_duration
     if( !(lwhp->format_flags & AVFMT_TS_DISCONT)
      && (vdhp->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
+        if (vdhp->lw_seek_flags & SEEK_PTS_GENERATED)
+            goto fail;
         first_ts          = info[1].pts;
         largest_ts        = first_ts;
         second_largest_ts = first_ts;
