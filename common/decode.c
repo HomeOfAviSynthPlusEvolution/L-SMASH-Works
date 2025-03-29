@@ -89,7 +89,7 @@ const AVCodec *find_decoder
             }
         }
     else if( codec->type == AVMEDIA_TYPE_VIDEO
-        && *prefer_hw_decoder && *prefer_hw_decoder < 4 )
+        && prefer_hw_decoder && *prefer_hw_decoder < 4 )
     {
         const char *codec_name;
         if (!strcmp(codec->name, "mpeg1video"))
@@ -188,7 +188,7 @@ int open_decoder
     AVBufferRef             *hw_device_ctx
 )
 {
-    if (*prefer_hw_decoder >= 3 && codecpar->codec_id == AV_CODEC_ID_AV1)
+    if (prefer_hw_decoder && *prefer_hw_decoder >= 3 && codecpar->codec_id == AV_CODEC_ID_AV1)
     {
         codec = avcodec_find_decoder_by_name("av1");
         if (!codec)
@@ -236,7 +236,7 @@ int open_decoder
         av_dict_free(&ff_d);
         goto fail;
     }
-    if (*prefer_hw_decoder >= 3)
+    if (prefer_hw_decoder && *prefer_hw_decoder >= 3)
     {
         while (1)
         {
