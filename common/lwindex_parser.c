@@ -413,9 +413,7 @@ lwindex_data_t *lwindex_parse(FILE *index, int include_video, int include_audio)
             else if (strcmp(tag, "FileHash") == 0) {
                 data->file_hash = strtoull(attribute, NULL, 16);
             }
-            else if (strcmp(tag, "LibavReaderIndex") == 0)
-
-            {
+            else if (strcmp(tag, "LibavReaderIndex") == 0) {
                 if (sscanf(attribute, "0x%x,%d,%[^>]", (unsigned int *)&data->format_flags, &data->raw_demuxer, data->format_name) != 3) {
                     fprintf(stderr, "Failed to parse libav reader index.\n");
                     goto fail_parsing;
@@ -451,7 +449,6 @@ lwindex_data_t *lwindex_parse(FILE *index, int include_video, int include_audio)
             else if (strcmp(tag, "FillAudioGaps") == 0) {
                 data->fill_audio_gaps = strtol(content, NULL, 10);
             }
-
             else if (strcmp(tag, "StreamInfo") == 0) {
                 if (buffered_fgets(line, MAX_LINE_LENGTH, index) == NULL) {
                     fprintf(stderr, "Unexpected end of file while reading stream info.\n");
