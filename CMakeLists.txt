@@ -105,19 +105,39 @@ endif()
 
 if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
     set(sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/cpp_compat.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/decode.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/decode.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio_internal.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video_internal.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_sscanf_unrolled.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio_internal.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video_internal.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/progress.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/utils.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/xxhash.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/xxhash.h
     )
 
     if (ENABLE_SSE2)
@@ -131,12 +151,19 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         set(sources
             ${sources}
             ${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.h
             ${CMAKE_CURRENT_SOURCE_DIR}/common/resample.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/common/resample.h
             ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.h
             ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.h
             ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lsmashsource.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lsmashsource.h
             ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lwlibav_source.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lwlibav_source.h
             ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/video_output.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/video_output.h
         )
     endif()
 
@@ -145,8 +172,10 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
             ${sources}
             ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/libavsmash_source.c
             ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.h
             ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lwlibav_source.c
             ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.h
         )
     endif()
     

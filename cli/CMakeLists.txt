@@ -5,17 +5,30 @@ add_executable(LSMASHSource_indexing)
 target_sources(LSMASHSource_indexing PRIVATE
     ${PROJECT_SOURCE_DIR}/cli/index.c
     ${PROJECT_SOURCE_DIR}/common/audio_output.c
+    ${PROJECT_SOURCE_DIR}/common/audio_output.h
     ${PROJECT_SOURCE_DIR}/common/decode.c
+    ${PROJECT_SOURCE_DIR}/common/decode.h
     ${PROJECT_SOURCE_DIR}/common/lwindex.c
+    ${PROJECT_SOURCE_DIR}/common/lwindex.h
+    ${PROJECT_SOURCE_DIR}/common/lwindex_sscanf_unrolled.h
     ${PROJECT_SOURCE_DIR}/common/lwlibav_audio.c
+    ${PROJECT_SOURCE_DIR}/common/lwlibav_audio.h
+    ${PROJECT_SOURCE_DIR}/common/lwlibav_audio_internal.h
     ${PROJECT_SOURCE_DIR}/common/lwlibav_dec.c
+    ${PROJECT_SOURCE_DIR}/common/lwlibav_dec.h
     ${PROJECT_SOURCE_DIR}/common/lwlibav_video.c
+    ${PROJECT_SOURCE_DIR}/common/lwlibav_video.h
+    ${PROJECT_SOURCE_DIR}/common/lwlibav_video_internal.h
     ${PROJECT_SOURCE_DIR}/common/osdep.c
+    ${PROJECT_SOURCE_DIR}/common/osdep.h
     ${PROJECT_SOURCE_DIR}/common/resample.c
+    ${PROJECT_SOURCE_DIR}/common/resample.h
     ${PROJECT_SOURCE_DIR}/common/qsv.c
+    ${PROJECT_SOURCE_DIR}/common/qsv.h
     ${PROJECT_SOURCE_DIR}/common/utils.c
     ${PROJECT_SOURCE_DIR}/common/utils.h
     ${PROJECT_SOURCE_DIR}/common/video_output.c
+    ${PROJECT_SOURCE_DIR}/common/video_output.h
 )
 
 if (GIT_FOUND)
