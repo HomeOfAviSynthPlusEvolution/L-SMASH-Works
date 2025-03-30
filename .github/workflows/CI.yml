@@ -61,7 +61,7 @@ jobs:
 
     - name: Install xxHash
       run: |
-        git clone https://github.com/Cyan4973/xxHash --branch v0.8.2 --depth 1
+        git clone https://github.com/Cyan4973/xxHash --branch v0.8.3 --depth 1
         pushd xxHash
         cmake -S ./cmake_unofficial -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DXXHASH_BUILD_XXHSUM=OFF
         cmake --build build -j 2
