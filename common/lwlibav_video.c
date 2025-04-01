@@ -861,7 +861,7 @@ static inline int field_number_of_picture_in_frame
     uint32_t                        output_picture_number
 )
 {
-    if( frame->top_field_first )
+    if( !!(frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST) )
         return vdhp->frame_list[output_picture_number].field_info == LW_FIELD_INFO_TOP    ? 1
              : vdhp->frame_list[output_picture_number].field_info == LW_FIELD_INFO_BOTTOM ? 2
              :                                                                              0;
@@ -1250,8 +1250,14 @@ static inline int copy_field
         }
     }
     /* Treat this frame as interlaced. */
-    dst->interlaced_frame = src->interlaced_frame;
-    dst->top_field_first  = top_field_first;
+    if( !!(src->flags & AV_FRAME_FLAG_INTERLACED) )
+        dst->flags |= AV_FRAME_FLAG_INTERLACED;
+    else
+        dst->flags &= ~AV_FRAME_FLAG_INTERLACED;
+    if( !!top_field_first )
+        dst->flags |= AV_FRAME_FLAG_TOP_FIELD_FIRST;
+    else
+        dst->flags &= ~AV_FRAME_FLAG_TOP_FIELD_FIRST;
     return 0;
 }
 
@@ -1293,7 +1299,10 @@ static int lwlibav_repeat_control
             if( get_requested_picture( vdhp, vdhp->frame_buffer, first_field_number ) < 0 )
                 return -1;
             /* Treat this frame as interlaced. */
-            vdhp->frame_buffer->interlaced_frame = vdhp->last_req_frame->interlaced_frame;
+            if( !!(vdhp->last_req_frame->flags & AV_FRAME_FLAG_INTERLACED) )
+                vdhp->frame_buffer->flags |= AV_FRAME_FLAG_INTERLACED;
+            else
+                vdhp->frame_buffer->flags &= ~AV_FRAME_FLAG_INTERLACED;
             return 0;
         }
     }
