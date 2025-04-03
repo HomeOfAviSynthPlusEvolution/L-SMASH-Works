@@ -84,7 +84,7 @@ jobs:
 
     - name: Build AviSynth/VapourSynth plugin
       run: |
-        cmake -S . -B build_avs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DBUILD_VS_PLUGIN=OFF -DENABLE_VPX=OFF
+        cmake -S . -B build_avs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DBUILD_VS_PLUGIN=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF
         cmake --build build_avs -j 2
-        cmake -S . -B build_vs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DBUILD_AVS_PLUGIN=OFF -DENABLE_VPX=OFF
+        cmake -S . -B build_vs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DBUILD_AVS_PLUGIN=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF
         cmake --build build_vs -j 2
