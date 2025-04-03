@@ -11,6 +11,7 @@ target_sources(LSMASHSource_indexing PRIVATE
     ${PROJECT_SOURCE_DIR}/common/lwindex.c
     ${PROJECT_SOURCE_DIR}/common/lwindex.h
     ${PROJECT_SOURCE_DIR}/common/lwindex_sscanf_unrolled.h
+    ${PROJECT_SOURCE_DIR}/common/lwindex_parser.c
     ${PROJECT_SOURCE_DIR}/common/lwlibav_audio.c
     ${PROJECT_SOURCE_DIR}/common/lwlibav_audio.h
     ${PROJECT_SOURCE_DIR}/common/lwlibav_audio_internal.h
