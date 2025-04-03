@@ -17,7 +17,7 @@ If you have issues about the file names save the AviSynth script (`.avs`) as UTF
 ##### CMake building options
 
 |        Option       |          Description         | Default value |
-|:-------------------:|:----------------------------:|:-------------:|
+|:--------------------|:-----------------------------|:--------------|
 | BUILD_AVS_PLUGIN    | Build plugin for AviSynth    |       ON      |
 | BUILD_VS_PLUGIN     | Build plugin for VapourSynth |       ON      |
 | ENABLE_DAV1D        | Enable dav1d AV1 decoding    |       ON      |
@@ -26,3 +26,4 @@ If you have issues about the file names save the AviSynth script (`.avs`) as UTF
 | ENABLE_VPX          | Enable libvpx decoding       |       ON      |
 | ENABLE_SSE2         | Force SSE2                   |       ON      |
 | BUILD_INDEXING_TOOL | Build indexing tool          |       OFF     |
+| ENABLE_VULKAN       | Enable Vulkan decoding       |       ON      |

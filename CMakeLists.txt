@@ -24,7 +24,10 @@ option(ENABLE_XML2 "Enable DNXHD support" ON)
 message(STATUS "Enable DNXHD support: ${ENABLE_XML2}.")
 
 option(ENABLE_VPX "Enable libvpx support" ON)
-message(STATUS "Enable libvpx support: ${ENABLE_VPX}.")
+message(STATUS "Enable libvpx decoding: ${ENABLE_VPX}.")
+
+option(ENABLE_VULKAN "Enable Vulkan support" ON)
+message(STATUS "Enable Vulkan decoding: ${ENABLE_VULKAN}.")
 
 cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
 option(ENABLE_SSE2 "Enable SSE2 support" ${sse2})
@@ -44,10 +47,6 @@ else()
     message(STATUS "GIT not found")
 endif()
 
-if (MSVC)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES "")
-endif()
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 
 find_package(FFMPEG REQUIRED COMPONENTS
@@ -60,11 +59,8 @@ find_package(FFMPEG REQUIRED COMPONENTS
 
 find_package(PkgConfig)
 
-if (PKG_CONFIG_FOUND)
-    pkg_check_modules(zlib zlib)
-endif (PKG_CONFIG_FOUND)
-find_library(libzlib NAMES libz.a z zlib.lib PATHS ${zlib_LIBRARY_DIRS})
-message(STATUS "zlib: ${libzlib}")
+set(ZLIB_USE_STATIC_LIBS ON)
+find_package(ZLIB REQUIRED)
 
 if (ENABLE_DAV1D)
     if (PKG_CONFIG_FOUND)
@@ -96,6 +92,10 @@ if (ENABLE_VPX)
     endif (PKG_CONFIG_FOUND)
     find_library(libvpx NAMES vpx vpx.lib vpxmd.lib PATHS ${vpx_LIBRARY_DIRS})
     message(STATUS "vpx: ${libvpx}")
+endif()
+
+if (ENABLE_VULKAN)
+    find_package(Vulkan REQUIRED COMPONENTS shaderc_combined)
 endif()
 
 if (WIN32)
@@ -190,14 +190,13 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
 
     add_library(LSMASHSource SHARED ${sources})
 
-    target_include_directories(LSMASHSource PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_include_directories(LSMASHSource PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${ZLIB_INCLUDE_DIRS}
+    )
 
     if (APPLE)
         target_include_directories(LSMASHSource PRIVATE /usr/local/include)
-    endif()
-
-    if (PKG_CONFIG_FOUND)
-        target_include_directories(LSMASHSource PRIVATE ${zlib_INCLUDE_DIRS})
     endif()
 
     if (PKG_CONFIG_FOUND)
@@ -225,7 +224,7 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         FFMPEG::swscale
         FFMPEG::swresample
         FFMPEG::avutil
-        ${libzlib}
+        ZLIB::ZLIB
         ${libxxhash}
         ${liblsmash}
         ${libobuparse}
@@ -261,6 +260,14 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
             target_include_directories(LSMASHSource PRIVATE ${vpx_INCLUDE_DIRS})
         endif()
         target_link_libraries(LSMASHSource PRIVATE ${libvpx})
+    endif()
+
+    if (ENABLE_VULKAN)
+        target_include_directories(LSMASHSource PRIVATE ${Vulkan_INCLUDE_DIRS})
+        target_link_libraries(LSMASHSource PRIVATE
+            Vulkan::Vulkan
+            Vulkan::shaderc_combined
+        )
     endif()
 
     if (MINGW)
