@@ -510,7 +510,7 @@ static int decode_video_picture
         get_new_pkt = 0;
         if (!vdhp->reuse_pkt)
         {
-            ret = lwlibav_get_av_frame(vdhp->format, vdhp->stream_index, pkt);
+            ret = lwlibav_get_av_frame(vdhp->format, vdhp->stream_index, picture_number, pkt);
             if (ret > 0)
                 return ret;
             /* Correct the current picture number in order to match DTS since libavformat might have sought wrong position. */
@@ -531,7 +531,7 @@ static int decode_video_picture
             /* Avoid decoding frames until the seek correction caused by too backward is done. */
             while (correction_distance)
             {
-                ret = lwlibav_get_av_frame(vdhp->format, vdhp->stream_index, pkt);
+                ret = lwlibav_get_av_frame(vdhp->format, vdhp->stream_index, ++picture_number, pkt);
                 if (ret > 0)
                     return ret;
                 if (pkt->flags & AV_PKT_FLAG_KEY)
@@ -1560,7 +1560,7 @@ int lwlibav_video_find_first_valid_frame
     AVPacket *pkt = &vdhp->packet;
     for( uint32_t i = 1; i <= vdhp->frame_count + vdhp->exh.delay_count; i++ )
     {
-        lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, pkt );
+        lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, i, pkt );
         av_frame_unref( vdhp->frame_buffer );
         set_output_order_id( vdhp, pkt, i );
         int got_picture;
@@ -1666,7 +1666,7 @@ int try_decode_video_frame
         int extradata_index = vdhp->frame_list[frame_number].extradata_index;
         if( extradata_index != vdhp->exh.current_index )
             break;
-        int ret = lwlibav_get_av_frame( format_ctx, stream_index, &pkt );
+        int ret = lwlibav_get_av_frame( format_ctx, stream_index, frame_number, &pkt );
         if( ret > 0 )
             break;
         else if( ret < 0 )

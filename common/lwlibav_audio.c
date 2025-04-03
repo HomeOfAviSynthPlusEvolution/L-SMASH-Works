@@ -462,7 +462,7 @@ retry_seek:;
             make_decodable_packet( alter_pkt, pkt );
             no_output_audio_decoding( adhp->ctx, alter_pkt, picture );
         }
-        if( lwlibav_get_av_frame( adhp->format, adhp->stream_index, pkt ) )
+        if( lwlibav_get_av_frame( adhp->format, adhp->stream_index, i, pkt ) )
             break;
         if( !match && error_count <= MAX_ERROR_COUNT )
         {
@@ -601,7 +601,7 @@ retry_seek:
         else if( alter_pkt->size <= 0 )
         {
             /* Getting an audio packet must be after flushing all remaining samples in resampler's FIFO buffer. */
-            lwlibav_get_av_frame( adhp->format, adhp->stream_index, pkt );
+            lwlibav_get_av_frame( adhp->format, adhp->stream_index, frame_number, pkt );
             make_decodable_packet( alter_pkt, pkt );
         }
         /* Decode and output from an audio packet. */
@@ -692,7 +692,7 @@ int try_decode_audio_frame
             seek_audio( adhp, frame_number, 0, pkt, NULL );
         else
         {
-            int ret = lwlibav_get_av_frame( format_ctx, stream_index, pkt );
+            int ret = lwlibav_get_av_frame( format_ctx, stream_index, frame_number, pkt );
             if( ret > 0 )
                 break;
             else if( ret < 0 )
