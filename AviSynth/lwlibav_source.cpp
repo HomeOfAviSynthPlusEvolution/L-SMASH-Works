@@ -179,10 +179,10 @@ LWLibavVideoSource::LWLibavVideoSource
     vi.num_frames      = vohp->frame_count;
     /* */
     prepare_video_decoding( vdhp, vohp, direct_rendering, pixel_format, env );
-
     has_at_least_v8 = env->FunctionExists("propShow");
-
     av_frame = lwlibav_video_get_frame_buffer(vdhp);
+    if (!av_frame->data[0] && prefer_hw)
+        env->ThrowError("LWLibavVideoSource: the GPU driver doesn't support this hardware decoding.");
     int num = av_frame->sample_aspect_ratio.num;
     int den = av_frame->sample_aspect_ratio.den;
     env->SetVar(env->Sprintf("%s", "FFSAR_NUM"), num);

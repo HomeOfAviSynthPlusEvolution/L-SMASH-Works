@@ -445,5 +445,12 @@ void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_d
         return;
     }
     lsmash_discard_boxes( libavsmash_video_get_root( vdhp ) );
+    AVFrame* av_frame = libavsmash_video_get_frame_buffer(vdhp);
+    if (!av_frame->data[0] && prefer_hw_decoder)
+    {
+        free_handler(&hp);
+        vsapi->setError(out, "lsmas: the GPU driver doesn't support this hardware decoding.");
+        return;
+    }
     vsapi->createFilter( in, out, "LibavSMASHSource", vs_filter_init, vs_filter_get_frame, vs_filter_free, fmUnordered, nfMakeLinear, hp, core );
 }
