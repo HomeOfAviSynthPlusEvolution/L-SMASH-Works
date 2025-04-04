@@ -473,7 +473,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
         return;
     }
     AVFrame* av_frame = lwlibav_video_get_frame_buffer(vdhp);
-    if (!av_frame->data[0] && prefer_hw_decoder)
+    if (!av_frame->data[0] && hp->prefer_hw)
     {
         free_handler(&hp);
         vsapi->setError(out, "lsmas: the GPU driver doesn't support this hardware decoding.");
