@@ -14,14 +14,17 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Install automake
+    - name: Install macos automake, cmake
       if: ${{ matrix.os == 'macos-latest' }}
       run: |
         brew update
-        brew install automake
+        brew install automake cmake zlib
 
-    - name: Install CMake
-      uses: lukka/get-cmake@latest
+    - name: Install ubuntu cmake
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt update
+        sudo apt install cmake
 
     - name: Install FFmpeg
       run: |
@@ -44,7 +47,6 @@ jobs:
         sudo make install -j2
         popd
         rm -rf obuparse
-      shell: bash
 
     - name: Install l-smash
       run: |
@@ -84,7 +86,11 @@ jobs:
 
     - name: Build AviSynth/VapourSynth plugin
       run: |
-        cmake -S . -B build_avs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DBUILD_VS_PLUGIN=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF
+        cmake_settings=(-S . -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF)
+        if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            cmake_settings+=(-DCMAKE_PREFIX_PATH=/opt/homebrew/opt/zlib)
+        fi
+        cmake -B build_avs -DBUILD_VS_PLUGIN=OFF "${cmake_settings[@]}"
         cmake --build build_avs -j 2
-        cmake -S . -B build_vs -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DBUILD_AVS_PLUGIN=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF
+        cmake -B build_vs -DBUILD_AVS_PLUGIN=OFF "${cmake_settings[@]}"
         cmake --build build_vs -j 2
