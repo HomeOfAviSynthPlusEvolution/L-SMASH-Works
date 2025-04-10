@@ -516,7 +516,7 @@ lwindex_data_t *lwindex_parse(FILE *index, int include_video, int include_audio)
                     goto fail_parsing;
                 }
 
-                stream_info_entry_t *stream = &data->stream_info[stream_index];
+                stream_info_entry_t *stream = &data->stream_info[stream_mapping[stream_index]];
                 if (stream == NULL) {
                     fprintf(stderr, "Stream index %d not found.\n", stream_index);
                     goto fail_parsing;
@@ -648,12 +648,13 @@ lwindex_data_t *lwindex_parse(FILE *index, int include_video, int include_audio)
             index_entry->stream_index = stream_index;
             index_entry->edi = extradata_index;
 
-            if (stream_mapping[index_entry->stream_index] == -1) {
-                fprintf(stderr, "Stream index %d not found.\n", index_entry->stream_index);
+            if (index_entry->stream_index >= MAX_STREAM_ID || stream_mapping[index_entry->stream_index] == -1) {
+                fprintf(stderr, "Stream index %d not found or mapping invalid.\n", index_entry->stream_index);
                 goto fail_parsing;
             }
 
-            if (data->stream_info[stream_mapping[index_entry->stream_index]].codec_type == AV_STREAM_TYPE_VIDEO) {
+            const int mapped_stream_index = stream_mapping[index_entry->stream_index];
+            if (data->stream_info[mapped_stream_index].codec_type == AV_STREAM_TYPE_VIDEO) {
                 if (include_video) {
                     int32_t key, pict_type, poc, repeat_pict, field_info;
                     if (sscanf_unrolled_video_index(next_line, &key, &pict_type, &poc, &repeat_pict, &field_info) != 5) {
@@ -668,7 +669,7 @@ lwindex_data_t *lwindex_parse(FILE *index, int include_video, int include_audio)
                     index_entry->data.type0.field = field_info;
                 }
             }
-            else if (data->stream_info[stream_mapping[index_entry->stream_index]].codec_type == AV_STREAM_TYPE_AUDIO) {
+            else if (data->stream_info[mapped_stream_index].codec_type == AV_STREAM_TYPE_AUDIO) {
                 if (include_audio)
                 {
                     int32_t frame_length;
@@ -681,7 +682,7 @@ lwindex_data_t *lwindex_parse(FILE *index, int include_video, int include_audio)
                 }
             }
             else {
-                fprintf(stderr, "Unexpected stream type: %d\n", data->stream_info[stream_mapping[index_entry->stream_index]].codec_type);
+                fprintf(stderr, "Unexpected stream type: %d\n", data->stream_info[mapped_stream_index].codec_type);
                 goto fail_parsing;
             }
 
