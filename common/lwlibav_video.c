@@ -436,56 +436,75 @@ static uint32_t correct_current_frame_number
     uint32_t                        goal
 )
 {
-// It's possible that the first few encoded frames all have DTS AV_NOPTS_VALUE, so we really
-// shouldn't stop when dts matches: at least we should fallback to checking POS if allowed.
-// Also note that `j` might contain side-effects, must always evaluate it exactly once!
-#define MATCH_DTS( j ) (info[j].dts == pkt->dts && (pkt->dts != AV_NOPTS_VALUE || ((vdhp->lw_seek_flags & SEEK_POS_CORRECTION) == 0)))
-#define MATCH_POS( j ) ((vdhp->lw_seek_flags & SEEK_POS_CORRECTION) && info[j].file_offset == pkt->pos)
+/* Match packet position if available and enabled. */
+#define MATCH_POS( j ) ((vdhp->lw_seek_flags & SEEK_POS_CORRECTION) && pkt->pos != -1 && info[j].file_offset != -1 \
+    && info[j].file_offset == pkt->pos)
+/* Match packet DTS if both packet DTS and stored DTS are valid and equal. */
+#define MATCH_DTS( j ) (pkt->dts != AV_NOPTS_VALUE && info[j].dts != AV_NOPTS_VALUE && info[j].dts == pkt->dts)
     order_converter_t  *oc   = vdhp->order_converter;
     video_frame_info_t *info = vdhp->frame_list;
     uint32_t p = oc ? oc[i].decoding_to_presentation : i;
-    // It is possible that the first frame has dts == AV_NOPTS_VALUE and we happen to seek to frame 0,
-    // even when rap is strictly > 0. This happens with recent mkvmerge versions where the #cuepoints
-    // are dramatically cut down and thus av_seek_frame is much less accurate and might give us a (much)
-    // earlier frame.
-    // Therefore, we should not just give up when dts == AV_NOPTS_VALUE, and we have to also check some
-    // others fields, especially when lw_seek_flags is more than just SEEK_DTS_BASED.
-    int undef_timestamp = (vdhp->ctx->codec_id == AV_CODEC_ID_VC1) ? pkt->dts == AV_NOPTS_VALUE :
-        (pkt->dts == AV_NOPTS_VALUE && ((vdhp->lw_seek_flags & ~SEEK_DTS_BASED) == 0));
-    if( undef_timestamp || MATCH_DTS( p ) || MATCH_POS( p ) )
+    /* Check if the current frame 'i' is a definite match based on position or valid DTS. */
+    if (MATCH_POS(p) || MATCH_DTS(p))
         return i;
-    if( pkt->dts > info[p].dts )
+    /* If no definite match for frame 'i', determine search direction. */
+    int search_forward;
+    int can_determine_direction = 0;
+    /* Try using position first if available and DTS is unreliable */
+    if ((vdhp->lw_seek_flags & SEEK_POS_CORRECTION) && pkt->pos != -1 && info[p].file_offset != -1 &&
+        (pkt->dts == AV_NOPTS_VALUE || info[p].dts == AV_NOPTS_VALUE))
     {
-        /* too forward */
-        uint32_t limit = MIN( goal, vdhp->frame_count );
-        if( oc )
-            while( !MATCH_DTS( oc[++i].decoding_to_presentation )
-                && !MATCH_POS( oc[  i].decoding_to_presentation )
-                && i <= limit );
-        else
-            while( !MATCH_DTS( ++i )
-                && !MATCH_POS(   i )
-                && i <= limit );
-        if( i > limit )
-            return 0;
+        /* Use position comparison to determine direction */
+        search_forward = (pkt->pos > info[p].file_offset);
+        can_determine_direction = 1;
     }
-    else
+    /* Otherwise, try using valid DTS */
+    else if (pkt->dts != AV_NOPTS_VALUE && info[p].dts != AV_NOPTS_VALUE)
     {
-        /* too backward */
-        if( oc )
-            while( !MATCH_DTS( oc[--i].decoding_to_presentation )
-                && !MATCH_POS( oc[  i].decoding_to_presentation )
-                && i );
-        else
-            while( !MATCH_DTS( --i )
-                && !MATCH_POS(   i )
-                && i );
-        if( i == 0 )
-            return 0;
+        /* Use valid DTS comparison to determine direction */
+        search_forward = (pkt->dts > info[p].dts);
+        can_determine_direction = 1;
     }
-    return i;
-#undef MATCH_DTS
+    if (!can_determine_direction)
+    {
+        /* Cannot reliably determine search direction (e.g., invalid DTS, no POS correction).
+         * Give up correction and return the initial guess. */
+        lw_log_show(&vdhp->lh, LW_LOG_WARNING, "Cannot determine search direction for frame correction at frame %"PRIu32".", i);
+        return i;
+    }
+    /* Perform search */
+    if (search_forward)
+    {
+        /* Search forward: check frames from i+1 up to goal (or a reasonable limit). */
+        /* Define a reasonable upper limit to prevent excessive searching */
+        for (uint32_t next_i = i + 1; next_i <= MIN(goal + vdhp->forward_seek_threshold, vdhp->frame_count); next_i++)
+        {
+            const uint32_t next_p = oc ? oc[next_i].decoding_to_presentation : next_i;
+            if (next_p > vdhp->frame_count) /* Boundary check */
+                break;
+            if (MATCH_POS(next_p) || MATCH_DTS(next_p))
+                return next_i; /* Found match */
+        }
+    }
+    else /* search backward */
+    {
+        /* Search backward: check frames from i-1 down to 1 (or rap_number). */
+        /* Define a reasonable lower limit (e.g., the RAP we aimed for) */
+        const uint32_t search_limit = (i <= vdhp->last_rap_number) ? 1 : vdhp->last_rap_number;
+        for (uint32_t prev_i = i - 1; prev_i >= search_limit; prev_i--)
+        {
+            const uint32_t prev_p = oc ? oc[prev_i].decoding_to_presentation : prev_i;
+            /* prev_p boundary check is implicitly handled by loop condition prev_i >= 1 */
+            if (MATCH_POS(prev_p) || MATCH_DTS(prev_p))
+                return prev_i; /* Found match */
+        }
+    }
+    /* If search failed to find a match */
+    lw_log_show(&vdhp->lh, LW_LOG_WARNING, "Failed to correct frame number: initial %"PRIu32", search failed.", i);
+    return i;   /* Return the original guess as a fallback */
+
 #undef MATCH_POS
+#undef MATCH_DTS
 }
 
 static int decode_video_picture
