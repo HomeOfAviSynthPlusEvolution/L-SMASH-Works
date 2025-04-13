@@ -29,16 +29,6 @@ jobs:
         sudo apt update
         sudo apt install cmake
 
-    - name: Install FFmpeg
-      run: |
-        git clone https://github.com/HomeOfAviSynthPlusEvolution/FFmpeg --branch custom-patches-for-lsmashsource --depth 1
-        pushd FFmpeg
-        ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-all --disable-autodetect --enable-avcodec --enable-avformat --enable-swresample --enable-swscale --disable-asm --disable-debug
-        make -j2
-        sudo make install -j2
-        popd
-        rm -rf FFmpeg
-
     - name: Install obuparse
       run : |
         git clone https://github.com/dwbuiten/obuparse --depth 1
@@ -79,6 +69,11 @@ jobs:
 
     - name: Build AviSynth/VapourSynth plugin
       run: |
+        pushd FFmpeg
+        ./configure --enable-gpl --enable-version3 --disable-static --enable-shared --disable-all --disable-autodetect --enable-avcodec --enable-avformat --enable-swresample --enable-swscale --disable-asm --disable-debug
+        make -j2
+        sudo make install -j2
+        popd
         cmake_settings=(-S . -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF)
         if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             cmake_settings+=(-DCMAKE_PREFIX_PATH=/opt/homebrew/opt/zlib)

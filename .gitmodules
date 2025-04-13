@@ -1,3 +1,7 @@
 [submodule "xxHash"]
 	path = xxHash
 	url = https://github.com/Cyan4973/xxHash
+[submodule "FFmpeg"]
+	path = FFmpeg
+	url = https://github.com/HomeOfAviSynthPlusEvolution/FFmpeg
+	branch = custom-patches-for-lsmashsource
