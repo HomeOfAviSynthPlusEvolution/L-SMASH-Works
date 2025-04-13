@@ -13,6 +13,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: true
 
     - name: Install macos automake, cmake
       if: ${{ matrix.os == 'macos-latest' }}
@@ -60,16 +63,6 @@ jobs:
         sudo make install-lib -j2
         popd
         rm -rf l-smash
-
-    - name: Install xxHash
-      run: |
-        git clone https://github.com/Cyan4973/xxHash --branch v0.8.3 --depth 1
-        pushd xxHash
-        cmake -S ./cmake_unofficial -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DXXHASH_BUILD_XXHSUM=OFF
-        cmake --build build -j 2
-        sudo cmake --install build
-        popd
-        rm -rf xxHash
 
     - name: Install AviSynth
       run: |

@@ -36,10 +36,16 @@ message(STATUS "Enable SSE2 support: ${ENABLE_SSE2}.")
 option(BUILD_INDEXING_TOOL "Build index tool" OFF)
 message(STATUS "Build index tool: ${BUILD_INDEXING_TOOL}.")
 
+# xxHash options
+option(BUILD_SHARED_LIBS "Build shared library" OFF)
+option(XXHASH_BUILD_XXHSUM "Build the xxhsum binary" OFF)
+option(XXHASH_BUNDLED_MODE "" OFF)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/xxHash/cmake_unofficial)
+
 find_package(Git)
 
 if (GIT_FOUND)
-    execute_process(COMMAND ${GIT_EXECUTABLE} rev-list --count origin/master
+    execute_process(COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
         OUTPUT_VARIABLE ver
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
@@ -138,8 +144,6 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         ${CMAKE_CURRENT_SOURCE_DIR}/common/utils.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/xxhash.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/xxhash.h
     )
 
     if (ENABLE_SSE2)
@@ -180,13 +184,13 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
             ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.h
         )
     endif()
-    
+
     if (WIN32)
         configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in"
         "${CMAKE_CURRENT_BINARY_DIR}/version.rc"
         )
-    
+
         set(sources ${sources} ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
     endif()
 
@@ -195,18 +199,12 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
     target_include_directories(LSMASHSource PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${ZLIB_INCLUDE_DIRS}
+        xxHash::xxhash
     )
 
     if (APPLE)
         target_include_directories(LSMASHSource PRIVATE /usr/local/include)
     endif()
-
-    if (PKG_CONFIG_FOUND)
-        pkg_check_modules(xxhash libxxhash)
-        target_include_directories(LSMASHSource PRIVATE ${xxhash_INCLUDE_DIRS})
-    endif (PKG_CONFIG_FOUND)
-    find_library(libxxhash NAMES libxxhash.a xxhash xxhash.lib PATHS ${xxhash_LIBRARY_DIRS})
-    message(STATUS "xxhash: ${libxxhash}")
 
     find_path(libopurse_include NAMES obuparse.h)
     target_include_directories(LSMASHSource PRIVATE ${libopurse_include})
@@ -227,7 +225,7 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         FFMPEG::swresample
         FFMPEG::avutil
         ZLIB::ZLIB
-        ${libxxhash}
+        xxHash::xxhash
         ${liblsmash}
         ${libobuparse}
     )
