@@ -45,34 +45,8 @@ void lwlibav_flush_buffers
     lwlibav_decode_handler_t *dhp
 )
 {
-    if (!strcmp(dhp->ctx->codec->name, "libdav1d")
-        && dhp->ctx->level > 9)
+    if (dhp->ctx)
         avcodec_flush_buffers(dhp->ctx);
-    else if (dhp->ctx->codec_type == AVMEDIA_TYPE_VIDEO
-        && strcmp(dhp->ctx->codec->name, "libdav1d"))
-        avcodec_flush_buffers(dhp->ctx);
-    else
-    {
-        const AVCodecParameters* codecpar = dhp->format->streams[dhp->stream_index]->codecpar;
-        const AVCodec* codec = dhp->ctx->codec;
-        void* app_specific = dhp->ctx->opaque;
-        AVCodecContext* ctx = NULL;
-        if (open_decoder(&ctx, codecpar, codec, dhp->ctx->thread_count, dhp->drc, dhp->ff_options, dhp->prefer_hw_decoder, dhp->hw_device_ctx) < 0)
-        {
-            avcodec_flush_buffers(dhp->ctx);
-            dhp->error = 1;
-            lw_log_show(&dhp->lh, LW_LOG_FATAL,
-                "Failed to flush buffers by a reliable way.\n"
-                "It is recommended you reopen the file.");
-        }
-        else
-        {
-            dhp->ctx->opaque = NULL;
-            avcodec_free_context(&dhp->ctx);
-            dhp->ctx = ctx;
-            dhp->ctx->opaque = app_specific;
-        }
-    }
 
     dhp->exh.delay_count = 0;
 }
