@@ -125,6 +125,8 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_sscanf_unrolled.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_utils.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_parser.c
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_parser.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.c

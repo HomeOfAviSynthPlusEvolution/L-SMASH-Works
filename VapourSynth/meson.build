@@ -29,6 +29,8 @@ sources = [
   '../common/lwindex.c',
   '../common/lwindex.h',
   '../common/lwindex_sscanf_unrolled.h',
+  '../common/lwindex_utils.c',
+  '../common/lwindex_utils.h',
   '../common/lwindex_parser.c',
   '../common/lwindex_parser.h',
   '../common/lwlibav_audio.c',
