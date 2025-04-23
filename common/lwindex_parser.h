@@ -25,18 +25,18 @@
 
 #include "cpp_compat.h"
 
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <ctype.h>
 
 #define MAX_LINE_LENGTH 8192
 #define MAX_TAG_LENGTH 64
 #define MAX_VALUE_LENGTH 6144
 #define MAX_FILE_PATH_LENGTH 6144
-#define MAX_INDEX_ENTRIES (1<<31)
-#define INIT_INDEX_ENTRIES (1<<18)
+#define MAX_INDEX_ENTRIES (1 << 31)
+#define INIT_INDEX_ENTRIES (1 << 18)
 #define MAX_STREAM_ID 256
 #define MAX_EXTRA_DATA_LIST 64
 #define FORMAT_LENGTH 64
@@ -61,20 +61,20 @@ typedef struct {
     int64_t pos;
     int64_t ts;
     int32_t size;
-    int32_t flags:4;
-    int32_t distance:28;
+    int32_t flags : 4;
+    int32_t distance : 28;
 } stream_index_entry_t; // Extensively used, 24 bytes
 
 typedef struct {
-    uint32_t stream_index:8;
-    uint32_t codec_type:2; // 0 for type0, 1 for type1
+    uint32_t stream_index : 8;
+    uint32_t codec_type : 2; // 0 for type0, 1 for type1
     uint32_t codec;
     rational_t time_base;
     char format[FORMAT_LENGTH];
     int32_t bits_per_sample;
     int64_t stream_duration;
 
-    stream_index_entry_t *stream_index_entries;
+    stream_index_entry_t* stream_index_entries;
     uint32_t num_stream_index_entries;
 
     union {
@@ -110,31 +110,31 @@ typedef struct {
             int32_t block_align;
         } type1;
     } data;
-    char *binary_data;
+    char* binary_data;
 } extra_data_entry_t;
 
 typedef struct {
-    uint32_t stream_index:8;
-    uint32_t codec_type:2; // 0 for type0, 1 for type1
+    uint32_t stream_index : 8;
+    uint32_t codec_type : 2; // 0 for type0, 1 for type1
     uint32_t entry_count;
-    extra_data_entry_t *entries;
+    extra_data_entry_t* entries;
 } extra_data_list_t;
 
 typedef struct {
     int64_t pts;
     int64_t dts;
     int64_t pos;
-    uint32_t stream_index:8;
-    uint32_t codec_type:2 ; // 0 for type0, 1 for type1
-    uint32_t edi:6;
+    uint32_t stream_index : 8;
+    uint32_t codec_type : 2; // 0 for type0, 1 for type1
+    uint32_t edi : 6;
 
     union {
         struct {
-            uint32_t key:4;
-            uint32_t repeat:4;
-            uint32_t field:4;
-            uint32_t pic:8;
-            int32_t poc:12;
+            uint32_t key : 4;
+            uint32_t repeat : 4;
+            uint32_t field : 4;
+            uint32_t pic : 8;
+            int32_t poc : 12;
         } type0;
         struct {
             uint32_t length;
@@ -156,20 +156,19 @@ typedef struct {
     int active_audio_stream_index;
     int default_audio_stream_index;
     int fill_audio_gaps;
-    stream_info_entry_t *stream_info;
+    stream_info_entry_t* stream_info;
     int num_streams;
 
-    index_entry_t *index_entries;
+    index_entry_t* index_entries;
     int num_index_entries;
-    extra_data_list_t *extra_data_list;
+    extra_data_list_t* extra_data_list;
     int num_extra_data_list;
     int consistent_field_and_repeat;
     int64_t active_video_stream_index_pos;
     int64_t active_audio_stream_index_pos;
 } lwindex_data_t;
 
-
-lwindex_data_t *lwindex_parse(FILE *index, int include_video, int include_audio);
-void lwindex_free(lwindex_data_t *data);
+lwindex_data_t* lwindex_parse(FILE* index, int include_video, int include_audio);
+void lwindex_free(lwindex_data_t* data);
 
 #endif // LWINDEX_PARSER_H

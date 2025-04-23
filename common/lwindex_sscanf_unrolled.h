@@ -23,10 +23,10 @@
 #ifndef LWINDEX_SSCANF_UNROLLED_H
 #define LWINDEX_SSCANF_UNROLLED_H
 
-#include <string.h>
-#include <limits.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
+#include <string.h>
 #if defined(__SSE4_1__)
 #include <immintrin.h>
 #endif
@@ -34,20 +34,21 @@
 #include <arm_neon.h>
 #endif
 
-#define PARSE_OR_RETURN(buf, needle, out, type) \
+#define PARSE_OR_RETURN(buf, needle, out, type)    \
     if (strncmp(buf, needle, strlen(needle)) != 0) \
-        return parsed_count; \
-    buf += strlen(needle); \
-    out = my_strto_##type(buf, &buf); \
+        return parsed_count;                       \
+    buf += strlen(needle);                         \
+    out = my_strto_##type(buf, &buf);              \
     parsed_count++;
 
 #define CHECK_COMMA_OR_RETURN(p, parsed_count) \
-    if (*p != ',') \
-        return parsed_count; \
+    if (*p != ',')                             \
+        return parsed_count;                   \
     p++;
 
-static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
-    const char *s = nptr;
+static inline int64_t my_strto_int64_t(const char* nptr, char** endptr)
+{
+    const char* s = nptr;
     int64_t acc;
     int c;
     int neg = 0;
@@ -61,77 +62,75 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
 
     acc = 0;
 
-    #if defined(__SSE4_1__)
-        __m128i zero = _mm_set1_epi8('0');
-        __m128i data = _mm_loadu_si128((const __m128i *)s);
-        __m128i add_208 = _mm_sub_epi8(data, _mm_set1_epi8('0'));
-        __m128i min_9 = _mm_min_epu8(add_208, _mm_set1_epi8(9));
-        __m128i is_digit = _mm_cmpeq_epi8(add_208, min_9);
-        int mask = _mm_movemask_epi8(is_digit);
+#if defined(__SSE4_1__)
+    __m128i zero = _mm_set1_epi8('0');
+    __m128i data = _mm_loadu_si128((const __m128i*)s);
+    __m128i add_208 = _mm_sub_epi8(data, _mm_set1_epi8('0'));
+    __m128i min_9 = _mm_min_epu8(add_208, _mm_set1_epi8(9));
+    __m128i is_digit = _mm_cmpeq_epi8(add_208, min_9);
+    int mask = _mm_movemask_epi8(is_digit);
 
-        if ((mask & 0xFF) == 0xFF) {
-            __m128i digits = _mm_sub_epi8(data, zero);
-            __m128i input = _mm_cvtepi8_epi32(digits);
-            __m128i multipliers = _mm_set_epi32(10000, 100000, 1000000, 10000000);
-            __m128i results = _mm_mullo_epi32(input, multipliers);
-            __m128i sum_vec = _mm_hadd_epi32(results, results);
-            sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
-            acc -= _mm_extract_epi32(sum_vec, 0);
-            input = _mm_cvtepi8_epi32(_mm_srli_si128(digits, 4));
-            multipliers = _mm_set_epi32(1, 10, 100, 1000);
-            results = _mm_mullo_epi32(input, multipliers);
-            sum_vec = _mm_hadd_epi32(results, results);
-            sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
-            acc -= _mm_extract_epi32(sum_vec, 0);
-            s += 8;
-        }
-        else if ((mask & 0xF) == 0xF) {
-            __m128i digits = _mm_sub_epi8(data, zero);
-            __m128i input = _mm_cvtepi8_epi32(digits);
-            __m128i multipliers = _mm_set_epi32(1, 10, 100, 1000);
-            __m128i results = _mm_mullo_epi32(input, multipliers);
-            __m128i sum_vec = _mm_hadd_epi32(results, results);
-            sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
-            acc -= _mm_extract_epi32(sum_vec, 0);
-            s += 4;
-        }
-    #endif
+    if ((mask & 0xFF) == 0xFF) {
+        __m128i digits = _mm_sub_epi8(data, zero);
+        __m128i input = _mm_cvtepi8_epi32(digits);
+        __m128i multipliers = _mm_set_epi32(10000, 100000, 1000000, 10000000);
+        __m128i results = _mm_mullo_epi32(input, multipliers);
+        __m128i sum_vec = _mm_hadd_epi32(results, results);
+        sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
+        acc -= _mm_extract_epi32(sum_vec, 0);
+        input = _mm_cvtepi8_epi32(_mm_srli_si128(digits, 4));
+        multipliers = _mm_set_epi32(1, 10, 100, 1000);
+        results = _mm_mullo_epi32(input, multipliers);
+        sum_vec = _mm_hadd_epi32(results, results);
+        sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
+        acc -= _mm_extract_epi32(sum_vec, 0);
+        s += 8;
+    } else if ((mask & 0xF) == 0xF) {
+        __m128i digits = _mm_sub_epi8(data, zero);
+        __m128i input = _mm_cvtepi8_epi32(digits);
+        __m128i multipliers = _mm_set_epi32(1, 10, 100, 1000);
+        __m128i results = _mm_mullo_epi32(input, multipliers);
+        __m128i sum_vec = _mm_hadd_epi32(results, results);
+        sum_vec = _mm_hadd_epi32(sum_vec, sum_vec);
+        acc -= _mm_extract_epi32(sum_vec, 0);
+        s += 4;
+    }
+#endif
 
-    #if defined(__ARM_NEON)
-        uint32_t multipliers1[4] = {10000000, 1000000, 100000, 10000};
-        uint32_t multipliers2[4] = {1000, 100, 10, 1};
-        uint8x16_t zero = vdupq_n_u8('0');
-        uint8x16_t data = vld1q_u8((const uint8_t*)s);
-        uint8x16_t add_208 = vsubq_u8(data, vdupq_n_u8('0'));
-        uint8x16_t min_9 = vminq_u8(add_208, vdupq_n_u8(9));
-        uint8x16_t is_digit = vceqq_u8(add_208, min_9);
-        uint32x2_t sum_pairwise2 = vpaddl_u16(vpaddl_u8(vget_low_u8(is_digit)));
-        uint64x1_t sum_pairwise3 = vpaddl_u32(sum_pairwise2);
+#if defined(__ARM_NEON)
+    uint32_t multipliers1[4] = { 10000000, 1000000, 100000, 10000 };
+    uint32_t multipliers2[4] = { 1000, 100, 10, 1 };
+    uint8x16_t zero = vdupq_n_u8('0');
+    uint8x16_t data = vld1q_u8((const uint8_t*)s);
+    uint8x16_t add_208 = vsubq_u8(data, vdupq_n_u8('0'));
+    uint8x16_t min_9 = vminq_u8(add_208, vdupq_n_u8(9));
+    uint8x16_t is_digit = vceqq_u8(add_208, min_9);
+    uint32x2_t sum_pairwise2 = vpaddl_u16(vpaddl_u8(vget_low_u8(is_digit)));
+    uint64x1_t sum_pairwise3 = vpaddl_u32(sum_pairwise2);
 
-        if (vget_lane_u64(sum_pairwise3, 0) == 2040) {
-            uint32x4_t digits = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
-            uint32x4_t multipliers = vld1q_u32(multipliers1);
-            uint32x4_t results = vmulq_u32(digits, multipliers);
-            int32_t sum = vaddvq_u32(results);
-            acc -= sum;
-            digits = vmovl_u16(vget_high_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
-            multipliers = vld1q_u32(multipliers2);
-            results = vmulq_u32(digits, multipliers);
-            sum = vaddvq_u32(results);
-            acc -= sum;
-            s += 8;
-        }
-        else if (vget_lane_u32(sum_pairwise2, 0) == 1020) {
-            uint32x4_t digits = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
-            uint32x4_t multipliers = vld1q_u32(multipliers2);
-            uint32x4_t results = vmulq_u32(digits, multipliers);
-            uint32_t sum = vaddvq_u32(results);
-            acc -= sum;
-            s += 4;
-        }
-    #endif
+    if (vget_lane_u64(sum_pairwise3, 0) == 2040) {
+        uint32x4_t digits = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
+        uint32x4_t multipliers = vld1q_u32(multipliers1);
+        uint32x4_t results = vmulq_u32(digits, multipliers);
+        int32_t sum = vaddvq_u32(results);
+        acc -= sum;
+        digits = vmovl_u16(vget_high_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
+        multipliers = vld1q_u32(multipliers2);
+        results = vmulq_u32(digits, multipliers);
+        sum = vaddvq_u32(results);
+        acc -= sum;
+        s += 8;
+    } else if (vget_lane_u32(sum_pairwise2, 0) == 1020) {
+        uint32x4_t digits = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(vsubq_u8(data, zero)))));
+        uint32x4_t multipliers = vld1q_u32(multipliers2);
+        uint32x4_t results = vmulq_u32(digits, multipliers);
+        uint32_t sum = vaddvq_u32(results);
+        acc -= sum;
+        s += 4;
+    }
+#endif
 
-    for (;;s++) {
+    for (;; s++) {
         c = *s;
         if (c >= '0' && c <= '9')
             c -= '0';
@@ -153,7 +152,7 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
         acc -= c;
     }
     if (endptr != NULL)
-        *endptr = (char *)s;
+        *endptr = (char*)s;
 
     if (!neg && acc == LLONG_MIN) {
         errno = ERANGE;
@@ -163,14 +162,15 @@ static inline int64_t my_strto_int64_t(const char *nptr, char **endptr) {
     return (neg ? acc : -acc);
 }
 
-static inline int my_strto_int(const char *nptr, char **endptr) {
-    const char *s = nptr;
+static inline int my_strto_int(const char* nptr, char** endptr)
+{
+    const char* s = nptr;
     int acc;
     int c;
     int neg = 0;
 
     if (s[0] >= '0' && s[0] <= '9' && s[1] == ',') {
-        *endptr = (char *)s + 1;
+        *endptr = (char*)s + 1;
         return s[0] - '0';
     }
 
@@ -182,7 +182,7 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
         s++;
 
     acc = 0;
-    for (;;s++) {
+    for (;; s++) {
         c = *s;
         if (c >= '0' && c <= '9')
             c -= '0';
@@ -204,7 +204,7 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
         acc -= c;
     }
     if (endptr != NULL)
-        *endptr = (char *)s;
+        *endptr = (char*)s;
 
     if (!neg && acc == INT_MIN) {
         errno = ERANGE;
@@ -219,8 +219,10 @@ static inline int my_strto_int(const char *nptr, char **endptr) {
     sscanf( buf, "Index=%d,POS=%" SCNd64 ",PTS=%" SCNd64 ",DTS=%" SCNd64 ",EDI=%d",
             &stream_index, &pos, &pts, &dts, &extradata_index )
 */
-static inline int sscanf_unrolled_main_index(const char *buf, int32_t *stream_index, int64_t *pos, int64_t *pts, int64_t *dts, int32_t *extradata_index) {
-    char *p = (char *)buf;
+static inline int sscanf_unrolled_main_index(
+    const char* buf, int32_t* stream_index, int64_t* pos, int64_t* pts, int64_t* dts, int32_t* extradata_index)
+{
+    char* p = (char*)buf;
     int parsed_count = 0;
 
     PARSE_OR_RETURN(p, "Index=", *stream_index, int);
@@ -241,8 +243,10 @@ static inline int sscanf_unrolled_main_index(const char *buf, int32_t *stream_in
     sscanf( buf, "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d",
             &key, &pict_type, &poc, &repeat_pict, &field_info )
 */
-static inline int sscanf_unrolled_video_index(const char *buf, int32_t *key, int32_t *pict_type, int32_t *poc, int32_t *repeat_pict, int32_t *field_info) {
-    char *p = (char *)buf;
+static inline int sscanf_unrolled_video_index(
+    const char* buf, int32_t* key, int32_t* pict_type, int32_t* poc, int32_t* repeat_pict, int32_t* field_info)
+{
+    char* p = (char*)buf;
     int parsed_count = 0;
 
     PARSE_OR_RETURN(p, "Key=", *key, int);
@@ -262,8 +266,9 @@ static inline int sscanf_unrolled_video_index(const char *buf, int32_t *key, int
     Unroll the following sscanf:
     sscanf( buf, "Length=%d", &frame_length )
 */
-static inline int sscanf_unrolled_audio_index(const char *buf, int32_t *frame_length) {
-    char *p = (char *)buf;
+static inline int sscanf_unrolled_audio_index(const char* buf, int32_t* frame_length)
+{
+    char* p = (char*)buf;
     int parsed_count = 0;
 
     PARSE_OR_RETURN(p, "Length=", *frame_length, int);
@@ -277,8 +282,10 @@ static inline int sscanf_unrolled_audio_index(const char *buf, int32_t *frame_le
     sscanf( buf, "POS=%" SCNd64 ",TS=%" SCNd64 ",Flags=%x,Size=%d,Distance=%d",
             &ie.pos, &ie.timestamp, (unsigned int *)&flags, &size, &ie.min_distance )
 */
-static inline int sscanf_unrolled_stream_index_entry(const char *buf, int64_t *pos, int64_t *ts, uint32_t *flags, uint32_t *size, uint32_t *distance) {
-    char *p = (char *)buf;
+static inline int sscanf_unrolled_stream_index_entry(
+    const char* buf, int64_t* pos, int64_t* ts, uint32_t* flags, uint32_t* size, uint32_t* distance)
+{
+    char* p = (char*)buf;
     int parsed_count = 0;
 
     PARSE_OR_RETURN(p, "POS=", *pos, int64_t);

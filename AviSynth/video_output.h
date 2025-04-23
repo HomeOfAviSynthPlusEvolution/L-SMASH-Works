@@ -24,91 +24,46 @@
 #ifndef AVS_VIDEO_OUTPUT_H
 #define AVS_VIDEO_OUTPUT_H
 
-extern "C"
-{
+extern "C" {
 #include <libavformat/avformat.h>
 }
 
 #include "../common/video_output.h"
 
-typedef struct
-{
-    uint8_t *data    [4];
-    int      linesize[4];
+typedef struct {
+    uint8_t* data[4];
+    int linesize[4];
 } as_picture_t;
 
-typedef void func_make_black_background
-(
-    PVideoFrame &frame,
-    int          bitdepth_minus_8
-);
+typedef void func_make_black_background(PVideoFrame& frame, int bitdepth_minus_8);
 
-typedef int func_make_frame
-(
-    lw_video_output_handler_t *vohp,
-    int                        height,
-    AVFrame                   *av_frame,
-    PVideoFrame               &as_frame
-);
+typedef int func_make_frame(lw_video_output_handler_t* vohp, int height, AVFrame* av_frame, PVideoFrame& as_frame);
 
-typedef struct
-{
-    func_make_black_background *make_black_background;
-    func_make_frame            *make_frame;
-    IScriptEnvironment         *env;
-    VideoInfo                  *vi;
-    int                         bitdepth_minus_8;
-    int                         sub_width;
-    int                         sub_height;
-    as_picture_t                scaled;
+typedef struct {
+    func_make_black_background* make_black_background;
+    func_make_frame* make_frame;
+    IScriptEnvironment* env;
+    VideoInfo* vi;
+    int bitdepth_minus_8;
+    int sub_width;
+    int sub_height;
+    as_picture_t scaled;
 } as_video_output_handler_t;
 
-typedef struct
-{
+typedef struct {
     PVideoFrame as_frame_buffer;
 } as_video_buffer_handler_t;
 
-enum AVPixelFormat get_av_output_pixel_format
-(
-    const char *format_name
-);
+enum AVPixelFormat get_av_output_pixel_format(const char* format_name);
 
-int make_frame
-(
-    lw_video_output_handler_t *vohp,
-    AVFrame                   *av_frame,
-    PVideoFrame               &as_frame,
-    IScriptEnvironment        *env
-);
+int make_frame(lw_video_output_handler_t* vohp, AVFrame* av_frame, PVideoFrame& as_frame, IScriptEnvironment* env);
 
-void as_free_video_output_handler
-(
-    void *private_handler
-);
+void as_free_video_output_handler(void* private_handler);
 
-void as_setup_video_rendering
-(
-    lw_video_output_handler_t *vohp,
-    AVCodecContext            *ctx,
-    const char                *filter_name,
-    int                        direct_rendering,
-    enum AVPixelFormat         output_pixel_format,
-    int                        output_width,
-    int                        output_height
-);
+void as_setup_video_rendering(lw_video_output_handler_t* vohp, AVCodecContext* ctx, const char* filter_name, int direct_rendering,
+    enum AVPixelFormat output_pixel_format, int output_width, int output_height);
 
-void avs_set_frame_properties
-(
-    AVFrame* av_frame,
-    AVStream* stream,
-    int64_t duration_num,
-    int64_t duration_den,
-    bool rgb,
-    PVideoFrame& avs_frame,
-    int top,
-    int bottom,
-    IScriptEnvironment* env,
-    int n
-);
+void avs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t duration_num, int64_t duration_den, bool rgb,
+    PVideoFrame& avs_frame, int top, int bottom, IScriptEnvironment* env, int n);
 
 #endif // !AVS_VIDEO_OUTPUT_H

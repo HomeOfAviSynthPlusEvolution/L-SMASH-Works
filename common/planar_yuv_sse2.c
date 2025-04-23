@@ -1,5 +1,5 @@
 #include <emmintrin.h>
-#include  <stdint.h>
+#include <stdint.h>
 
 static inline __m128i _MM_PACKUS_EPI32(const __m128i* low, const __m128i* high)
 {
@@ -10,13 +10,12 @@ static inline __m128i _MM_PACKUS_EPI32(const __m128i* low, const __m128i* high)
     return _mm_add_epi16(_mm_packs_epi32(low1, high1), val_16);
 }
 
-void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv, const int dst_stride_y, const int dst_stride_uv, const int src_stride_y, const int src_stride_uv, 
-    const int width_y, const int width_uv, const int height_y, const int height_uv)
-{                    
-    for (int y = 0; y < height_y; y++)
-    {
-        for (int x = 0; x < width_y; x += 8)
-        {
+void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv, const int dst_stride_y,
+    const int dst_stride_uv, const int src_stride_y, const int src_stride_uv, const int width_y, const int width_uv, const int height_y,
+    const int height_uv)
+{
+    for (int y = 0; y < height_y; y++) {
+        for (int x = 0; x < width_y; x += 8) {
             __m128i yy = _mm_load_si128((const __m128i*)(srcp_y + x));
             yy = _mm_srli_epi16(yy, 6);
             _mm_stream_si128((__m128i*)(dstp_y + x), yy);
@@ -26,10 +25,8 @@ void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint1
     }
 
     const __m128i mask = _mm_set1_epi32(0x0000FFFF);
-    for (int y = 0; y < height_uv; y++)
-    {
-        for (int x = 0; x < width_uv; x += 8)
-        {
+    for (int y = 0; y < height_uv; y++) {
+        for (int x = 0; x < width_uv; x += 8) {
             __m128i uv_low = _mm_load_si128((__m128i*)((uint32_t*)srcp_uv + x + 0));
             __m128i uv_high = _mm_load_si128((__m128i*)((uint32_t*)srcp_uv + x + 4));
 

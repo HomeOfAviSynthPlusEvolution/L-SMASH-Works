@@ -25,57 +25,54 @@
 
 #include "lwlibav_dec.h"
 
-typedef struct
-{
-    int64_t  pts;
-    int64_t  dts;
-    int64_t  file_offset;
+typedef struct {
+    int64_t pts;
+    int64_t dts;
+    int64_t file_offset;
     uint32_t sample_number;
-    int      extradata_index;
-    uint8_t  keyframe;
-    int      length;
-    int      sample_rate;
+    int extradata_index;
+    uint8_t keyframe;
+    int length;
+    int sample_rate;
 } audio_frame_info_t;
 
-typedef struct
-{
+typedef struct {
     int64_t pts_in_samples;
     int length;
 } lw_audio_gap_info_t;
 
-struct lwlibav_audio_decode_handler_tag
-{
+struct lwlibav_audio_decode_handler_tag {
     /* common */
-    AVFormatContext    *format;
-    int                 stream_index;
-    int                 error;
-    lw_log_handler_t    lh;
+    AVFormatContext* format;
+    int stream_index;
+    int error;
+    lw_log_handler_t lh;
     lwlibav_extradata_handler_t exh;
-    AVCodecContext     *ctx;
-    AVIndexEntry       *index_entries;
-    int                 index_entries_count;
-    int                 lw_seek_flags;
-    int                 av_seek_flags;  /* unused */
-    int                 dv_in_avi;      /* 1 = 'DV in AVI Type-1', 0 = otherwise */
-    enum AVCodecID      codec_id;
-    const char        **preferred_decoder_names;
-    int                *prefer_hw_decoder;
-    AVRational          time_base;
-    uint32_t            frame_count;
-    AVFrame            *frame_buffer;
-    audio_frame_info_t *frame_list;
-    const char         *ff_options;
-    double              drc;
-    AVBufferRef        *hw_device_ctx;  /* dummy */
+    AVCodecContext* ctx;
+    AVIndexEntry* index_entries;
+    int index_entries_count;
+    int lw_seek_flags;
+    int av_seek_flags; /* unused */
+    int dv_in_avi; /* 1 = 'DV in AVI Type-1', 0 = otherwise */
+    enum AVCodecID codec_id;
+    const char** preferred_decoder_names;
+    int* prefer_hw_decoder;
+    AVRational time_base;
+    uint32_t frame_count;
+    AVFrame* frame_buffer;
+    audio_frame_info_t* frame_list;
+    const char* ff_options;
+    double drc;
+    AVBufferRef* hw_device_ctx; /* dummy */
     /* */
-    AVPacket            packet;         /* for getting and freeing */
-    AVPacket            alter_packet;   /* for consumed by the decoder instead of 'packet'. */
-    uint32_t            frame_length;
-    uint32_t            last_frame_number;
-    uint64_t            pcm_sample_count;
-    uint64_t            next_pcm_sample_number;
-    lw_audio_gap_info_t *gap_list;
-    int                 gap_count;
+    AVPacket packet; /* for getting and freeing */
+    AVPacket alter_packet; /* for consumed by the decoder instead of 'packet'. */
+    uint32_t frame_length;
+    uint32_t last_frame_number;
+    uint64_t pcm_sample_count;
+    uint64_t next_pcm_sample_number;
+    lw_audio_gap_info_t* gap_list;
+    int gap_count;
 };
 
 #endif // !LWLIBAV_AUDIO_INTERNAL_H

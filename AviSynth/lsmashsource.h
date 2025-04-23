@@ -32,49 +32,42 @@
 
 #include <avisynth.h>
 
-class LSMASHSource : public IClip
-{
+class LSMASHSource : public IClip {
 protected:
     VideoInfo vi;
-    char      preferred_decoder_names_buf[512];
-    int       prefer_hw;
-    inline void set_preferred_decoder_names
-    (
-        const char *preferred_decoder_names
-    )
+    char preferred_decoder_names_buf[512];
+    int prefer_hw;
+    inline void set_preferred_decoder_names(const char* preferred_decoder_names)
     {
-        memset( preferred_decoder_names_buf, 0, sizeof(preferred_decoder_names_buf) );
-        if( preferred_decoder_names )
-            memcpy( preferred_decoder_names_buf,
-                    preferred_decoder_names,
-                    MIN( sizeof(preferred_decoder_names_buf) - 1, strlen(preferred_decoder_names) ) );
+        memset(preferred_decoder_names_buf, 0, sizeof(preferred_decoder_names_buf));
+        if (preferred_decoder_names)
+            memcpy(preferred_decoder_names_buf, preferred_decoder_names,
+                MIN(sizeof(preferred_decoder_names_buf) - 1, strlen(preferred_decoder_names)));
     }
-    inline const char **tokenize_preferred_decoder_names( void )
+    inline const char** tokenize_preferred_decoder_names(void)
     {
-        return lw_tokenize_string( preferred_decoder_names_buf, ',', nullptr );
+        return lw_tokenize_string(preferred_decoder_names_buf, ',', nullptr);
     }
-    inline void set_prefer_hw
-    (
-        int prefer_hw_decoder
-    )
+    inline void set_prefer_hw(int prefer_hw_decoder)
     {
         prefer_hw = prefer_hw_decoder;
     }
-    int __stdcall SetCacheHints( int cachehints, int frame_range ) { return cachehints == CACHE_GET_MTMODE ? MT_SERIALIZED : 0; }
-    const VideoInfo& __stdcall GetVideoInfo() { return vi; }
+    int __stdcall SetCacheHints(int cachehints, int frame_range)
+    {
+        return cachehints == CACHE_GET_MTMODE ? MT_SERIALIZED : 0;
+    }
+    const VideoInfo& __stdcall GetVideoInfo()
+    {
+        return vi;
+    }
 };
 
-void throw_error
-(
-    lw_log_handler_t *lhp,
-    lw_log_level      level,
-    const char       *message
-);
+void throw_error(lw_log_handler_t* lhp, lw_log_level level, const char* message);
 
 #ifdef SSE2_ENABLED
-extern "C"
-void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv, const int dst_stride_y, const int dst_stride_uv, const int src_stride_y, const int src_stride_uv,
-    const int width_y, const int width_uv, const int height_y, const int height_uv);
+extern "C" void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv,
+    const int dst_stride_y, const int dst_stride_uv, const int src_stride_y, const int src_stride_uv, const int width_y, const int width_uv,
+    const int height_y, const int height_uv);
 #endif // SSE2_ENABLED
 
 #endif // !AVS_LSMASHSOURCE_H

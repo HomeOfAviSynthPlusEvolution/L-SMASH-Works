@@ -24,99 +24,62 @@
 #ifndef VS_LSMASHSOURCE_H
 #define VS_LSMASHSOURCE_H
 
+#include <VapourSynth.h>
 #include <stdio.h>
 #include <string.h>
-#include <VapourSynth.h>
 
 #include "../common/utils.h"
 
 #define PREFERRED_DECODER_NAMES_BUFSIZE 512
 
-typedef struct
-{
-    VSMap          *out;
-    VSFrameContext *frame_ctx;
-    const VSAPI    *vsapi;
+typedef struct {
+    VSMap* out;
+    VSFrameContext* frame_ctx;
+    const VSAPI* vsapi;
 } vs_basic_handler_t;
 
-void set_error
-(
-    lw_log_handler_t *lhp,
-    lw_log_level      level,
-    const char       *message
-);
+void set_error(lw_log_handler_t* lhp, lw_log_level level, const char* message);
 
-void set_error_on_init
-(
-          VSMap *out,
-    const VSAPI *vsapi,
-    const char  *format,
-    ...
-);
+void set_error_on_init(VSMap* out, const VSAPI* vsapi, const char* format, ...);
 
-static inline void set_option_int64
-(
-    int64_t     *opt,
-    int64_t      default_value,
-    const char  *arg,
-    const VSMap *in,
-    const VSAPI *vsapi
-)
+static inline void set_option_int64(int64_t* opt, int64_t default_value, const char* arg, const VSMap* in, const VSAPI* vsapi)
 {
     int e;
-    *opt = vsapi->propGetInt( in, arg, 0, &e );
-    if( e )
+    *opt = vsapi->propGetInt(in, arg, 0, &e);
+    if (e)
         *opt = default_value;
 }
 
-static inline void set_option_string
-(
-    const char **opt,
-    const char  *default_value,
-    const char  *arg,
-    const VSMap *in,
-    const VSAPI *vsapi
-)
+static inline void set_option_string(const char** opt, const char* default_value, const char* arg, const VSMap* in, const VSAPI* vsapi)
 {
     int e;
-    *opt = vsapi->propGetData( in, arg, 0, &e );
-    if( e )
+    *opt = vsapi->propGetData(in, arg, 0, &e);
+    if (e)
         *opt = default_value;
 }
 
-static inline void set_preferred_decoder_names_on_buf
-(
-          char *preferred_decoder_names_buf,
-    const char *preferred_decoder_names
-)
+static inline void set_preferred_decoder_names_on_buf(char* preferred_decoder_names_buf, const char* preferred_decoder_names)
 {
-    memset( preferred_decoder_names_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE );
-    if( preferred_decoder_names )
-        memcpy( preferred_decoder_names_buf,
-                preferred_decoder_names,
-                MIN( PREFERRED_DECODER_NAMES_BUFSIZE - 1, strlen(preferred_decoder_names) ) );
+    memset(preferred_decoder_names_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE);
+    if (preferred_decoder_names)
+        memcpy(preferred_decoder_names_buf, preferred_decoder_names,
+            MIN(PREFERRED_DECODER_NAMES_BUFSIZE - 1, strlen(preferred_decoder_names)));
 }
 
-static inline const char **tokenize_preferred_decoder_names
-(
-    char *preferred_decoder_names_buf
-)
+static inline const char** tokenize_preferred_decoder_names(char* preferred_decoder_names_buf)
 {
-    return lw_tokenize_string( preferred_decoder_names_buf, ',', NULL );
+    return lw_tokenize_string(preferred_decoder_names_buf, ',', NULL);
 }
 
-static inline void set_prefer_hw
-(
-    int prefer_hw,
-    int64_t prefer_hw_decoder
-)
+static inline void set_prefer_hw(int prefer_hw, int64_t prefer_hw_decoder)
 {
     prefer_hw = (int)prefer_hw_decoder;
 }
 
 #ifdef SSE2_ENABLED
-void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv, const int dst_stride_y, const int dst_stride_uv, const int src_stride_y, const int src_stride_uv,
-    const int width_y, const int width_uv, const int height_y, const int height_uv);
+void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv, const int dst_stride_y,
+    const int dst_stride_uv, const int src_stride_y, const int src_stride_uv, const int width_y, const int width_uv, const int height_y,
+    const int height_uv);
 #endif // SSE2_ENABLED
 
 #endif // !VS_LSMASHSOURCE_H

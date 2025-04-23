@@ -31,51 +31,50 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-int lw_string_to_wchar( int cp, const char *from, wchar_t **to )
+int lw_string_to_wchar(int cp, const char* from, wchar_t** to)
 {
-    int nc = MultiByteToWideChar( cp, MB_ERR_INVALID_CHARS, from, -1, 0, 0 );
-    if( nc == 0 )
+    int nc = MultiByteToWideChar(cp, MB_ERR_INVALID_CHARS, from, -1, 0, 0);
+    if (nc == 0)
         return 0;
-    *to = (wchar_t *)lw_malloc_zero( nc * sizeof(wchar_t) );
-    MultiByteToWideChar( cp, 0, from, -1, *to, nc );
+    *to = (wchar_t*)lw_malloc_zero(nc * sizeof(wchar_t));
+    MultiByteToWideChar(cp, 0, from, -1, *to, nc);
     return nc;
 }
 
-int lw_string_from_wchar( int cp, const wchar_t *from, char **to )
+int lw_string_from_wchar(int cp, const wchar_t* from, char** to)
 {
-    int nc = WideCharToMultiByte( cp, 0, from, -1, 0, 0, 0, 0 );
-    if( nc == 0 )
+    int nc = WideCharToMultiByte(cp, 0, from, -1, 0, 0, 0, 0);
+    if (nc == 0)
         return 0;
-    *to = (char *)lw_malloc_zero( nc * sizeof(char) );
-    WideCharToMultiByte( cp, 0, from, -1, *to, nc, 0, 0 );
+    *to = (char*)lw_malloc_zero(nc * sizeof(char));
+    WideCharToMultiByte(cp, 0, from, -1, *to, nc, 0, 0);
     return nc;
 }
 
-FILE *lw_win32_fopen( const char *name, const char *mode )
+FILE* lw_win32_fopen(const char* name, const char* mode)
 {
     wchar_t *wname = 0, *wmode = 0;
-    FILE *fp = 0;
-    if( lw_string_to_wchar( CP_UTF8, name, &wname ) &&
-        lw_string_to_wchar( CP_UTF8, mode, &wmode ) )
-        fp = _wfopen( wname, wmode );
-    if( !fp )
-        fp = fopen( name, mode );
-    lw_freep( &wname );
-    lw_freep( &wmode );
+    FILE* fp = 0;
+    if (lw_string_to_wchar(CP_UTF8, name, &wname) && lw_string_to_wchar(CP_UTF8, mode, &wmode))
+        fp = _wfopen(wname, wmode);
+    if (!fp)
+        fp = fopen(name, mode);
+    lw_freep(&wname);
+    lw_freep(&wmode);
     return fp;
 }
 
-char *lw_realpath( const char *path, char *resolved )
+char* lw_realpath(const char* path, char* resolved)
 {
     wchar_t *wpath = 0, *wresolved = 0;
-    char *ret = 0;
-    if( lw_string_to_wchar( CP_UTF8, path, &wpath ) ) {
+    char* ret = 0;
+    if (lw_string_to_wchar(CP_UTF8, path, &wpath)) {
         wresolved = _wfullpath(0, wpath, _MAX_PATH);
-        lw_string_from_wchar( CP_UTF8, wresolved, &ret);
+        lw_string_from_wchar(CP_UTF8, wresolved, &ret);
     } else
         ret = _fullpath(0, path, _MAX_PATH);
-    lw_freep( &wpath );
-    lw_freep( &wresolved );
+    lw_freep(&wpath);
+    lw_freep(&wresolved);
     if (resolved) {
         strcpy(resolved, ret);
         free(ret);

@@ -47,53 +47,38 @@ extern "C" {
  * reindexing opened file immediately. */
 #define LWINDEX_INDEX_FILE_VERSION 18
 
-typedef struct
-{
-    const char *file_path;
-    const char *cache_dir;
-    int         threads;
-    int         av_sync;
-    int         no_create_index;
-    const char *index_file_path;
-    int         force_video;
-    int         force_video_index;
-    int         force_audio;
-    int         force_audio_index;
-    int         apply_repeat_flag;
-    int         field_dominance;
-    struct
-    {
-        int      active;
+typedef struct {
+    const char* file_path;
+    const char* cache_dir;
+    int threads;
+    int av_sync;
+    int no_create_index;
+    const char* index_file_path;
+    int force_video;
+    int force_video_index;
+    int force_audio;
+    int force_audio_index;
+    int apply_repeat_flag;
+    int field_dominance;
+    struct {
+        int active;
         uint32_t fps_num;
         uint32_t fps_den;
     } vfr2cfr;
 } lwlibav_option_t;
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
+extern "C" {
+#endif /* __cplusplus */
 
-int lwlibav_construct_index
-(
-    lwlibav_file_handler_t         *lwhp,
-    lwlibav_video_decode_handler_t *vdhp,
-    lwlibav_video_output_handler_t *vohp,
-    lwlibav_audio_decode_handler_t *adhp,
-    lwlibav_audio_output_handler_t *aohp,
-    lw_log_handler_t               *lhp,
-    lwlibav_option_t               *opt,
-    progress_indicator_t           *indicator,
-    progress_handler_t             *php
-);
+int lwlibav_construct_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handler_t* vdhp, lwlibav_video_output_handler_t* vohp,
+    lwlibav_audio_decode_handler_t* adhp, lwlibav_audio_output_handler_t* aohp, lw_log_handler_t* lhp, lwlibav_option_t* opt,
+    progress_indicator_t* indicator, progress_handler_t* php);
 
-int lwlibav_import_av_index_entry
-(
-    lwlibav_decode_handler_t *dhp
-);
+int lwlibav_import_av_index_entry(lwlibav_decode_handler_t* dhp);
 
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 #endif // !LWINDEX_H

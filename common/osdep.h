@@ -24,19 +24,19 @@
 #define OSDEP_H
 
 #ifdef _WIN32
-#  include <stdio.h>
-   FILE *lw_win32_fopen( const char *name, const char *mode );
-#  define lw_fopen lw_win32_fopen
-   char *lw_realpath( const char *path, char *resolved );
+#include <stdio.h>
+FILE* lw_win32_fopen(const char* name, const char* mode);
+#define lw_fopen lw_win32_fopen
+char* lw_realpath(const char* path, char* resolved);
 #else
-#  define lw_fopen fopen
-#  define lw_realpath realpath
+#define lw_fopen fopen
+#define lw_realpath realpath
 #endif
 
 #ifdef _WIN32
-#  include <wchar.h>
-   int lw_string_to_wchar( int cp, const char *from, wchar_t **to );
-   int lw_string_from_wchar( int cp, const wchar_t *from, char **to );
+#include <wchar.h>
+int lw_string_to_wchar(int cp, const char* from, wchar_t** to);
+int lw_string_from_wchar(int cp, const wchar_t* from, char** to);
 #endif
 
 #endif

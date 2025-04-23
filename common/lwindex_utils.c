@@ -7,7 +7,8 @@
 #include "lwindex_utils.h"
 #include "xxhash.h"
 
-void print_index(FILE* index, const char* format, ...) {
+void print_index(FILE* index, const char* format, ...)
+{
     if (!index)
         return;
     va_list args;
@@ -17,7 +18,8 @@ void print_index(FILE* index, const char* format, ...) {
 }
 
 /* Hash the first and last mebibytes. */
-uint64_t xxhash_file(const char* file_path, int64_t file_size) {
+uint64_t xxhash_file(const char* file_path, int64_t file_size)
+{
     FILE* fp = lw_fopen(file_path, "rb");
     if (!fp)
         return 0;
@@ -36,7 +38,8 @@ uint64_t xxhash_file(const char* file_path, int64_t file_size) {
 }
 
 /* Hash the first and last mebibytes. */
-unsigned xxhash32_file(const char* file_path, int64_t file_size) {
+unsigned xxhash32_file(const char* file_path, int64_t file_size)
+{
     uint8_t* file_buffer = (uint8_t*)lw_malloc_zero(1 << 21);
     const size_t read_len = 1 << 20;
     FILE* fp = lw_fopen(file_path, "rb");
@@ -52,7 +55,8 @@ unsigned xxhash32_file(const char* file_path, int64_t file_size) {
     return hash;
 }
 
-char* create_lwi_path(lwlibav_option_t* opt) {
+char* create_lwi_path(lwlibav_option_t* opt)
+{
     if (!opt->cache_dir || opt->cache_dir[0] == '\0') {
         char* buf = lw_malloc_zero(strlen(opt->file_path) + 5);
         sprintf(buf, "%s.lwi", opt->file_path);

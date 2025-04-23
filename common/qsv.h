@@ -20,13 +20,7 @@
 
 /* This file is available under an ISC license. */
 
-int is_qsv_decoder
-(
-    const AVCodec *codec
-);
+int is_qsv_decoder(const AVCodec* codec);
 
 /* Workarounds for Intel QuickSync Video Decoder through libavcodec */
-int do_qsv_decoder_workaround
-(
-    AVCodecContext *ctx
-);
+int do_qsv_decoder_workaround(AVCodecContext* ctx);

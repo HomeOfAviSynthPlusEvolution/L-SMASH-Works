@@ -23,22 +23,21 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdlib.h>
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-#define MIN( a, b ) ((a) < (b) ? (a) : (b))
-#define MAX( a, b ) ((a) > (b) ? (a) : (b))
-#define CLIP_VALUE( value, min, max ) ((value) > (max) ? (max) : (value) < (min) ? (min) : (value))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define CLIP_VALUE(value, min, max) ((value) > (max) ? (max) : (value) < (min) ? (min) : (value))
 
 #ifndef _countof
-#define _countof( _Array ) ( sizeof(_Array) / sizeof(_Array[0]) )
+#define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
 #endif
 
-#define LW_STRINGFY( s ) #s
+#define LW_STRINGFY(s) #s
 
-typedef enum
-{
+typedef enum {
     LW_LOG_INFO = 0,
     LW_LOG_WARNING,
     LW_LOG_ERROR,
@@ -48,104 +47,62 @@ typedef enum
 
 typedef struct lw_log_handler_tag lw_log_handler_t;
 
-struct lw_log_handler_tag
-{
-    const char  *name;
+struct lw_log_handler_tag {
+    const char* name;
     lw_log_level level;
-    void        *priv;
-    void (*show_log)( lw_log_handler_t *, lw_log_level, const char *message );
+    void* priv;
+    void (*show_log)(lw_log_handler_t*, lw_log_level, const char* message);
 };
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
+extern "C" {
+#endif /* __cplusplus */
 
-void *lw_malloc_zero
-(
-    size_t size
-);
+void* lw_malloc_zero(size_t size);
 
-void  lw_free
-(
-    void *pointer
-);
+void lw_free(void* pointer);
 
-void  lw_freep
-(
-    void *pointer
-);
+void lw_freep(void* pointer);
 
-void *lw_memdup
-(
-    void  *src,
-    size_t size
-);
+void* lw_memdup(void* src, size_t size);
 
-const char **lw_tokenize_string
-(
-    char  *str,         /* null-terminated string: separator charactors will be replaced with '\0'. */
-    char   separator,   /* separator */
-    char **bufs         /* If NULL, allocate memory block internally, which can be deallocated by lw_freep(). */
+const char** lw_tokenize_string(char* str, /* null-terminated string: separator charactors will be replaced with '\0'. */
+    char separator, /* separator */
+    char** bufs /* If NULL, allocate memory block internally, which can be deallocated by lw_freep(). */
 );
 
 /*****************************************************************************
  * Non-public functions
  *****************************************************************************/
-void lw_log_show
-(
-    lw_log_handler_t *lhp,
-    lw_log_level      level,
-    const char       *format,
-    ...
-);
+void lw_log_show(lw_log_handler_t* lhp, lw_log_level level, const char* format, ...);
 
-static inline uint64_t get_gcd
-(
-    uint64_t a,
-    uint64_t b
-)
+static inline uint64_t get_gcd(uint64_t a, uint64_t b)
 {
-    if( !b )
+    if (!b)
         return a;
-    while( 1 )
-    {
+    while (1) {
         uint64_t c = a % b;
-        if( !c )
+        if (!c)
             return b;
         a = b;
         b = c;
     }
 }
 
-static inline uint64_t reduce_fraction
-(
-    uint64_t *a,
-    uint64_t *b
-)
+static inline uint64_t reduce_fraction(uint64_t* a, uint64_t* b)
 {
-    uint64_t reduce = get_gcd( *a, *b );
+    uint64_t reduce = get_gcd(*a, *b);
     *a /= reduce;
     *b /= reduce;
     return reduce;
 }
 
-int lw_check_file_extension
-(
-    const char *file_name,
-    const char *extension
-);
+int lw_check_file_extension(const char* file_name, const char* extension);
 
-int lw_try_rational_framerate
-(
-    double   framerate,
-    int64_t *framerate_num,
-    int64_t *framerate_den,
-    uint64_t timebase
-);
+int lw_try_rational_framerate(double framerate, int64_t* framerate_num, int64_t* framerate_den, uint64_t timebase);
 
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 #endif // !UTILS_H

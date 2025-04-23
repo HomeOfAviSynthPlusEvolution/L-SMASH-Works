@@ -20,5 +20,5 @@
 
 /* This file is available under an ISC license. */
 
-void convert_lw48_to_yuy2_sse41( int thread_id, int thread_num, void *param1, void *param2 );
-void convert_lw48_to_rgb24_sse41( int thread_id, int thread_num, void *param1, void *param2 );
+void convert_lw48_to_yuy2_sse41(int thread_id, int thread_num, void* param1, void* param2);
+void convert_lw48_to_rgb24_sse41(int thread_id, int thread_num, void* param1, void* param2);

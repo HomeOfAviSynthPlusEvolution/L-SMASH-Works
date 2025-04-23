@@ -18,49 +18,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *****************************************************************************/
 
- /* This file is available under an ISC license.
+/* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL.
  * Don't distribute it if its license is GPL. */
 
-void convert_yuv16le_to_yc48_sse2
-(
-    uint8_t  *buf,
-    int       buf_linesize,
-    uint8_t **dst_data,
-    int      *dst_linesize,
-    int       output_rowsize,
-    int       output_height,
-    int       full_range
-);
-void convert_yuv16le_to_yc48_sse4_1
-(
-    uint8_t  *buf,
-    int       buf_linesize,
-    uint8_t **dst_data,
-    int      *dst_linesize,
-    int       output_rowsize,
-    int       output_height,
-    int       full_range
-);
-void convert_yv12i_to_yuy2_ssse3
-(
-    uint8_t  *buf,
-    int       buf_linesize,
-    uint8_t **pic_data,
-    int      *pic_linesize,
-    int       output_rowsize,
-    int       height
-);
+void convert_yuv16le_to_yc48_sse2(
+    uint8_t* buf, int buf_linesize, uint8_t** dst_data, int* dst_linesize, int output_rowsize, int output_height, int full_range);
+void convert_yuv16le_to_yc48_sse4_1(
+    uint8_t* buf, int buf_linesize, uint8_t** dst_data, int* dst_linesize, int output_rowsize, int output_height, int full_range);
+void convert_yv12i_to_yuy2_ssse3(uint8_t* buf, int buf_linesize, uint8_t** pic_data, int* pic_linesize, int output_rowsize, int height);
 
-typedef void func_convert_yuv420ple_i_to_yuv444p16le
-(
-    uint8_t  **dst,
-    const int *dst_linesize,
-    uint8_t  **pic_data,
-    int       *pic_linesize,
-    int        output_rowsize,
-    int        height
-);
+typedef void func_convert_yuv420ple_i_to_yuv444p16le(
+    uint8_t** dst, const int* dst_linesize, uint8_t** pic_data, int* pic_linesize, int output_rowsize, int height);
 
 func_convert_yuv420ple_i_to_yuv444p16le convert_yuv420p9le_i_to_yuv444p16le_sse41;
 func_convert_yuv420ple_i_to_yuv444p16le convert_yuv420p10le_i_to_yuv444p16le_sse41;

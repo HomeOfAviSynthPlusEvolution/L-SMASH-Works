@@ -25,106 +25,82 @@
 #define AVS_LIBAVSMASH_SOURCE_H
 
 #include "../common/libavsmash.h"
-#include "../common/libavsmash_video.h"
 #include "../common/libavsmash_audio.h"
+#include "../common/libavsmash_video.h"
 #include "lsmashsource.h"
 
-class LibavSMASHSource : public LSMASHSource
-{
+class LibavSMASHSource : public LSMASHSource {
 private:
-    void (*free_format_ctx)( AVFormatContext *p )
-        = []( AVFormatContext *p ){ avformat_close_input( &p ); };
+    void (*free_format_ctx)(AVFormatContext* p) = [](AVFormatContext* p) { avformat_close_input(&p); };
+
 protected:
     lsmash_file_parameters_t file_param;
-    std::unique_ptr< AVFormatContext, decltype( free_format_ctx ) > format_ctx;
-    LibavSMASHSource() : file_param{}, format_ctx{ nullptr, free_format_ctx } {}
+    std::unique_ptr<AVFormatContext, decltype(free_format_ctx)> format_ctx;
+    LibavSMASHSource()
+        : file_param {}, format_ctx { nullptr, free_format_ctx }
+    {
+    }
     ~LibavSMASHSource() = default;
-    LibavSMASHSource( const LibavSMASHSource & ) = delete;
-    LibavSMASHSource & operator= ( const LibavSMASHSource & ) = delete;
+    LibavSMASHSource(const LibavSMASHSource&) = delete;
+    LibavSMASHSource& operator=(const LibavSMASHSource&) = delete;
 };
 
-class LSMASHVideoSource : public LibavSMASHSource
-{
+class LSMASHVideoSource : public LibavSMASHSource {
 private:
-    std::unique_ptr< libavsmash_video_decode_handler_t, decltype( &libavsmash_video_free_decode_handler ) > vdhp;
-    std::unique_ptr< libavsmash_video_output_handler_t, decltype( &libavsmash_video_free_output_handler ) > vohp;
+    std::unique_ptr<libavsmash_video_decode_handler_t, decltype(&libavsmash_video_free_decode_handler)> vdhp;
+    std::unique_ptr<libavsmash_video_output_handler_t, decltype(&libavsmash_video_free_output_handler)> vohp;
     LSMASHVideoSource()
-      : LibavSMASHSource{},
-        vdhp{ libavsmash_video_alloc_decode_handler(), libavsmash_video_free_decode_handler },
-        vohp{ libavsmash_video_alloc_output_handler(), libavsmash_video_free_output_handler } {}
-    uint32_t open_file
-    (
-        const char                        *source,
-        IScriptEnvironment                *env
-    );
-    void get_video_track
-    (
-        const char                        *source,
-        uint32_t                           track_number,
-        IScriptEnvironment                *env
-    );
+        : LibavSMASHSource {},
+          vdhp { libavsmash_video_alloc_decode_handler(), libavsmash_video_free_decode_handler },
+          vohp { libavsmash_video_alloc_output_handler(), libavsmash_video_free_output_handler }
+    {
+    }
+    uint32_t open_file(const char* source, IScriptEnvironment* env);
+    void get_video_track(const char* source, uint32_t track_number, IScriptEnvironment* env);
     bool has_at_least_v8;
     AVFrame* av_frame;
+
 public:
-    LSMASHVideoSource
-    (
-        const char         *source,
-        uint32_t            track_number,
-        int                 threads,
-        int                 seek_mode,
-        uint32_t            forward_seek_threshold,
-        int                 direct_rendering,
-        int                 fps_num,
-        int                 fps_den,
-        enum AVPixelFormat  pixel_format,
-        const char         *preferred_decoder_names,
-        int                 prefer_hw_decoder,
-        const char         *ff_options,
-        IScriptEnvironment *env
-    );
+    LSMASHVideoSource(const char* source, uint32_t track_number, int threads, int seek_mode, uint32_t forward_seek_threshold,
+        int direct_rendering, int fps_num, int fps_den, enum AVPixelFormat pixel_format, const char* preferred_decoder_names,
+        int prefer_hw_decoder, const char* ff_options, IScriptEnvironment* env);
     ~LSMASHVideoSource();
-    PVideoFrame __stdcall GetFrame( int n, IScriptEnvironment *env );
-    bool __stdcall GetParity( int n ) { return false; }
-    void __stdcall GetAudio( void *buf, int64_t start, int64_t count, IScriptEnvironment *env ) {}
+    PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
+    bool __stdcall GetParity(int n)
+    {
+        return false;
+    }
+    void __stdcall GetAudio(void* buf, int64_t start, int64_t count, IScriptEnvironment* env)
+    {
+    }
 };
 
-class LSMASHAudioSource : public LibavSMASHSource
-{
+class LSMASHAudioSource : public LibavSMASHSource {
 private:
-    std::unique_ptr< libavsmash_audio_decode_handler_t, decltype( &libavsmash_audio_free_decode_handler ) > adhp;
-    std::unique_ptr< libavsmash_audio_output_handler_t, decltype( &libavsmash_audio_free_output_handler ) > aohp;
+    std::unique_ptr<libavsmash_audio_decode_handler_t, decltype(&libavsmash_audio_free_decode_handler)> adhp;
+    std::unique_ptr<libavsmash_audio_output_handler_t, decltype(&libavsmash_audio_free_output_handler)> aohp;
     LSMASHAudioSource()
-      : LibavSMASHSource{},
-        adhp{ libavsmash_audio_alloc_decode_handler(), libavsmash_audio_free_decode_handler },
-        aohp{ libavsmash_audio_alloc_output_handler(), libavsmash_audio_free_output_handler } {}
-    uint32_t open_file
-    (
-        const char         *source,
-        IScriptEnvironment *env
-    );
-    void get_audio_track
-    (
-        const char         *source,
-        uint32_t            track_number,
-        IScriptEnvironment *env
-    );
+        : LibavSMASHSource {},
+          adhp { libavsmash_audio_alloc_decode_handler(), libavsmash_audio_free_decode_handler },
+          aohp { libavsmash_audio_alloc_output_handler(), libavsmash_audio_free_output_handler }
+    {
+    }
+    uint32_t open_file(const char* source, IScriptEnvironment* env);
+    void get_audio_track(const char* source, uint32_t track_number, IScriptEnvironment* env);
+
 public:
-    LSMASHAudioSource
-    (
-        const char         *source,
-        uint32_t            track_number,
-        bool                skip_priming,
-        const char         *channel_layout,
-        int                 sample_rate,
-        const char         *preferred_decoder_names,
-        const double        drc,
-        const char         *ff_options,
-        IScriptEnvironment *env
-    );
+    LSMASHAudioSource(const char* source, uint32_t track_number, bool skip_priming, const char* channel_layout, int sample_rate,
+        const char* preferred_decoder_names, const double drc, const char* ff_options, IScriptEnvironment* env);
     ~LSMASHAudioSource();
-    PVideoFrame __stdcall GetFrame( int n, IScriptEnvironment *env ) { return nullptr; }
-    bool __stdcall GetParity( int n ) { return false; }
-    void __stdcall GetAudio( void *buf, int64_t start, int64_t wanted_length, IScriptEnvironment *env );
+    PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env)
+    {
+        return nullptr;
+    }
+    bool __stdcall GetParity(int n)
+    {
+        return false;
+    }
+    void __stdcall GetAudio(void* buf, int64_t start, int64_t wanted_length, IScriptEnvironment* env);
 };
 
 #endif // !AVS_LIBAVSMASH_SOURCE_H

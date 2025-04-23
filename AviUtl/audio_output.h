@@ -24,10 +24,4 @@
 
 #include "../common/audio_output.h"
 
-int au_setup_audio_rendering
-(
-    lw_audio_output_handler_t *aohp,
-    AVCodecContext            *ctx,
-    audio_option_t            *opt,
-    WAVEFORMATEX              *format
-);
+int au_setup_audio_rendering(lw_audio_output_handler_t* aohp, AVCodecContext* ctx, audio_option_t* opt, WAVEFORMATEX* format);

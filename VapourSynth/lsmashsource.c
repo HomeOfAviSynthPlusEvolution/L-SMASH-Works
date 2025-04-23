@@ -26,42 +26,31 @@
 #include "../common/cpp_compat.h"
 #include "lsmashsource.h"
 
-//#include "version.h"
+// #include "version.h"
 
-void set_error
-(
-    lw_log_handler_t *lhp,
-    lw_log_level      level,
-    const char       *message
-)
+void set_error(lw_log_handler_t* lhp, lw_log_level level, const char* message)
 {
-    vs_basic_handler_t *eh = (vs_basic_handler_t *)lhp->priv;
-    if( !eh || !eh->vsapi )
+    vs_basic_handler_t* eh = (vs_basic_handler_t*)lhp->priv;
+    if (!eh || !eh->vsapi)
         return;
-    if( eh->out )
-        eh->vsapi->setError( eh->out, message );
-    else if( eh->frame_ctx )
-        eh->vsapi->setFilterError( message, eh->frame_ctx );
+    if (eh->out)
+        eh->vsapi->setError(eh->out, message);
+    else if (eh->frame_ctx)
+        eh->vsapi->setFilterError(message, eh->frame_ctx);
 }
 
-void set_error_on_init
-(
-          VSMap *out,
-    const VSAPI *vsapi,
-    const char  *format,
-    ...
-)
+void set_error_on_init(VSMap* out, const VSAPI* vsapi, const char* format, ...)
 {
     char message[4096];
     va_list args;
-    va_start( args, format );
-    vsnprintf( message, sizeof message, format, args );
-    va_end( args );
-    vsapi->setError( out, message );
+    va_start(args, format);
+    vsnprintf(message, sizeof message, format, args);
+    va_end(args);
+    vsapi->setError(out, message);
 }
 
-extern void VS_CC vs_libavsmashsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi );
-extern void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi );
+extern void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_data, VSCore* core, const VSAPI* vsapi);
+extern void VS_CC vs_lwlibavsource_create(const VSMap* in, VSMap* out, void* user_data, VSCore* core, const VSAPI* vsapi);
 
 /*void VS_CC vs_version_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
 {
@@ -74,34 +63,18 @@ extern void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *us
     vsapi->propSetData(out, "ffmpeg_version", LIBSWSCALE_IDENT, -1, paAppend);
 }*/
 
-VS_EXTERNAL_API(void) VapourSynthPluginInit( VSConfigPlugin config_func, VSRegisterFunction register_func, VSPlugin *plugin )
+VS_EXTERNAL_API(void) VapourSynthPluginInit(VSConfigPlugin config_func, VSRegisterFunction register_func, VSPlugin* plugin)
 {
-    config_func
-    (
-        "systems.innocent.lsmas",
-        "lsmas",
-        "LSMASHSource for VapourSynth",
-        VAPOURSYNTH_API_VERSION,
-        1,
-        plugin
-    );
-#define COMMON_OPTS "threads:int:opt;seek_mode:int:opt;seek_threshold:int:opt;dr:int:opt;fpsnum:int:opt;fpsden:int:opt;variable:int:opt;format:data:opt;decoder:data:opt;prefer_hw:int:opt;"
-    register_func
-    (
-        "LibavSMASHSource",
-        "source:data;track:int:opt;" COMMON_OPTS "ff_loglevel:int:opt;ff_options:data:opt;",
-        vs_libavsmashsource_create,
-        NULL,
-        plugin
-    );
-    register_func
-    (
-        "LWLibavSource",
-        "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;" COMMON_OPTS "repeat:int:opt;dominance:int:opt;ff_loglevel:int:opt;cachedir:data:opt;ff_options:data:opt;",
-        vs_lwlibavsource_create,
-        NULL,
-        plugin
-    );
+    config_func("systems.innocent.lsmas", "lsmas", "LSMASHSource for VapourSynth", VAPOURSYNTH_API_VERSION, 1, plugin);
+#define COMMON_OPTS                                                                                                                       \
+    "threads:int:opt;seek_mode:int:opt;seek_threshold:int:opt;dr:int:opt;fpsnum:int:opt;fpsden:int:opt;variable:int:opt;format:data:opt;" \
+    "decoder:data:opt;prefer_hw:int:opt;"
+    register_func("LibavSMASHSource", "source:data;track:int:opt;" COMMON_OPTS "ff_loglevel:int:opt;ff_options:data:opt;",
+        vs_libavsmashsource_create, NULL, plugin);
+    register_func("LWLibavSource",
+        "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;" COMMON_OPTS
+        "repeat:int:opt;dominance:int:opt;ff_loglevel:int:opt;cachedir:data:opt;ff_options:data:opt;",
+        vs_lwlibavsource_create, NULL, plugin);
     /*register_func
     (
         "Version",

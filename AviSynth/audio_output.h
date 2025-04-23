@@ -27,15 +27,7 @@
 #include "../common/audio_output.h"
 #include "avisynth.h"
 
-void as_setup_audio_rendering
-(
-    lw_audio_output_handler_t *aohp,
-    AVCodecContext            *ctx,
-    VideoInfo                 *vi,
-    IScriptEnvironment        *env,
-    const char                *filter_name,
-    const char                *channel_layout,
-    int                        sample_rate
-);
+void as_setup_audio_rendering(lw_audio_output_handler_t* aohp, AVCodecContext* ctx, VideoInfo* vi, IScriptEnvironment* env,
+    const char* filter_name, const char* channel_layout, int sample_rate);
 
 #endif // !AVS_AUDIO_OUTPUT_H

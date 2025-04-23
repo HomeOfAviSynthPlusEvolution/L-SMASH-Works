@@ -31,10 +31,7 @@ extern "C" {
 }
 #endif /* __cplusplus */
 
-static inline uint32_t get_decoder_delay
-(
-    AVCodecContext *ctx
-)
+static inline uint32_t get_decoder_delay(AVCodecContext* ctx)
 {
     if (!strcmp(ctx->codec->name, "libdav1d"))
         return ctx->delay;
@@ -42,52 +39,17 @@ static inline uint32_t get_decoder_delay
         return ctx->has_b_frames + ((ctx->active_thread_type & FF_THREAD_FRAME) ? ctx->thread_count - 1 : 0);
 }
 
-const AVCodec *find_decoder
-(
-    enum AVCodecID           codec_id,
-    const AVCodecParameters *codecpar,
-    const char             **preferred_decoder_names,
-    int                     *prefer_hw_decoder
-);
+const AVCodec* find_decoder(
+    enum AVCodecID codec_id, const AVCodecParameters* codecpar, const char** preferred_decoder_names, int* prefer_hw_decoder);
 
-int open_decoder
-(
-    AVCodecContext         **ctx,
-    const AVCodecParameters *codecpar,
-    const AVCodec           *codec,
-    const int                thread_count,
-    const double             drc,
-    const char              *ff_options,
-    int                     *prefer_hw_decoder,
-    AVBufferRef             *hw_device_ctx
-);
+int open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const AVCodec* codec, const int thread_count, const double drc,
+    const char* ff_options, int* prefer_hw_decoder, AVBufferRef* hw_device_ctx);
 
-int find_and_open_decoder
-(
-    AVCodecContext         **ctx,
-    const AVCodecParameters *codecpar,
-    const char             **preferred_decoder_names,
-    int                     *prefer_hw_decoder,
-    const int                thread_count,
-    const double             drc,
-    const char              *ff_options,
-    AVBufferRef             *hw_device_ctx
-);
+int find_and_open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const char** preferred_decoder_names,
+    int* prefer_hw_decoder, const int thread_count, const double drc, const char* ff_options, AVBufferRef* hw_device_ctx);
 
-int decode_video_packet
-(
-    AVCodecContext *ctx,
-    AVFrame        *av_frame,
-    int            *got_frame,
-    AVPacket       *pkt
-);
+int decode_video_packet(AVCodecContext* ctx, AVFrame* av_frame, int* got_frame, AVPacket* pkt);
 
-int decode_audio_packet
-(
-    AVCodecContext *ctx,
-    AVFrame        *av_frame,
-    int            *got_frame,
-    AVPacket       *pkt
-);
+int decode_audio_packet(AVCodecContext* ctx, AVFrame* av_frame, int* got_frame, AVPacket* pkt);
 
 #endif // !DECODE_H

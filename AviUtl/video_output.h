@@ -25,30 +25,17 @@
 #include "../common/video_output.h"
 #include "colorspace.h"
 
-typedef struct
-{
-    int                      output_linesize;
-    uint32_t                 output_frame_size;
-    uint8_t                 *back_ground;
-    uint8_t                 *another_chroma;
-    uint32_t                 another_chroma_size;
-    AVFrame                 *yuv444p16;
-    func_convert_colorspace *convert_colorspace;
+typedef struct {
+    int output_linesize;
+    uint32_t output_frame_size;
+    uint8_t* back_ground;
+    uint8_t* another_chroma;
+    uint32_t another_chroma_size;
+    AVFrame* yuv444p16;
+    func_convert_colorspace* convert_colorspace;
 } au_video_output_handler_t;
 
-int au_setup_video_rendering
-(
-    lw_video_output_handler_t *vohp,
-    video_option_t            *opt,
-    BITMAPINFOHEADER          *format,
-    int                        output_width,
-    int                        output_height,
-    enum AVPixelFormat         input_pixel_format
-);
+int au_setup_video_rendering(lw_video_output_handler_t* vohp, video_option_t* opt, BITMAPINFOHEADER* format, int output_width,
+    int output_height, enum AVPixelFormat input_pixel_format);
 
-int convert_colorspace
-(
-    lw_video_output_handler_t *vohp,
-    AVFrame                   *picture,
-    uint8_t                   *buf
-);
+int convert_colorspace(lw_video_output_handler_t* vohp, AVFrame* picture, uint8_t* buf);
