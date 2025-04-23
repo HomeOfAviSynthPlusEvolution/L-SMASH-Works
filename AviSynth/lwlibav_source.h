@@ -21,6 +21,9 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#ifndef AVS_LWLIBAV_SOURCE_H
+#define AVS_LWLIBAV_SOURCE_H
+
 #define NO_PROGRESS_HANDLER
 
 #include "../common/progress.h"
@@ -28,6 +31,7 @@
 #include "../common/lwlibav_video.h"
 #include "../common/lwlibav_audio.h"
 #include "../common/lwindex.h"
+#include "lsmashsource.h"
 
 class LWLibavSource : public LSMASHSource
 {
@@ -102,3 +106,5 @@ public:
     bool __stdcall GetParity( int n ) { return false; }
     void __stdcall GetAudio( void *buf, int64_t start, int64_t wanted_length, IScriptEnvironment *env );
 };
+
+#endif // !AVS_LWLIBAV_SOURCE_H

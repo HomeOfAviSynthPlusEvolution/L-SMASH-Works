@@ -20,6 +20,24 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LWINDEX_H
+#define LWINDEX_H
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavcodec/bsf.h>
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#include "lwlibav_audio.h"
+#include "lwlibav_dec.h"
+#include "lwlibav_video.h"
+#include "progress.h"
+
 /* lwindex version
  * Major.Minor.Micro.Build */
 #define LWINDEX_VERSION ((0 << 24) | (0 << 16) | (3 << 8) | 0)
@@ -77,3 +95,5 @@ int lwlibav_import_av_index_entry
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !LWINDEX_H

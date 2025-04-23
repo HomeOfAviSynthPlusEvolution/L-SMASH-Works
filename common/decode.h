@@ -20,6 +20,17 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef DECODE_H
+#define DECODE_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavcodec/avcodec.h>
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 static inline uint32_t get_decoder_delay
 (
     AVCodecContext *ctx
@@ -78,3 +89,5 @@ int decode_audio_packet
     int            *got_frame,
     AVPacket       *pkt
 );
+
+#endif // !DECODE_H

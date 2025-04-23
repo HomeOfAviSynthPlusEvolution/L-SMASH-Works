@@ -1,5 +1,3 @@
-#pragma once
-
 /*****************************************************************************
  * audio_output.h
  *****************************************************************************
@@ -22,9 +20,19 @@
 
 /* This file is available under an ISC license. */
 
-#include "cpp_compat.h"
+#ifndef AUDIO_OUTPUT_H
+#define AUDIO_OUTPUT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavcodec/avcodec.h>
 #include "libswresample/swresample.h"
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#include "cpp_compat.h"
 
 typedef struct
 {
@@ -81,3 +89,5 @@ void lw_cleanup_audio_output_handler
 (
     lw_audio_output_handler_t *aohp
 );
+
+#endif // AUDIO_OUTPUT_H

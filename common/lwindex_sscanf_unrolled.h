@@ -20,6 +20,9 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LWINDEX_SSCANF_UNROLLED_H
+#define LWINDEX_SSCANF_UNROLLED_H
+
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
@@ -294,3 +297,5 @@ static inline int sscanf_unrolled_stream_index_entry(const char *buf, int64_t *p
 
     return parsed_count;
 }
+
+#endif // !LWINDEX_SSCANF_UNROLLED_H

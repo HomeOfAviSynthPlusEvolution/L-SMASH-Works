@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LIBAVSMASH_VIDEO_INTERNAL_H
+#define LIBAVSMASH_VIDEO_INTERNAL_H
+
+#include "libavsmash.h"
+
 #define SEEK_MODE_NORMAL     0
 #define SEEK_MODE_UNSAFE     1
 #define SEEK_MODE_AGGRESSIVE 2
@@ -49,3 +54,5 @@ struct libavsmash_video_decode_handler_tag
     uint64_t              min_cts;
     AVFrame              *movable_frame_buffer;       /* the frame buffer where the decoder outputs temporally stored frame data */
 };
+
+#endif // !LIBAVSMASH_VIDEO_INTERNAL_H

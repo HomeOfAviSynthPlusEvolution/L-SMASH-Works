@@ -20,28 +20,11 @@
 
 /* This file is available under an ISC license. */
 
-#include "cpp_compat.h"
-
-#include <inttypes.h>
 #include <float.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <lsmash.h>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
-
-#include "utils.h"
-#include "video_output.h"
-#include "libavsmash.h"
-#include "libavsmash_video.h"
-#include "libavsmash_video_internal.h"
+#include "cpp_compat.h"
 #include "decode.h"
+#include "libavsmash_video.h"
 
 /*****************************************************************************
  * Allocators / Deallocators

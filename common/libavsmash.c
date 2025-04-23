@@ -20,34 +20,14 @@
 
 /* This file is available under an ISC license. */
 
-#include "cpp_compat.h"
-
-#include <stdlib.h>
-#include <string.h>
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <lsmash.h>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/channel_layout.h>
-#include <libavutil/mem.h>
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
-
-#include "utils.h"
-#include "libavsmash.h"
-#include "qsv.h"
-#include "decode.h"
-
 #ifdef _WIN32
-#include <windows.h>
 #include "osdep.h"
+#include <windows.h>
 #endif // _WIN32
 
+#include "cpp_compat.h"
+#include "decode.h"
+#include "libavsmash.h"
 
 #define BYTE_SWAP_16( x ) ((( x ) << 8 & 0xff00)  | (( x ) >> 8 & 0x00ff))
 #define BYTE_SWAP_32( x ) (BYTE_SWAP_16( x ) << 16 | BYTE_SWAP_16(( x ) >> 16))

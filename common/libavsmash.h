@@ -20,6 +20,22 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LIBAVSMASH_H
+#define LIBAVSMASH_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/channel_layout.h>
+#include "lsmash.h"
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#include "utils.h"
+
 typedef struct
 {
     int                 width;      /* the maximum visual presentation width */
@@ -145,3 +161,5 @@ void cleanup_configuration
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !LIBAVSMASH_H

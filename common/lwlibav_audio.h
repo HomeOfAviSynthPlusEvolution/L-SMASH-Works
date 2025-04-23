@@ -20,7 +20,12 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LWLIBAV_AUDIO_H
+#define LWLIBAV_AUDIO_H
+
 #include "audio_output.h"
+#include "lwlibav_audio_internal.h"
+#include "utils.h"
 
 /*****************************************************************************
  * Opaque Handlers
@@ -139,3 +144,5 @@ uint64_t lwlibav_audio_get_pcm_samples
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !LWLIBAV_AUDIO_H

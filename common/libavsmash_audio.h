@@ -20,6 +20,23 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LIBAVSMASH_AUDIO_H
+#define LIBAVSMASH_AUDIO_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <lsmash.h>
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#include "audio_output.h"
+#include "libavsmash_audio_internal.h"
+#include "utils.h"
+
 /*****************************************************************************
  * Opaque Handlers
  *****************************************************************************/
@@ -238,3 +255,5 @@ uint64_t libavsmash_audio_get_pcm_samples
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !LIBAVSMASH_AUDIO_H

@@ -20,6 +20,9 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <assert.h>
@@ -144,3 +147,5 @@ int lw_try_rational_framerate
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !UTILS_H

@@ -20,20 +20,17 @@
 
 /* This file is available under an ISC license. */
 
-#include "cpp_compat.h"
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
+extern "C" {
+#endif /* __cplusplus */
 #include <libavutil/opt.h>
-#include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#include "utils.h"
+#include "cpp_compat.h"
 #include "video_output.h"
 
 /* If YUV is treated as full range, return 1.

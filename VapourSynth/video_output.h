@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef VS_VIDEO_OUTPUT_H
+#define VS_VIDEO_OUTPUT_H
+
+#include <libavformat/avformat.h>
+
 #include "../common/video_output.h"
 
 typedef int component_reorder_t;
@@ -93,3 +98,5 @@ void vs_set_frame_properties
     const VSAPI    *vsapi,
     int             n
 );
+
+#endif // !VS_VIDEO_OUTPUT_H

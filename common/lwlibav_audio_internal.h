@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LWLIBAV_AUDIO_INTERNAL_H
+#define LWLIBAV_AUDIO_INTERNAL_H
+
+#include "lwlibav_dec.h"
+
 typedef struct
 {
     int64_t  pts;
@@ -72,3 +77,5 @@ struct lwlibav_audio_decode_handler_tag
     lw_audio_gap_info_t *gap_list;
     int                 gap_count;
 };
+
+#endif // !LWLIBAV_AUDIO_INTERNAL_H

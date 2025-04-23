@@ -21,9 +21,13 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#ifndef AVS_LIBAVSMASH_SOURCE_H
+#define AVS_LIBAVSMASH_SOURCE_H
+
 #include "../common/libavsmash.h"
 #include "../common/libavsmash_video.h"
 #include "../common/libavsmash_audio.h"
+#include "lsmashsource.h"
 
 class LibavSMASHSource : public LSMASHSource
 {
@@ -122,3 +126,5 @@ public:
     bool __stdcall GetParity( int n ) { return false; }
     void __stdcall GetAudio( void *buf, int64_t start, int64_t wanted_length, IScriptEnvironment *env );
 };
+
+#endif // !AVS_LIBAVSMASH_SOURCE_H

@@ -28,18 +28,14 @@
 #include <strings.h>
 #endif
 
-#include "lsmashsource.h"
-
 extern "C"
 {
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libswscale/swscale.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/mem.h>
+#include <libavutil/pixdesc.h>
 #include <libavutil/mastering_display_metadata.h>
+#include <libswscale/swscale.h>
 }
 
+#include "lsmashsource.h"
 #include "video_output.h"
 
 static void make_black_background_planar_yuv

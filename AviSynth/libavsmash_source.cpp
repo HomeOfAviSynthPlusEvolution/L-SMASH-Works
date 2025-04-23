@@ -23,25 +23,9 @@
 
 #include "../common/cpp_compat.h"
 
-extern "C"
-{
-/* L-SMASH */
-#include <lsmash.h>                 /* Demuxer */
-
-/* Libav
- * The binary file will be LGPLed or GPLed. */
-#include <libavformat/avformat.h>       /* Codec specific info importer */
-#include <libavcodec/avcodec.h>         /* Decoder */
-#include <libswscale/swscale.h>         /* Colorspace converter */
-#include <libswresample/swresample.h>   /* Audio resampler */
-#include <libavutil/imgutils.h>
-}
-
-#include "lsmashsource.h"
-#include "video_output.h"
 #include "audio_output.h"
 #include "libavsmash_source.h"
-#include "../common/libavsmash_video_internal.h"
+#include "video_output.h"
 
 static const char func_name_video_source[] = "LSMASHVideoSource";
 static const char func_name_audio_source[] = "LSMASHAudioSource";

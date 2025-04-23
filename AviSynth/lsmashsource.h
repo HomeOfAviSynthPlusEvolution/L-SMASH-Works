@@ -21,6 +21,9 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#ifndef AVS_LSMASHSOURCE_H
+#define AVS_LSMASHSOURCE_H
+
 #include <memory>
 #include <string.h>
 
@@ -73,3 +76,5 @@ extern "C"
 void planar_yuv_sse2(uint16_t* dstp_y, uint16_t* dstp_u, uint16_t* dstp_v, uint16_t* srcp_y, uint16_t* srcp_uv, const int dst_stride_y, const int dst_stride_uv, const int src_stride_y, const int src_stride_uv,
     const int width_y, const int width_uv, const int height_y, const int height_uv);
 #endif // SSE2_ENABLED
+
+#endif // !AVS_LSMASHSOURCE_H

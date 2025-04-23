@@ -20,22 +20,9 @@
 
 /* This file is available under an ISC license. */
 
-#include "cpp_compat.h"
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <libavcodec/avcodec.h>
-#include <libswresample/swresample.h>
-#include <libavutil/mem.h>
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
-
 #include "audio_output.h"
-#include "resample.h"
 #include "decode.h"
+#include "resample.h"
 
 static int consume_decoded_audio_samples
 (

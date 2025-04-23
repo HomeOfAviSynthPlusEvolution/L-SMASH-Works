@@ -21,28 +21,12 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
-#include <stdio.h>
-#include <string>
-#include <utility>
+#include <cstdio>
 #include <vector>
-#include "lsmashsource.h"
 
-extern "C"
-{
-/* Libav
- * The binary file will be LGPLed or GPLed. */
-#include <libavformat/avformat.h>       /* Codec specific info importer */
-#include <libavcodec/avcodec.h>         /* Decoder */
-#include <libswscale/swscale.h>         /* Colorspace converter */
-#include <libswresample/swresample.h>   /* Audio resampler */
-#include <libavutil/imgutils.h>
-}
-
-#include "video_output.h"
 #include "audio_output.h"
 #include "lwlibav_source.h"
-#include "../common/lwlibav_audio_internal.h"
-#include "../common/lwlibav_video_internal.h"
+#include "video_output.h"
 
 #ifdef _MSC_VER
 #pragma warning( disable:4996 )
@@ -424,7 +408,6 @@ int LWLibavAudioSource::fill_audio_gaps(void* buf, int64_t* start, int64_t wante
     int64_t total_gap_length = 0;
     if (!adhp->gap_list)
         return 0;
-    const AVRational sample_rate_tb = { 1, aohp->output_sample_rate };
     int64_t current_start = *start;
     for (int i = 0; i < adhp->gap_count; ++i)
     {

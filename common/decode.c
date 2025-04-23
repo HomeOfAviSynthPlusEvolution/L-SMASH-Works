@@ -21,16 +21,13 @@
 /* This file is available under an ISC license. */
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <libavcodec/avcodec.h>
+extern "C" {
+#endif /* __cplusplus */
 #include <libavutil/cpu.h>
-#include <libavutil/hwcontext.h>
 #include <libavutil/opt.h>
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 #include "decode.h"
 #include "qsv.h"

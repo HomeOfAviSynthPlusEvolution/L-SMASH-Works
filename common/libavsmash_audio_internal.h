@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LIBAVSMASH_AUDIO_INTERNAL_H
+#define LIBAVSMASH_AUDIO_INTERNAL_H
+
+#include "libavsmash.h"
+
 struct libavsmash_audio_decode_handler_tag
 {
     lsmash_root_t        *root;
@@ -36,3 +41,5 @@ struct libavsmash_audio_decode_handler_tag
     uint64_t              media_duration;   /* unused */
     uint64_t              min_cts;
 };
+
+#endif // !LIBAVSMASH_AUDIO_INTERNAL_H

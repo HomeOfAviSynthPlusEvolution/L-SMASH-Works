@@ -27,17 +27,13 @@
 #include <strings.h>
 #endif
 
-/* Libav */
-#include <libavformat/avformat.h>       /* Demuxer */
-#include <libavcodec/avcodec.h>         /* Decoder */
-#include <libswscale/swscale.h>         /* Colorspace converter */
-#include <libavutil/imgutils.h>
-#include <libavutil/mem.h>
+#include <libavutil/pixdesc.h>
 #include <libavutil/mastering_display_metadata.h>
+#include <libswscale/swscale.h>
+#include <VSHelper.h>
 
 #include "lsmashsource.h"
 #include "video_output.h"
-#include <VSHelper.h>
 
 typedef struct
 {

@@ -20,11 +20,20 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LWLIBAV_VIDEO_INTERNAL_H
+#define LWLIBAV_VIDEO_INTERNAL_H
+
 #define LW_VFRAME_FLAG_KEY                 0x1
 #define LW_VFRAME_FLAG_LEADING             0x2
 #define LW_VFRAME_FLAG_CORRUPT             0x4
 #define LW_VFRAME_FLAG_INVISIBLE           0x8
 #define LW_VFRAME_FLAG_COUNTERPART_MISSING 0x10
+
+typedef enum lw_field_info {
+    LW_FIELD_INFO_UNKNOWN = 0, /* unknown */
+    LW_FIELD_INFO_TOP, /* top field first or top field coded */
+    LW_FIELD_INFO_BOTTOM, /* bottom field first or bottom field coded */
+} lw_field_info_t;
 
 typedef struct
 {
@@ -103,3 +112,5 @@ struct lwlibav_video_decode_handler_tag
     int                 strict_cfr;
     int                 reuse_pkt;
 };
+
+#endif // !LWLIBAV_VIDEO_INTERNAL_H

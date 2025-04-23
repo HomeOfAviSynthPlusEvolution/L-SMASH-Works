@@ -20,27 +20,19 @@
 
 /* This file is available under an ISC license. */
 
-#include "cpp_compat.h"
-
-#include <float.h>
+#include "float.h"
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <libavformat/avformat.h>   /* Demuxer */
-#include <libavcodec/avcodec.h>     /* Decoder */
+extern "C" {
+#endif /* __cplusplus */
 #include <libavutil/imgutils.h>
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#include "utils.h"
-#include "video_output.h"
-#include "lwlibav_dec.h"
-#include "lwlibav_video.h"
-#include "lwlibav_video_internal.h"
+#include "cpp_compat.h"
 #include "decode.h"
+#include "lwlibav_video.h"
 
 #define SEEK_MODE_NORMAL     0
 #define SEEK_MODE_UNSAFE     1

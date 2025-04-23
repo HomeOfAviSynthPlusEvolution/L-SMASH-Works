@@ -20,6 +20,21 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LIBAVSMASH_VIDEO_H
+#define LIBAVSMASH_VIDEO_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavformat/avformat.h>
+#include <lsmash.h>
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#include "libavsmash_video_internal.h"
+#include "video_output.h"
+
 /*****************************************************************************
  * Opaque Handlers
  *****************************************************************************/
@@ -295,3 +310,5 @@ int libavsmash_video_is_keyframe
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !LIBAVSMASH_VIDEO_H

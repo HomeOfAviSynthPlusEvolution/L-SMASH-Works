@@ -21,27 +21,8 @@
 /* This file is available under an ISC license. */
 
 #include "cpp_compat.h"
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <lsmash.h>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libswresample/swresample.h>
-#include <libavutil/mem.h>
-#include <libavutil/opt.h>
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
-
-#include "utils.h"
-#include "audio_output.h"
-#include "resample.h"
-#include "libavsmash.h"
 #include "libavsmash_audio.h"
-#include "libavsmash_audio_internal.h"
+#include "resample.h"
 
 /*****************************************************************************
  * Allocators / Deallocators

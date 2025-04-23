@@ -20,20 +20,15 @@
 
 /* This file is available under an ISC license. */
 
-#include "cpp_compat.h"
-
 #ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <libavcodec/avcodec.h>
-#include <libswresample/swresample.h>
-#include <libavutil/samplefmt.h>
+extern "C" {
+#endif /* __cplusplus */
 #include <libavutil/opt.h>
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
+#include "cpp_compat.h"
 #include "resample.h"
 
 int resample_s32_to_s24( uint8_t **out_data, uint8_t *in_data, int data_size )

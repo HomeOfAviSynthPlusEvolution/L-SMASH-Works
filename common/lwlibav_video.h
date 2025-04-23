@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef LWLIBAV_VIDEO_H
+#define LWLIBAV_VIDEO_H
+
+#include "lwlibav_dec.h"
+#include "lwlibav_video_internal.h"
 #include "video_output.h"
 
 /*****************************************************************************
@@ -33,12 +38,6 @@ typedef struct lwlibav_video_decode_handler_tag lwlibav_video_decode_handler_t;
 /*****************************************************************************
  * Enumerators
  *****************************************************************************/
-typedef enum lw_field_info
-{
-    LW_FIELD_INFO_UNKNOWN = 0,  /* unknown */
-    LW_FIELD_INFO_TOP,          /* top field first or top field coded */
-    LW_FIELD_INFO_BOTTOM,       /* bottom field first or bottom field coded */
-} lw_field_info_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -218,3 +217,5 @@ enum lw_field_info lwlibav_video_get_field_info
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !LWLIBAV_VIDEO_H

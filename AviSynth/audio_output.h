@@ -21,7 +21,11 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#ifndef AVS_AUDIO_OUTPUT_H
+#define AVS_AUDIO_OUTPUT_H
+
 #include "../common/audio_output.h"
+#include "avisynth.h"
 
 void as_setup_audio_rendering
 (
@@ -33,3 +37,5 @@ void as_setup_audio_rendering
     const char                *channel_layout,
     int                        sample_rate
 );
+
+#endif // !AVS_AUDIO_OUTPUT_H

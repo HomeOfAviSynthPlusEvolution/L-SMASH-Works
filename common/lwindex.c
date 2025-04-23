@@ -25,43 +25,21 @@
 #  define _GNU_SOURCE
 #endif
 
-#include "cpp_compat.h"
+#include <sys/stat.h>
+#include <xxhash.h>
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif  /* __cplusplus */
-#include <libavformat/avformat.h>       /* Demuxer */
-#include <libavcodec/avcodec.h>         /* Decoder */
-#include <libavcodec/bsf.h>
-#include <libswresample/swresample.h>   /* Resampler/Buffer */
-#include <libavutil/mathematics.h>      /* Timebase rescaler */
+extern "C" {
+#endif /* __cplusplus */
 #include <libavutil/pixdesc.h>
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#include "osdep.h"
-#include "utils.h"
-#include "video_output.h"
-#include "audio_output.h"
-#include "lwlibav_dec.h"
-#include "lwlibav_video.h"
-#include "lwlibav_video_internal.h"
-#include "lwlibav_audio.h"
-#include "lwlibav_audio_internal.h"
-#include "progress.h"
-#include "lwindex.h"
 #include "decode.h"
-
-#include <sys/stat.h>
-#include "xxhash.h"
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
+#include "lwindex.h"
 #include "lwindex_parser.h"
+#include "osdep.h"
 
 typedef struct
 {

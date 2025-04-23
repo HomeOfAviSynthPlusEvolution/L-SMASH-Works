@@ -21,6 +21,14 @@
 /* This file is available under an ISC license.
  * However, when distributing its binary file, it will be under LGPL or GPL. */
 
+#ifndef AVS_VIDEO_OUTPUT_H
+#define AVS_VIDEO_OUTPUT_H
+
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
+
 #include "../common/video_output.h"
 
 typedef struct
@@ -102,3 +110,5 @@ void avs_set_frame_properties
     IScriptEnvironment* env,
     int n
 );
+
+#endif // !AVS_VIDEO_OUTPUT_H

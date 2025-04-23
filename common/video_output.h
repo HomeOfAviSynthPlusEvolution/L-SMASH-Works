@@ -1,5 +1,3 @@
-#pragma once
-
 /*****************************************************************************
  * video_output.h
  *****************************************************************************
@@ -21,6 +19,20 @@
  *****************************************************************************/
 
 /* This file is available under an ISC license. */
+
+#ifndef VIDEO_OUTPUT_H
+#define VIDEO_OUTPUT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavcodec/avcodec.h>
+#include <libavutil/frame.h>
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#include "utils.h"
 
 #define REPEAT_CONTROL_CACHE_NUM 2
 
@@ -114,3 +126,5 @@ int transfer_frame_data
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+#endif // !VIDEO_OUTPUT_H

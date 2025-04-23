@@ -20,7 +20,20 @@
 
 /* This file is available under an ISC license. */
 
+#ifndef RESAMPLE_H
+#define RESAMPLE_H
+
+#include <stdint.h>
 #include <string.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#include <libavutil/channel_layout.h>
+#include <libswresample/swresample.h>
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 typedef struct
 {
@@ -59,3 +72,5 @@ int update_resampler_configuration( SwrContext *swr,
                                     AVChannelLayout*  in_channel_layout, int  in_sample_rate, enum AVSampleFormat  in_sample_fmt,
                                     int *input_planes, int *input_block_align );
 int resample_audio( SwrContext *swr, audio_samples_t *out, audio_samples_t *in );
+
+#endif // !RESAMPLE_H
