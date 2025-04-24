@@ -4,8 +4,9 @@
 
 /* This file is available under an ISC license. */
 
+#include <xxhash.h>
+
 #include "lwindex_utils.h"
-#include "xxhash.h"
 
 void print_index(FILE* index, const char* format, ...)
 {
