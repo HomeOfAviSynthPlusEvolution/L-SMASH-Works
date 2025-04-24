@@ -335,7 +335,7 @@ void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_da
     libavsmash_video_set_seek_mode(vdhp, CLIP_VALUE(seek_mode, 0, 2));
     libavsmash_video_set_forward_seek_threshold(vdhp, CLIP_VALUE(seek_threshold, 1, 999));
     libavsmash_video_set_preferred_decoder_names(vdhp, tokenize_preferred_decoder_names(hp->preferred_decoder_names_buf));
-    set_prefer_hw(hp->prefer_hw, CLIP_VALUE(prefer_hw_decoder, 0, 6));
+    set_prefer_hw(&hp->prefer_hw, CLIP_VALUE(prefer_hw_decoder, 0, 6));
     libavsmash_video_set_prefer_hw_decoder(vdhp, &hp->prefer_hw);
     libavsmash_video_set_decoder_options(vdhp, ff_options);
     vohp->vfr2cfr = (fps_num > 0 && fps_den > 0);

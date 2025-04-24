@@ -71,9 +71,9 @@ static inline const char** tokenize_preferred_decoder_names(char* preferred_deco
     return lw_tokenize_string(preferred_decoder_names_buf, ',', NULL);
 }
 
-static inline void set_prefer_hw(int prefer_hw, int64_t prefer_hw_decoder)
+static inline void set_prefer_hw(int* prefer_hw, int64_t prefer_hw_decoder)
 {
-    prefer_hw = (int)prefer_hw_decoder;
+    *prefer_hw = (int)prefer_hw_decoder;
 }
 
 #ifdef SSE2_ENABLED
