@@ -46,6 +46,7 @@ typedef struct {
     int poc; /* Picture Order Count */
     int repeat_pict;
     lw_field_info_t field_info;
+    uint8_t is_superframe;
 } video_frame_info_t;
 
 typedef struct {

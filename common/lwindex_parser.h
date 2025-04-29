@@ -130,7 +130,8 @@ typedef struct {
 
     union {
         struct {
-            uint32_t key : 4;
+            uint32_t key : 1;
+            uint32_t super : 1;
             uint32_t repeat : 4;
             uint32_t field : 4;
             uint32_t pic : 8;
@@ -140,7 +141,7 @@ typedef struct {
             uint32_t length;
         } type1;
     } data;
-} index_entry_t; // Extensively used, 32 bytes
+} index_entry_t; // Extensively used, 30 bytes
 
 typedef struct {
     char lsmash_works_index_version[16];

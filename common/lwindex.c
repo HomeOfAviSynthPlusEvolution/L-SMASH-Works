@@ -924,6 +924,15 @@ static inline int check_vp8_invisible_frame(const AVPacket* pkt)
     return !(pkt->data[0] & 0x10);
 }
 
+static inline int is_vp9_superframe(const AVPacket* pkt)
+{
+    if (!pkt->data || pkt->size < 3)
+        return 0;
+    if ((pkt->data[pkt->size - 1] & 0xe0) == 0xc0)
+        return 1;
+    return 0;
+}
+
 static void create_video_visible_frame_list(
     lwlibav_video_decode_handler_t* vdhp, lwlibav_video_output_handler_t* vohp, uint32_t invisible_count)
 {
@@ -1622,7 +1631,7 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
         Codec=2,TimeBase=1001/24000,Width=1920,Height=1080,Format=yuv420p,ColorSpace=5
         </StreamInfo>
         Index=0,POS=0,PTS=2002,DTS=0,EDI=0
-        Key=1,Pic=1,POC=0,Repeat=1,Field=0
+        Key=1,Pic=1,POC=0,Repeat=1,Field=0,Super=0
         </LibavReaderIndex>
         <VideoConsistentFieldRepeatPict>1</VideoConsistentFieldRepeatPict>
         <StreamDuration=0,0>5000</StreamDuration>
@@ -1823,6 +1832,7 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
             /* Get field information. */
             int repeat_pict;
             lw_field_info_t field_info;
+            int is_superframe = 0;
             if (helper->parser_ctx) {
                 if (helper->parser_ctx->picture_structure == AV_PICTURE_STRUCTURE_TOP_FIELD
                     || helper->parser_ctx->picture_structure == AV_PICTURE_STRUCTURE_BOTTOM_FIELD) {
@@ -1897,6 +1907,9 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
                     pkt.dts = AV_NOPTS_VALUE;
                     pkt.pos = -1;
                 }
+                if (pkt_ctx->codec_id == AV_CODEC_ID_VP9 && is_vp9_superframe(&pkt))
+                    is_superframe = 1;
+                info->is_superframe = is_superframe;
                 if (vdhp->time_base.num == 0 || vdhp->time_base.den == 0) {
                     vdhp->time_base.num = stream->time_base.num;
                     vdhp->time_base.den = stream->time_base.den;
@@ -1936,9 +1949,9 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
             /* Write a video packet info to the index file. */
             print_index(index,
                 "Index=%d,POS=%" PRId64 ",PTS=%" PRId64 ",DTS=%" PRId64 ",EDI=%d\n"
-                "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d\n",
+                "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d,Super=%d\n",
                 pkt.stream_index, pkt.pos, pkt.pts, pkt.dts, extradata_index, !!(pkt.flags & AV_PKT_FLAG_KEY), pict_type, poc, repeat_pict,
-                field_info);
+                field_info, is_superframe);
         } else if (adhp->stream_index != -2) {
             if (adhp->stream_index == -1 && (!opt->force_audio || (opt->force_audio && pkt.stream_index == opt->force_audio_index))) {
                 /* Update active audio stream. */
@@ -2511,6 +2524,7 @@ static int parse_index_real(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_h
                     info->poc = entry->data.type0.poc;
                     info->repeat_pict = entry->data.type0.repeat;
                     info->field_info = (lw_field_info_t)entry->data.type0.field;
+                    info->is_superframe = entry->data.type0.super;
                     if (entry->pts != AV_NOPTS_VALUE && last_keyframe_pts != AV_NOPTS_VALUE && entry->pts < last_keyframe_pts)
                         info->flags |= LW_VFRAME_FLAG_LEADING;
                     if (key) {

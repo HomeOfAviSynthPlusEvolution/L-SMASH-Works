@@ -244,7 +244,7 @@ static inline int sscanf_unrolled_main_index(
             &key, &pict_type, &poc, &repeat_pict, &field_info )
 */
 static inline int sscanf_unrolled_video_index(
-    const char* buf, int32_t* key, int32_t* pict_type, int32_t* poc, int32_t* repeat_pict, int32_t* field_info)
+    const char* buf, int32_t* key, int32_t* pict_type, int32_t* poc, int32_t* repeat_pict, int32_t* field_info, int32_t* is_superframe)
 {
     char* p = (char*)buf;
     int parsed_count = 0;
@@ -258,6 +258,8 @@ static inline int sscanf_unrolled_video_index(
     PARSE_OR_RETURN(p, "Repeat=", *repeat_pict, int);
     CHECK_COMMA_OR_RETURN(p, parsed_count);
     PARSE_OR_RETURN(p, "Field=", *field_info, int);
+    CHECK_COMMA_OR_RETURN(p, parsed_count);
+    PARSE_OR_RETURN(p, "Super=", *is_superframe, int);
 
     return parsed_count;
 }

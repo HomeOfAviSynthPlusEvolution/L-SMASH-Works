@@ -633,8 +633,8 @@ lwindex_data_t* lwindex_parse(FILE* index, int include_video, int include_audio)
             const int mapped_stream_index = stream_mapping[index_entry->stream_index];
             if (data->stream_info[mapped_stream_index].codec_type == AV_STREAM_TYPE_VIDEO) {
                 if (include_video) {
-                    int32_t key, pict_type, poc, repeat_pict, field_info;
-                    if (sscanf_unrolled_video_index(next_line, &key, &pict_type, &poc, &repeat_pict, &field_info) != 5) {
+                    int32_t key, pict_type, poc, repeat_pict, field_info, is_superframe;
+                    if (sscanf_unrolled_video_index(next_line, &key, &pict_type, &poc, &repeat_pict, &field_info, &is_superframe) != 6) {
                         fprintf(stderr, "Failed to parse video index entry.\n");
                         goto fail_parsing;
                     }
@@ -644,6 +644,7 @@ lwindex_data_t* lwindex_parse(FILE* index, int include_video, int include_audio)
                     index_entry->data.type0.poc = poc;
                     index_entry->data.type0.repeat = repeat_pict;
                     index_entry->data.type0.field = field_info;
+                    index_entry->data.type0.super = is_superframe;
                 }
             } else if (data->stream_info[mapped_stream_index].codec_type == AV_STREAM_TYPE_AUDIO) {
                 if (include_audio) {

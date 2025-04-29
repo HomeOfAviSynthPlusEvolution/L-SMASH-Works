@@ -600,7 +600,6 @@ static uint32_t seek_video(lwlibav_video_decode_handler_t* vdhp, AVFrame* frame,
                 if (picture_number == presentation_picture_number) {
                     /* Got the desired output frame now.
                      * Shorten the decoder delay if we got a frame earlier than expected. */
-                    ;
                     vdhp->last_half_frame = is_half_frame(vdhp, picture_number);
                     return current + 1;
                 }
@@ -640,6 +639,8 @@ static uint32_t seek_video(lwlibav_video_decode_handler_t* vdhp, AVFrame* frame,
             lw_log_show(&vdhp->lh, LW_LOG_ERROR, "Failed to decode a video frame.");
             return 0;
         }
+        if (vdhp->frame_list[current].is_superframe)
+            ++decoder_delay;
     }
     exhp->delay_count = MIN(decoder_delay, current - rap_number);
     if (current <= rap_number)

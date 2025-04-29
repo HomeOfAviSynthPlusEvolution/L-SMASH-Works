@@ -45,7 +45,7 @@ extern "C" {
 /* index file version
  * This version is bumped when its structure changed so that the lwindex invokes
  * reindexing opened file immediately. */
-#define LWINDEX_INDEX_FILE_VERSION 18
+#define LWINDEX_INDEX_FILE_VERSION 19
 
 typedef struct {
     const char* file_path;

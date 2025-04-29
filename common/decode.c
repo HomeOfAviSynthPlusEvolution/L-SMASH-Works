@@ -31,6 +31,7 @@ extern "C" {
 
 #include "decode.h"
 #include "qsv.h"
+#include "utils.h"
 
 static const enum AVHWDeviceType hw_device_types[] = { [1] = AV_HWDEVICE_TYPE_CUDA, [2] = AV_HWDEVICE_TYPE_QSV };
 
@@ -162,8 +163,8 @@ int open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const 
                                      * while AVCodec.id is set to AV_CODEC_ID_AC3. */
     if (!strcmp(codec->name, "libdav1d") && (ret = av_opt_set_int(c->priv_data, "max_frame_delay", 2, 0)) < 0)
         goto fail;
-    else if (!strcmp(codec->name, "vp9") && thread_count != 1 && av_cpu_count() > 1)
-        c->thread_count = 2;
+    else if (!strcmp(codec->name, "vp9") && (thread_count > 4 || !thread_count))
+        c->thread_count = MIN(4, (!thread_count) ? av_cpu_count() : thread_count);
     if (codec->wrapper_name && !strcmp(codec->wrapper_name, "cuvid"))
         c->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
     AVDictionary* ff_d = NULL;
