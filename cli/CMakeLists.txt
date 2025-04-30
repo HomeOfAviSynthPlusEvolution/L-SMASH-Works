@@ -46,9 +46,10 @@ endif()
 
 target_include_directories(LSMASHSource_indexing PRIVATE ${PROJECT_SOURCE_DIR}/common)
 
-if (PKG_CONFIG_FOUND)
-    target_include_directories(LSMASHSource_indexing PRIVATE ${zlib_INCLUDE_DIRS})
-endif()
+target_include_directories(LSMASHSource_indexing PRIVATE
+    ${zlib_INCLUDE_DIRS}
+    xxHash::xxhash
+)
 
 target_compile_definitions(LSMASHSource_indexing PRIVATE
     XXH_INLINE_ALL
@@ -67,7 +68,8 @@ target_link_libraries(LSMASHSource_indexing PRIVATE
     FFMPEG::swscale
     FFMPEG::swresample
     FFMPEG::avutil
-    ${libzlib}
+    ZLIB::ZLIB
+    xxHash::xxhash
 )
 
 if (ENABLE_DAV1D)
@@ -99,6 +101,14 @@ if (ENABLE_VPX)
         target_include_directories(LSMASHSource_indexing PRIVATE ${vpx_INCLUDE_DIRS})
     endif()
     target_link_libraries(LSMASHSource_indexing PRIVATE ${libvpx})
+endif()
+
+if (ENABLE_VULKAN)
+    target_include_directories(LSMASHSource_indexing PRIVATE ${Vulkan_INCLUDE_DIRS})
+    target_link_libraries(LSMASHSource_indexing PRIVATE
+        Vulkan::Vulkan
+        Vulkan::shaderc_combined
+    )
 endif()
 
 if (MINGW)
