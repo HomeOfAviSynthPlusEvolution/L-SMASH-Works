@@ -2779,7 +2779,7 @@ static int parse_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handle
     lwlibav_audio_decode_handler_t* adhp, lwlibav_audio_output_handler_t* aohp, lwlibav_option_t* opt, FILE* index)
 {
     rewind(index);
-    lwindex_data_t* data = lwindex_parse(index, 1, 1);
+    lwindex_data_t* data = lwindex_parse(index, opt->force_audio_index == -2, opt->force_audio_index != -2);
     if (!data) {
         return -1;
     }
