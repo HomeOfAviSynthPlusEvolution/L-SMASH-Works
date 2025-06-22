@@ -75,6 +75,9 @@ endif
 
 if host_machine.system() == 'windows'
   add_project_arguments('-D__USE_MINGW_ANSI_STDIO', language: ['c', 'cpp'])
+else
+  # needed for POSIX functions like realpath().
+  add_project_arguments('-D_DEFAULT_SOURCE', language: 'c')
 endif
 
 shared_module('lsmashsource', sources,

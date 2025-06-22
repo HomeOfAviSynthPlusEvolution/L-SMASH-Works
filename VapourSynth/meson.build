@@ -72,6 +72,9 @@ if host_machine.system() == 'windows'
     add_global_link_arguments('-static-libgcc', language: 'c')
     add_global_link_arguments('-Wl,--add-stdcall-alias', language: 'c')
   endif
+else
+  # needed for POSIX functions like realpath().
+  add_project_arguments('-D_DEFAULT_SOURCE', language: 'c')
 endif
 
 shared_module('vslsmashsource', sources,
