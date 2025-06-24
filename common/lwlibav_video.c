@@ -560,8 +560,9 @@ static uint32_t seek_video(lwlibav_video_decode_handler_t* vdhp, AVFrame* frame,
 {
     /* Prepare to decode from random accessible picture. */
     lwlibav_extradata_handler_t* exhp = &vdhp->exh;
-    int extradata_index = vdhp->frame_list[rap_number].extradata_index;
-    if (extradata_index != exhp->current_index)
+    const int extradata_index = vdhp->frame_list[rap_number].extradata_index;
+    const int is_transport_stream = (vdhp->format && vdhp->format->iformat && strstr(vdhp->format->iformat->name, "mpegts"));
+    if (is_transport_stream || extradata_index != exhp->current_index)
         /* Update the decoder configuration. */
         lwlibav_update_configuration((lwlibav_decode_handler_t*)vdhp, rap_number, extradata_index, rap_pos);
     else
