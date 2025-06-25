@@ -477,13 +477,16 @@ lwindex_data_t* lwindex_parse(FILE* index, int include_video, int include_audio)
 
                 stream_duration = strtoll(content, NULL, 10);
 
-                stream_info_entry_t* stream = &data->stream_info[stream_index];
-                if (stream == NULL) {
-                    fprintf(stderr, "Stream index %d not found.\n", stream_index);
-                    goto fail_parsing;
+                if (stream_index >= MAX_STREAM_ID || stream_mapping[stream_index] == -1
+                    || stream_mapping[stream_index] >= data->num_streams) {
+                    // This stream_index was not declared in a <StreamInfo> tag.
+                    // It's either from a different index file version or the file is corrupt. Ignore it.
+                    fprintf(stderr, "Warning: Found StreamDuration for undeclared stream index %d. Ignoring.\n", stream_index);
+                } else {
+                    // The stream_index is valid, proceed.
+                    stream_info_entry_t* stream = &data->stream_info[stream_mapping[stream_index]];
+                    stream->stream_duration = stream_duration;
                 }
-
-                stream->stream_duration = stream_duration;
             }
 
             else if (strcmp(tag, "StreamIndexEntries") == 0) {
@@ -495,6 +498,20 @@ lwindex_data_t* lwindex_parse(FILE* index, int include_video, int include_audio)
                 if (sscanf(attribute, "%" SCNu8 ",%" SCNu8 ",%" SCNu32, &stream_index, &codec_type, &index_entries_count) != 3) {
                     fprintf(stderr, "Failed to parse stream index entries attribute.\n");
                     goto fail_parsing;
+                }
+
+                if (stream_index >= MAX_STREAM_ID || stream_mapping[stream_index] == -1
+                    || stream_mapping[stream_index] >= data->num_streams) {
+                    fprintf(stderr, "Warning: Found StreamIndexEntries for undeclared stream index %d. Skipping.\n", stream_index);
+                    // Skip over the entries for this invalid stream
+                    for (unsigned int i = 0; i < index_entries_count; i++) {
+                        if (buffered_fgets(line, MAX_LINE_LENGTH, index) == NULL)
+                            goto fail_parsing;
+                    }
+                    if (buffered_fgets(line, MAX_LINE_LENGTH, index) == NULL)
+                        goto fail_parsing;
+
+                    continue;
                 }
 
                 stream_info_entry_t* stream = &data->stream_info[stream_mapping[stream_index]];
@@ -551,6 +568,31 @@ lwindex_data_t* lwindex_parse(FILE* index, int include_video, int include_audio)
                     fprintf(stderr, "Failed to parse extra data list.\n");
                     goto fail_parsing;
                 }
+
+                if (stream_index >= MAX_STREAM_ID || stream_mapping[stream_index] == -1
+                    || stream_mapping[stream_index] >= data->num_streams) {
+                    fprintf(stderr, "Warning: Found ExtraDataList for undeclared stream index %d. Skipping.\n", stream_index);
+                    // Skip over the entries for this invalid stream
+                    for (int i = 0; i < extra_data_entry->entry_count; i++) {
+                        if (buffered_fgets(line, MAX_LINE_LENGTH, index) == NULL)
+                            goto fail_parsing; // Skip the text line
+                        // We need to know the size to skip the binary data
+                        extra_data_entry_t temp_entry;
+                        if (!parse_extra_data_entry(line, codec_type, &temp_entry))
+                            goto fail_parsing;
+                        // Skip the binary data itself
+                        for (uint32_t j = 0; j < temp_entry.size; ++j) {
+                            if (fgetc(index) == EOF)
+                                goto fail_parsing;
+                        }
+                        if (buffered_fgets(line, MAX_LINE_LENGTH, index) == NULL)
+                            goto fail_parsing; // Skip the newline after binary data
+                    }
+                    if (buffered_fgets(line, MAX_LINE_LENGTH, index) == NULL)
+                        goto fail_parsing; // Skip the closing tag
+                    continue; // Continue to the next tag in the file
+                }
+
                 extra_data_entry->stream_index = stream_index;
                 extra_data_entry->codec_type = codec_type;
 
