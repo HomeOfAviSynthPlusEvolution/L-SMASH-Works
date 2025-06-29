@@ -264,7 +264,7 @@
 * `LWLibavVideoSource(string source, int stream_index = -1, int threads = 0, bool cache = true, string cachefile = source + ".lwi",
                     int seek_mode = 0, int seek_threshold = 10, bool dr = false, int fpsnum = 0, int fpsden = 1,
                     bool repeat = unspecified, int dominance = 0, string format = "", string decoder = "", int prefer_hw = 0,
-                    int ff_loglevel = 0, string cachedir = "", string ff_options = "")`
+                    int ff_loglevel = 0, string cachedir = "", string ff_options = "", bool rap_verification = true)`
 
         * This function uses libavcodec as video decoder and libavformat as demuxer.
         [Arguments]
@@ -319,6 +319,10 @@
                 Whether to print indexing progress to stderr.
             + ff_options (default: "")
                 Same as 'ff_options' of LSMASHVideoSource().
+            + rap_verification (default: true)
+                Whether to verify if the determined RAP by demuxer/parser is valid RAP (the frame is decoded).
+                This is done in the indexing step.
+                To avoid the indexing speed penalty set this to false.
 
 ###### LWLibavAudioSource
 

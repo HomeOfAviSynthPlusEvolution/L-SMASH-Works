@@ -317,6 +317,7 @@ void VS_CC vs_lwlibavsource_create(const VSMap* in, VSMap* out, void* user_data,
     int64_t apply_repeat_flag;
     int64_t field_dominance;
     int64_t ff_loglevel;
+    int64_t rap_verification;
     const char* index_file_path;
     const char* format;
     const char* preferred_decoder_names;
@@ -340,6 +341,7 @@ void VS_CC vs_lwlibavsource_create(const VSMap* in, VSMap* out, void* user_data,
     set_option_string(&preferred_decoder_names, NULL, "decoder", in, vsapi);
     set_option_string(&cache_dir, NULL, "cachedir", in, vsapi);
     set_option_string(&ff_options, NULL, "ff_options", in, vsapi);
+    set_option_int64(&rap_verification, 1, "rap_verification", in, vsapi);
     set_preferred_decoder_names_on_buf(hp->preferred_decoder_names_buf, preferred_decoder_names);
     /* Set options. */
     lwlibav_option_t opt;
@@ -358,6 +360,7 @@ void VS_CC vs_lwlibavsource_create(const VSMap* in, VSMap* out, void* user_data,
     opt.vfr2cfr.active = fps_num > 0 && fps_den > 0 ? 1 : 0;
     opt.vfr2cfr.fps_num = fps_num;
     opt.vfr2cfr.fps_den = fps_den;
+    opt.rap_verification = rap_verification;
     lwlibav_video_set_seek_mode(vdhp, CLIP_VALUE(seek_mode, 0, 2));
     lwlibav_video_set_forward_seek_threshold(vdhp, CLIP_VALUE(seek_threshold, 1, 999));
     lwlibav_video_set_preferred_decoder_names(vdhp, tokenize_preferred_decoder_names(hp->preferred_decoder_names_buf));

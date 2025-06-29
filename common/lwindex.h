@@ -65,6 +65,7 @@ typedef struct {
         uint32_t fps_num;
         uint32_t fps_den;
     } vfr2cfr;
+    int rap_verification;
 } lwlibav_option_t;
 
 #ifdef __cplusplus

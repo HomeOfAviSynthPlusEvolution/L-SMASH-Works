@@ -441,6 +441,7 @@ AVSValue __cdecl CreateLWLibavVideoSource(AVSValue args, void* user_data, IScrip
     const char* cdir = args[16].AsString(nullptr);
     const bool progress = args[17].AsBool(true);
     const char* ff_options = args[18].AsString(nullptr);
+    const bool rap_verification = args[19].AsBool(true);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path = source;
@@ -458,6 +459,7 @@ AVSValue __cdecl CreateLWLibavVideoSource(AVSValue args, void* user_data, IScrip
     opt.vfr2cfr.active = fps_num > 0 && fps_den > 0 ? 1 : 0;
     opt.vfr2cfr.fps_num = fps_num;
     opt.vfr2cfr.fps_den = fps_den;
+    opt.rap_verification = rap_verification;
     seek_mode = CLIP_VALUE(seek_mode, 0, 2);
     forward_seek_threshold = CLIP_VALUE(forward_seek_threshold, 1, 999);
     direct_rendering &= (pixel_format == AV_PIX_FMT_NONE);
@@ -500,6 +502,7 @@ AVSValue __cdecl CreateLWLibavAudioSource(AVSValue args, void* user_data, IScrip
     opt.vfr2cfr.active = 0;
     opt.vfr2cfr.fps_num = 0;
     opt.vfr2cfr.fps_den = 0;
+    opt.rap_verification = 0;
     set_av_log_level(ff_loglevel);
     return new LWLibavAudioSource(
         &opt, layout_string, sample_rate, preferred_decoder_names, progress, drc, ff_options, fill_audio_gaps, env);

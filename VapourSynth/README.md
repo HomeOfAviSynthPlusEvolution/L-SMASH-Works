@@ -137,7 +137,7 @@
 * `lsmas.LWLibavSource(string source, int stream_index = -1, int threads = 0, int cache = 1, string cachefile = source + ".lwi",
                         int seek_mode = 0, int seek_threshold = 10, int dr = 0, int fpsnum = 0, int fpsden = 1, int variable = 0,
                         string format = "", int repeat = 2, int dominance = 0, string decoder = "", int prefer_hw = 0, int ff_loglevel = 0,
-                        string cachedir = "", string ff_options = "")`
+                        string cachedir = "", string ff_options = "", int rap_verification = 1)`
 
         * This function uses libavcodec as video decoder and libavformat as demuxer.
         [Arguments]
@@ -192,3 +192,7 @@
                 Create *.lwi file under this directory with names encoding the full path to avoid collisions.
             + ff_options (default: "")
                 Same as 'ff_options' of LibavSMASHSource().
+            + rap_verification (default: true)
+                Whether to verify if the determined RAP by demuxer/parser is valid RAP (the frame is decoded).
+                This is done in the indexing step.
+                To avoid the indexing speed penalty set this to false.
