@@ -1,0 +1,94 @@
+# FindLSMASH.cmake - Finds the L-SMASH library
+#
+# This module finds the L-SMASH library and creates the imported target `LSMASH::lsmash`.
+# It respects the `LSMASH_USE_STATIC_LIBS` variable to prefer static or shared libs.
+#
+# It first attempts to use pkg-config. If that fails or is unavailable, it falls
+# back to manual path searching, which respects CMAKE_PREFIX_PATH.
+
+include(FindPackageHandleStandardArgs)
+
+# Guard to prevent this from running multiple times
+if(TARGET LSMASH::lsmash)
+    return()
+endif()
+
+# 1. Try to find via pkg-config (standard for Linux/macOS)
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+    if(LSMASH_USE_STATIC_LIBS)
+        # The --static flag tells pkg-config to return static linking information
+        pkg_check_modules(PC_LSMASH QUIET liblsmash --static)
+    else()
+        pkg_check_modules(PC_LSMASH QUIET liblsmash)
+    endif()
+endif()
+
+# 2. Find the header and library files
+find_path(LSMASH_INCLUDE_DIR
+    NAMES lsmash.h
+    HINTS ${PC_LSMASH_INCLUDEDIR}
+    PATH_SUFFIXES include
+)
+
+# Temporarily modify the library search suffixes to respect user's preference
+set(_LSMASH_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+if(LSMASH_USE_STATIC_LIBS)
+    if(WIN32)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a)
+    else()
+        set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+    endif()
+else()
+    if(WIN32)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES .lib) # .lib can be an import lib for a .dll
+    else()
+        # Default suffixes already prefer shared libs (.so, .dylib)
+    endif()
+endif()
+
+find_library(LSMASH_LIBRARY
+    NAMES lsmash liblsmash
+    HINTS ${PC_LSMASH_LIBDIR}
+    PATH_SUFFIXES lib lib64
+)
+
+# Restore the original suffixes so we don't break other find calls
+set(CMAKE_FIND_LIBRARY_SUFFIXES "${_LSMASH_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES}")
+unset(_LSMASH_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
+
+# 3. Use the standard tool to set LSMASH_FOUND and handle REQUIRED/QUIET
+find_package_handle_standard_args(LSMASH
+    FOUND_VAR LSMASH_FOUND
+    REQUIRED_VARS LSMASH_LIBRARY LSMASH_INCLUDE_DIR
+    VERSION_VAR PC_LSMASH_VERSION
+)
+
+# 4. If found, create the modern imported target
+if(LSMASH_FOUND AND NOT TARGET LSMASH::lsmash)
+    # Determine if the library is static or shared
+    get_filename_component(LIB_EXT ${LSMASH_LIBRARY} EXT)
+    if(LIB_EXT STREQUAL ".a" OR (WIN32 AND LIB_EXT STREQUAL ".lib" AND LSMASH_USE_STATIC_LIBS))
+        add_library(LSMASH::lsmash STATIC IMPORTED)
+    else()
+        add_library(LSMASH::lsmash SHARED IMPORTED)
+    endif()
+
+    set_target_properties(LSMASH::lsmash PROPERTIES
+        IMPORTED_LOCATION "${LSMASH_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${LSMASH_INCLUDE_DIR}"
+    )
+
+    # L-SMASH depends on obuparse and the math library (m).
+    # We must add these to the interface so consumers link them correctly.
+    find_package(OBUParse QUIET) # Assumes our FindOBUParse.cmake exists
+    if(OBUParse_FOUND)
+        target_link_libraries(LSMASH::lsmash INTERFACE OBUParse::obuparse)
+    endif()
+    if(UNIX)
+        target_link_libraries(LSMASH::lsmash INTERFACE m)
+    endif()
+endif()
+
+# 5. Hide the internal variables from the user in the GUI
+mark_as_advanced(LSMASH_INCLUDE_DIR LSMASH_LIBRARY)

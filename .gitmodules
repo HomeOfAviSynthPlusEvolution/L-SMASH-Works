@@ -5,3 +5,9 @@
 	path = FFmpeg
 	url = https://github.com/HomeOfAviSynthPlusEvolution/FFmpeg
 	branch = custom-patches-for-lsmashsource
+[submodule "obuparse"]
+	path = obuparse
+	url = https://github.com/HomeOfAviSynthPlusEvolution/obuparse
+[submodule "l-smash"]
+	path = l-smash
+	url = https://github.com/HomeOfAviSynthPlusEvolution/l-smash

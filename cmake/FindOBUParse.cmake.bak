@@ -1,0 +1,70 @@
+# FindOBUParse.cmake - Finds the obuparse library
+#
+# This module finds the obuparse library and creates the imported target `OBUParse::obuparse`.
+# It respects the `OBUParse_USE_STATIC_LIBS` variable to prefer static or shared libs.
+#
+# Since obuparse does not provide pkg-config files, this module relies entirely
+# on manual path searching, which respects CMAKE_PREFIX_PATH.
+
+include(FindPackageHandleStandardArgs)
+
+# Guard to prevent this from running multiple times
+if(TARGET OBUParse::obuparse)
+    return()
+endif()
+
+# 1. Find the header and library files
+find_path(OBUParse_INCLUDE_DIR
+    NAMES obuparse.h
+    PATH_SUFFIXES include
+)
+
+# Temporarily modify the library search suffixes to respect user's preference
+set(_OBUParse_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+if(OBUParse_USE_STATIC_LIBS)
+    if(WIN32)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a)
+    else()
+        set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+    endif()
+else()
+    if(WIN32)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES .lib) # .lib can be an import lib for a .dll
+    else()
+        # Default suffixes already prefer shared libs (.so, .dylib)
+    endif()
+endif()
+
+find_library(OBUParse_LIBRARY
+    NAMES obuparse libobuparse
+    PATH_SUFFIXES lib lib64
+)
+
+# Restore the original suffixes so we don't break other find calls
+set(CMAKE_FIND_LIBRARY_SUFFIXES "${_OBUParse_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES}")
+unset(_OBUParse_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
+
+# 2. Use the standard tool to set OBUParse_FOUND and handle REQUIRED/QUIET
+find_package_handle_standard_args(OBUParse
+    FOUND_VAR OBUParse_FOUND
+    REQUIRED_VARS OBUParse_LIBRARY OBUParse_INCLUDE_DIR
+)
+
+# 3. If found, create the modern imported target
+if(OBUParse_FOUND AND NOT TARGET OBUParse::obuparse)
+    # Determine if the library is static or shared
+    get_filename_component(LIB_EXT ${OBUParse_LIBRARY} EXT)
+    if(LIB_EXT STREQUAL ".a" OR (WIN32 AND LIB_EXT STREQUAL ".lib" AND OBUParse_USE_STATIC_LIBS))
+        add_library(OBUParse::obuparse STATIC IMPORTED)
+    else()
+        add_library(OBUParse::obuparse SHARED IMPORTED)
+    endif()
+
+    set_target_properties(OBUParse::obuparse PROPERTIES
+        IMPORTED_LOCATION "${OBUParse_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${OBUParse_INCLUDE_DIR}"
+    )
+endif()
+
+# 4. Hide the internal variables from the user in the GUI
+mark_as_advanced(OBUParse_INCLUDE_DIR OBUParse_LIBRARY)

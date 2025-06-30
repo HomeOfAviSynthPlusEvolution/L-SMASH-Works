@@ -1,12 +1,11 @@
 cmake_minimum_required(VERSION 3.28)
 
-if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
-    if (NOT CMAKE_BUILD_TYPE)
-        set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-    endif()
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to 'Release' as none was specified.")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the build type" FORCE)
 endif()
 
-project(LSMASHSource)
+project(LSMASHSource VERSION 1253)
 
 option(BUILD_AVS_PLUGIN "Build plugin for AviSynth" ON)
 message(STATUS "Build plugin for AviSynth: ${BUILD_AVS_PLUGIN}.")
@@ -16,6 +15,8 @@ message(STATUS "Build plugin for VapourSynth: ${BUILD_VS_PLUGIN}.")
 
 option(ENABLE_DAV1D "Enable dav1d AV1 decoding" ON)
 message(STATUS "Enable dav1d AV1 decoding: ${ENABLE_DAV1D}.")
+option(dav1d_USE_STATIC_LIBS "Look for static dav1d libraries" ON)
+message(STATUS "Look for static dav1d libraries: ${dav1d_USE_STATIC_LIBS}.")
 
 option(ENABLE_MFX "Enable Intel HW decoding" ON)
 message(STATUS "Enable Intel HW decoding: ${ENABLE_MFX}.")
@@ -25,9 +26,8 @@ message(STATUS "Enable DNXHD support: ${ENABLE_XML2}.")
 
 option(ENABLE_VPX "Enable libvpx support" ON)
 message(STATUS "Enable libvpx decoding: ${ENABLE_VPX}.")
-
-option(ENABLE_VULKAN "Enable Vulkan support" ON)
-message(STATUS "Enable Vulkan decoding: ${ENABLE_VULKAN}.")
+option(VPX_USE_STATIC_LIBS "Look for static libvpx libraries" ON)
+message(STATUS "Look for static libvpx libraries: ${VPX_USE_STATIC_LIBS}.")
 
 cmake_host_system_information(RESULT sse2 QUERY HAS_SSE2)
 option(ENABLE_SSE2 "Enable SSE2 support" ${sse2})
@@ -36,24 +36,29 @@ message(STATUS "Enable SSE2 support: ${ENABLE_SSE2}.")
 option(BUILD_INDEXING_TOOL "Build index tool" OFF)
 message(STATUS "Build index tool: ${BUILD_INDEXING_TOOL}.")
 
+option(ENABLE_VULKAN "Enable Vulkan support" ON)
+message(STATUS "Enable Vulkan decoding: ${ENABLE_VULKAN}.")
+
+option(ZLIB_USE_STATIC_LIBS "Look for static zlib libraries" ON)
+message(STATUS "Look for static zlib libraries: ${ZLIB_USE_STATIC_LIBS}.")
+
+# In case we use old obuparse without cmake build system.
+#option(OBUParse_USE_STATIC_LIBS "Look for static obuparse libraries" ON)
+#message(STATUS "Look for static obuparse libraries: ${OBUParse_USE_STATIC_LIBS}.")
+
+# In case we use old lsmash without cmake build system.
+#option(LSMASH_USE_STATIC_LIBS "Look for static lsmash libraries" ON)
+#message(STATUS "Look for static lsmash libraries: ${LSMASH_USE_STATIC_LIBS}.")
+
+option(BUILD_SHARED_LIBS "Build shared dependencies libraries" OFF)
+message(STATUS "Build shared dependencies libraries: ${BUILD_SHARED_LIBS}.")
+
 # xxHash options
-option(BUILD_SHARED_LIBS "Build shared library" OFF)
 option(XXHASH_BUILD_XXHSUM "Build the xxhsum binary" OFF)
 option(XXHASH_BUNDLED_MODE "" OFF)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/xxHash/cmake_unofficial)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/xxHash/cmake_unofficial")
 
-find_package(Git)
-
-if (GIT_FOUND)
-    execute_process(COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
-        OUTPUT_VARIABLE ver
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-else()
-    message(STATUS "GIT not found")
-endif()
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(FFMPEG REQUIRED COMPONENTS
     avcodec
@@ -62,42 +67,22 @@ find_package(FFMPEG REQUIRED COMPONENTS
     swresample
     avutil
 )
-
-find_package(PkgConfig)
-
-set(ZLIB_USE_STATIC_LIBS ON)
 find_package(ZLIB REQUIRED)
 
 if (ENABLE_DAV1D)
-    if (PKG_CONFIG_FOUND)
-        pkg_check_modules(dav1d dav1d)
-    endif (PKG_CONFIG_FOUND)
-    find_library(libdav1d NAMES libdav1d.a dav1d PATHS ${dav1d_LIBRARY_DIRS})
-    message(STATUS "dav1d: ${libdav1d}")
+    find_package(dav1d REQUIRED)
 endif()
 
 if (ENABLE_MFX)
-    if (PKG_CONFIG_FOUND)
-        pkg_check_modules(mfx libmfx)
-    endif (PKG_CONFIG_FOUND)
-    find_library(libmfx NAMES libmfx.a mfx libmfx.lib PATHS ${mfx_LIBRARY_DIRS})
-    message(STATUS "mfx: ${libmfx}")
+    find_package(MFX REQUIRED)
 endif()
 
 if (ENABLE_XML2)
-    if (PKG_CONFIG_FOUND)
-        pkg_check_modules(xml2 libxml-2.0)
-    endif (PKG_CONFIG_FOUND)
-    find_library(libxml2 NAMES libxml2.a xml2 libxml2s.lib PATH ${xml2_LIBRARY_DIRS})
-    message(STATUS "xml2: ${libxml2}")
+    find_package(LibXml2 REQUIRED)
 endif()
 
 if (ENABLE_VPX)
-    if (PKG_CONFIG_FOUND)
-        pkg_check_modules(vpx vpx)
-    endif (PKG_CONFIG_FOUND)
-    find_library(libvpx NAMES vpx vpx.lib vpxmd.lib PATHS ${vpx_LIBRARY_DIRS})
-    message(STATUS "vpx: ${libvpx}")
+    find_package(VPX REQUIRED)
 endif()
 
 if (ENABLE_VULKAN)
@@ -105,120 +90,113 @@ if (ENABLE_VULKAN)
 endif()
 
 if (WIN32)
-    find_library(bcrypt NAMES bcrypt bcrypt.lib)
-    message(STATUS "bcrypt: ${bcrypt}")
+    find_package(Git QUIET)
+
+    if(GIT_FOUND)
+        # Run git to get the revision count.
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            OUTPUT_VARIABLE ver
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE git_result
+        )
+
+        if(NOT git_result EQUAL 0)
+            message(STATUS "Could not determine git revision. Not a git repository or git error.")
+            set(ver "${PROJECT_VERSION}") # Set a default if git failed
+        endif()
+    else()
+        message(STATUS "Git not found. Using default version '${PROJECT_VERSION}'.")
+        set(ver "${PROJECT_VERSION}") # Set a default if git isn't installed
+    endif()
 endif()
 
 if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
-    set(sources
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/cpp_compat.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/decode.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/decode.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio_internal.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video_internal.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_sscanf_unrolled.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_utils.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_utils.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_parser.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_parser.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio_internal.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video_internal.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/progress.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/utils.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/utils.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.h
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/obuparse")
+
+    # l-smash options
+    option(LSMASH_BUILD_TOOLS "Build the l-smash tools" OFF)
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/l-smash")
+
+    add_library(LSMASHSource MODULE
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/cpp_compat.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/decode.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/decode.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_audio_internal.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/libavsmash_video_internal.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_sscanf_unrolled.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_utils.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_utils.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_parser.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwindex_parser.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_audio_internal.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_dec.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/lwlibav_video_internal.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/progress.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/utils.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/utils.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.h"
     )
 
     if (ENABLE_SSE2)
-        set(sources
-            ${sources}
-            ${CMAKE_CURRENT_SOURCE_DIR}/common/planar_yuv_sse2.c
-        )
+        target_sources(LSMASHSource PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/common/planar_yuv_sse2.c")
     endif()
 
     if (BUILD_AVS_PLUGIN)
-        set(sources
-            ${sources}
-            ${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/common/resample.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/common/resample.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lsmashsource.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lsmashsource.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lwlibav_source.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lwlibav_source.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/video_output.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/video_output.h
+        target_sources(LSMASHSource PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/common/resample.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/common/resample.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lsmashsource.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lsmashsource.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lwlibav_source.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/lwlibav_source.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/video_output.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/video_output.h"
         )
     endif()
 
     if (BUILD_VS_PLUGIN)
-        set(sources
-            ${sources}
-            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/libavsmash_source.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lwlibav_source.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.h
+        target_sources(LSMASHSource PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/libavsmash_source.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lwlibav_source.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.h"
         )
     endif()
 
-    if (WIN32)
-        configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/version.rc"
-        )
-
-        set(sources ${sources} ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
-    endif()
-
-    add_library(LSMASHSource SHARED ${sources})
-
-    target_include_directories(LSMASHSource PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${ZLIB_INCLUDE_DIRS}
-        xxHash::xxhash
-    )
+    target_include_directories(LSMASHSource PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
     if (APPLE)
-        target_include_directories(LSMASHSource PRIVATE /usr/local/include)
+        target_include_directories(LSMASHSource PRIVATE "/usr/local/include")
     endif()
-
-    find_path(libopurse_include NAMES obuparse.h)
-    target_include_directories(LSMASHSource PRIVATE ${libopurse_include})
-    find_library(libobuparse NAMES libobuparse.a obuparse obuparse.lib)
-    message(STATUS "obuparse: ${libobuparse}")
-
-    if (PKG_CONFIG_FOUND)
-        pkg_check_modules(lsmash liblsmash)
-        target_include_directories(LSMASHSource PRIVATE ${lsmash_INCLUDE_DIRS})
-    endif (PKG_CONFIG_FOUND)
-    find_library(liblsmash NAMES liblsmash.a lsmash liblsmash.lib PATHS ${lsmash_LIBRARY_DIRS})
-    message(STATUS "lsmash: ${liblsmash}")
 
     target_link_libraries(LSMASHSource PRIVATE
         FFMPEG::avcodec
@@ -228,44 +206,35 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         FFMPEG::avutil
         ZLIB::ZLIB
         xxHash::xxhash
-        ${liblsmash}
-        ${libobuparse}
     )
 
+    if (BUILD_SHARED_LIBS)
+        target_link_libraries(LSMASHSource PRIVATE
+        OBUParse::shared
+        LSMASH::shared)
+    else()
+        target_link_libraries(LSMASHSource PRIVATE
+        OBUParse::static
+        LSMASH::static)
+    endif()
+
     if (ENABLE_DAV1D)
-        if (PKG_CONFIG_FOUND)
-            target_include_directories(LSMASHSource PRIVATE ${dav1d_INCLUDE_DIRS})
-        endif()
-        target_link_libraries(LSMASHSource PRIVATE ${libdav1d})
+        target_link_libraries(LSMASHSource PRIVATE dav1d::dav1d)
     endif()
 
     if (ENABLE_MFX)
-        if (PKG_CONFIG_FOUND)
-            target_include_directories(LSMASHSource PRIVATE ${mfx_INCLUDE_DIRS})
-        endif()
-        target_link_libraries(LSMASHSource PRIVATE ${libmfx})
+        target_link_libraries(LSMASHSource PRIVATE MFX::mfx)
     endif()
 
     if (ENABLE_XML2)
-        if (PKG_CONFIG_FOUND)
-            target_include_directories(LSMASHSource PRIVATE ${xml2_INCLUDE_DIRS})
-        endif()
-        target_link_libraries(LSMASHSource PRIVATE ${libxml2})
-
-        if (WIN32)
-            target_compile_definitions(LSMASHSource PRIVATE "-DLIBXML_STATIC")
-        endif()
+        target_link_libraries(LSMASHSource PRIVATE LibXml2::LibXml2)
     endif()
 
     if (ENABLE_VPX)
-        if (PKG_CONFIG_FOUND)
-            target_include_directories(LSMASHSource PRIVATE ${vpx_INCLUDE_DIRS})
-        endif()
-        target_link_libraries(LSMASHSource PRIVATE ${libvpx})
+        target_link_libraries(LSMASHSource PRIVATE VPX::vpx)
     endif()
 
     if (ENABLE_VULKAN)
-        target_include_directories(LSMASHSource PRIVATE ${Vulkan_INCLUDE_DIRS})
         target_link_libraries(LSMASHSource PRIVATE
             Vulkan::Vulkan
             Vulkan::shaderc_combined
@@ -277,24 +246,28 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
     endif()
 
     if (WIN32)
-        target_link_libraries(LSMASHSource PRIVATE ${bcrypt})
+        target_link_libraries(LSMASHSource PRIVATE bcrypt)
     endif()
 
     target_compile_features(LSMASHSource PRIVATE cxx_std_17)
 
-    if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
-        string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
-        if (build_type STREQUAL debug)
-            target_compile_definitions(LSMASHSource PRIVATE DEBUG_BUILD)
-        else (build_type STREQUAL release)
-            target_compile_definitions(LSMASHSource PRIVATE RELEASE_BUILD)
-        endif()
-
-        message(STATUS "Build type - ${CMAKE_BUILD_TYPE}")
-    endif()
+    target_compile_definitions(LSMASHSource PRIVATE
+        $<$<CONFIG:Debug>:DEBUG_BUILD>
+        $<$<CONFIG:Release>:RELEASE_BUILD>
+        $<$<CONFIG:RelWithDebInfo>:RELEASE_BUILD>
+        $<$<CONFIG:MinSizeRel>:RELEASE_BUILD>
+    )
 
     if (${sse2})
         target_compile_definitions(LSMASHSource PRIVATE SSE2_ENABLED=1)
+    endif()
+
+    if (WIN32)
+        configure_file(
+            "${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/version.rc"
+        )
+        target_sources(LSMASHSource PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/version.rc")
     endif()
 
     if (WIN32)
@@ -331,5 +304,5 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
 endif()
 
 if (BUILD_INDEXING_TOOL)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cli)
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/cli")
 endif()

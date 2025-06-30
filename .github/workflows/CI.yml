@@ -29,31 +29,6 @@ jobs:
         sudo apt update
         sudo apt install cmake
 
-    - name: Install obuparse
-      run : |
-        git clone https://github.com/dwbuiten/obuparse --depth 1
-        pushd obuparse
-        if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            sed -i '' 's/--version-script,obuparse.v -Wl,-soname,libobuparse.so.1/ /g' Makefile
-        fi
-        make -j2
-        sudo make install -j2
-        popd
-        rm -rf obuparse
-
-    - name: Install l-smash
-      run: |
-        git clone https://github.com/vimeo/l-smash --depth 1
-        pushd l-smash
-        mv configure configure.old
-        sed 's/-Wl,--version-script,liblsmash.ver//g' configure.old >configure
-        chmod +x configure
-        ./configure --disable-static
-        make lib -j2
-        sudo make install-lib -j2
-        popd
-        rm -rf l-smash
-
     - name: Install AviSynth
       run: |
         git clone https://github.com/AviSynth/AviSynthPlus --branch 3.7 --depth 1 avisynth-build
@@ -74,7 +49,7 @@ jobs:
         make -j2
         sudo make install -j2
         popd
-        cmake_settings=(-S . -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF)
+        cmake_settings=(-S . -G Ninja -DENABLE_DAV1D=OFF -DENABLE_MFX=OFF -DENABLE_XML2=OFF -DENABLE_VPX=OFF -DENABLE_VULKAN=OFF -DZLIB_USE_STATIC_LIBS=OFF -DBUILD_SHARED_LIBS=ON)
         if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             cmake_settings+=(-DCMAKE_PREFIX_PATH=/opt/homebrew/opt/zlib)
         fi
