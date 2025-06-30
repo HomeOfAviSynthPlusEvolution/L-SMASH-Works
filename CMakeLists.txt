@@ -5,7 +5,7 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the build type" FORCE)
 endif()
 
-project(LSMASHSource VERSION 1253)
+project(LSMASHSource VERSION 1262)
 
 option(BUILD_AVS_PLUGIN "Build plugin for AviSynth" ON)
 message(STATUS "Build plugin for AviSynth: ${BUILD_AVS_PLUGIN}.")
