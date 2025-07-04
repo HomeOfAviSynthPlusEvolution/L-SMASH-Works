@@ -184,8 +184,10 @@
                     - There is a video frame consisting of two separated field coded pictures.
             + decoder (default : "")
                 Same as 'decoder' of LibavSMASHSource().
+                This is always unspecified (software decoder) if `rap_verification=1` during the indexing step.
             + prefer_hw (default : 0)
                 Same as 'prefer_hw' of LibavSMASHSource().
+                This is always `0` if `rap_verification=1` during the indexing step.
             + ff_loglevel (default : 0)
                 Same as 'ff_loglevel' of LibavSMASHSource().
             + cachedir (default : "")
@@ -196,3 +198,4 @@
                 Whether to verify if the determined RAP by demuxer/parser is valid RAP (the frame is decoded).
                 This is done in the indexing step.
                 To avoid the indexing speed penalty set this to false.
+                Switching between `1` and `0` requires manual deletion of the index file.

@@ -1083,10 +1083,12 @@ static lwindex_helper_t* get_index_helper(lwindex_indexer_t* indexer, AVStream* 
         indexer->helpers[stream->index] = helper;
         /* Set up the decoder. */
         AVCodecParameters* codecpar = stream->codecpar;
-        const char** preferred_decoder_names
-            = codecpar->codec_type == AVMEDIA_TYPE_VIDEO ? indexer->preferred_video_decoder_names : indexer->preferred_audio_decoder_names;
-        if (find_and_open_decoder(&helper->codec_ctx, codecpar, preferred_decoder_names, indexer->prefer_video_hw_decoder,
-                indexer->thread_count, -1.0, 0, indexer->hw_device_ctx)
+        const char** preferred_decoder_names = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
+            ? rap_verification ? NULL : indexer->preferred_video_decoder_names
+            : indexer->preferred_audio_decoder_names;
+        int indexing_prefer_hw = rap_verification ? 0 : *indexer->prefer_video_hw_decoder;
+        if (find_and_open_decoder(&helper->codec_ctx, codecpar, preferred_decoder_names, &indexing_prefer_hw, indexer->thread_count, -1.0,
+                0, indexer->hw_device_ctx)
             < 0)
             /* Failed to find and open an appropriate decoder, but do not abort indexing. */
             return helper;
@@ -1427,8 +1429,6 @@ static int get_picture_type(lwindex_helper_t* helper, AVCodecContext* ctx, AVPac
                 pkt->flags |= AV_PKT_FLAG_KEY;
             else
                 pkt->flags &= ~AV_PKT_FLAG_KEY;
-            avcodec_flush_buffers(ctx);
-            av_packet_unref(&filtered_pkt);
             pict_type_to_return = helper->picture->pict_type > 0 ? helper->picture->pict_type : parser_pict_type;
         } else
             pkt->flags &= ~AV_PKT_FLAG_KEY;

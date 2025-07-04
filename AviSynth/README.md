@@ -45,7 +45,7 @@
                     After the check, if the closest RAP is identical with the last RAP, do the same as the case M > N and M - N <= T.
                     Otherwise, the decoder tries to get f(M) by decoding frames from the frame which is the closest RAP sequentially.
             + dr (default : false)
-                Try direct rendering from the video decoder if 'dr' is set to true and 'format' is unspecfied.
+                Try direct rendering from the video decoder if 'dr' is set to true and 'format' is unspecified.
                 The output resolution will be aligned to be mod16-width and mod32-height by assuming two vertical 16x16 macroblock.
                 For H.264 streams, in addition, 2 lines could be added because of the optimized chroma MC.
             + fpsnum (default : 0)
@@ -309,8 +309,10 @@
                 Same as 'format' of LSMASHVideoSource().
             + decoder (default : "")
                 Same as 'decoder' of LSMASHVideoSource().
+                This is always unspecified (software decoder) if `rap_verification=1` during the indexing step.
             + prefer_hw (default : 0)
                 Same as 'prefer_hw' of LSMASHVideoSource().
+                This is always `0` if `rap_verification=1` during the indexing step.
             + ff_loglevel (default : 0)
                 Same as 'ff_loglevel' of LSMASHVideoSource().
             + cachedir (default: "")
@@ -322,7 +324,8 @@
             + rap_verification (default: true)
                 Whether to verify if the determined RAP by demuxer/parser is valid RAP (the frame is decoded).
                 This is done in the indexing step.
-                To avoid the indexing speed penalty set this to false.
+                To avoid the indexing speed penalty set this to `false`.
+                Switching between `true` and `false` requires manual deletion of the index file.
 
 ###### LWLibavAudioSource
 
