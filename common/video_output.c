@@ -154,6 +154,11 @@ int transfer_frame_data(AVFrame* dst, AVFrame* src)
 {
     if (src->hw_frames_ctx) {
         int ret = av_hwframe_transfer_data(dst, src, 0);
+        if (ret) {
+            av_frame_unref(src);
+            return ret;
+        }
+        ret = av_frame_copy_props(dst, src);
         av_frame_unref(src);
         return ret;
     } else {
