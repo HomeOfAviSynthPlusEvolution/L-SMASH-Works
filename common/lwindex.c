@@ -1083,12 +1083,13 @@ static lwindex_helper_t* get_index_helper(lwindex_indexer_t* indexer, AVStream* 
         indexer->helpers[stream->index] = helper;
         /* Set up the decoder. */
         AVCodecParameters* codecpar = stream->codecpar;
-        const char** preferred_decoder_names = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
-            ? rap_verification ? NULL : indexer->preferred_video_decoder_names
-            : indexer->preferred_audio_decoder_names;
-        int indexing_prefer_hw = rap_verification ? 0 : *indexer->prefer_video_hw_decoder;
-        if (find_and_open_decoder(&helper->codec_ctx, codecpar, preferred_decoder_names, &indexing_prefer_hw, indexer->thread_count, -1.0,
-                0, indexer->hw_device_ctx)
+        const int is_codec_type_video = codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+        const char** preferred_decoder_names = is_codec_type_video ? rap_verification ? NULL : indexer->preferred_video_decoder_names
+                                                                   : indexer->preferred_audio_decoder_names;
+        int indexing_prefer_hw = indexer->prefer_video_hw_decoder ? rap_verification ? 0 : *indexer->prefer_video_hw_decoder : -1;
+        int* indexing_prefer_hw_ptr = (indexing_prefer_hw == -1) ? NULL : &indexing_prefer_hw;
+        if (find_and_open_decoder(&helper->codec_ctx, codecpar, preferred_decoder_names, indexing_prefer_hw_ptr, indexer->thread_count,
+                -1.0, 0, indexer->hw_device_ctx)
             < 0)
             /* Failed to find and open an appropriate decoder, but do not abort indexing. */
             return helper;
@@ -1120,8 +1121,8 @@ static lwindex_helper_t* get_index_helper(lwindex_indexer_t* indexer, AVStream* 
                 /* This is needed to make mpeg124_video_vc1_genarate_pts() work properly for packed bitstream. */
                 helper->bsf = av_bsf_get_by_name("mpeg4_unpack_bframes");
         }
-        if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO || rap_verification) {
-            helper->decode = codecpar->codec_type == AVMEDIA_TYPE_AUDIO ? decode_audio_packet : decode_video_packet;
+        if (!is_codec_type_video || rap_verification) {
+            helper->decode = !is_codec_type_video ? decode_audio_packet : decode_video_packet;
             helper->picture = av_frame_alloc();
             if (!helper->picture)
                 return NULL;
