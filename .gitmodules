@@ -11,3 +11,4 @@
 [submodule "l-smash"]
 	path = l-smash
 	url = https://github.com/HomeOfAviSynthPlusEvolution/l-smash
+	branch = merged_changes
