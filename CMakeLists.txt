@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.25) # 3.25 to support bookworm
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
