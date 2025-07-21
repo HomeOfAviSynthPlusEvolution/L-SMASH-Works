@@ -676,7 +676,12 @@ lwindex_data_t* lwindex_parse(FILE* index, int include_video, int include_audio)
             if (data->stream_info[mapped_stream_index].codec_type == AV_STREAM_TYPE_VIDEO) {
                 if (include_video) {
                     int32_t key, pict_type, poc, repeat_pict, field_info, is_superframe;
-                    if (sscanf_unrolled_video_index(next_line, &key, &pict_type, &poc, &repeat_pict, &field_info, &is_superframe) != 6) {
+                    int parsed_count = sscanf_unrolled_video_index(next_line, &key, &pict_type, &poc, &repeat_pict, &field_info, &is_superframe);
+                    if (parsed_count == 5) {
+                        // entry from previous version where super is absent
+                        is_superframe = 0;
+                    }
+                    else if (parsed_count != 6) {
                         fprintf(stderr, "Failed to parse video index entry.\n");
                         goto fail_parsing;
                     }
