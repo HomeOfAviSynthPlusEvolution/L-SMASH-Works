@@ -341,7 +341,7 @@ void VS_CC vs_lwlibavsource_create(const VSMap* in, VSMap* out, void* user_data,
     set_option_string(&preferred_decoder_names, NULL, "decoder", in, vsapi);
     set_option_string(&cache_dir, NULL, "cachedir", in, vsapi);
     set_option_string(&ff_options, NULL, "ff_options", in, vsapi);
-    set_option_int64(&rap_verification, 1, "rap_verification", in, vsapi);
+    set_option_int64(&rap_verification, 0, "rap_verification", in, vsapi);
     set_preferred_decoder_names_on_buf(hp->preferred_decoder_names_buf, preferred_decoder_names);
     /* Set options. */
     lwlibav_option_t opt;
