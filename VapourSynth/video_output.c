@@ -637,10 +637,11 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
     vsapi->propSetData(props, "_PictType", &pict_type, 1, paReplace);
     /* BFF or TFF */
     int field_based = 0;
-    if (av_frame->flags & AV_FRAME_FLAG_INTERLACED)
-        field_based = av_frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST ? 2 : 1;
-    vsapi->propSetInt(props, "_FieldBased", field_based, paReplace);
-    if (top > -1) {
+    if( av_frame->interlaced_frame )
+        field_based = av_frame->top_field_first ? 2 : 1;
+    vsapi->propSetInt( props, "_FieldBased", field_based, paReplace );
+    if ( top > -1 )
+    {
         vsapi->propSetInt(props, "_EncodedFrameTop", top, paReplace);
         vsapi->propSetInt(props, "_EncodedFrameBottom", bottom, paReplace);
     }
@@ -666,10 +667,10 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
         }
     }
     if (stream && (!frame_has_primaries || !frame_has_luminance)) {
-        for (int i = 0; i < stream->codecpar->nb_coded_side_data; i++) {
-            if (stream->codecpar->coded_side_data[i].type == AV_PKT_DATA_MASTERING_DISPLAY_METADATA) {
-                const AVMasteringDisplayMetadata* mastering_display
-                    = (const AVMasteringDisplayMetadata*)stream->codecpar->coded_side_data[i].data;
+        for (int i = 0; i < stream->nb_side_data; i++) {
+            if (stream->side_data[i].type == AV_PKT_DATA_MASTERING_DISPLAY_METADATA) {
+                const AVMasteringDisplayMetadata *mastering_display
+                    = (const AVMasteringDisplayMetadata *)stream->side_data[i].data;
                 if (mastering_display->has_primaries && !frame_has_primaries) {
                     double display_primaries_x[3], display_primaries_y[3];
                     for (int i = 0; i < 3; i++) {
@@ -700,9 +701,9 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
         }
     }
     if (stream && !frame_has_light_level) {
-        for (int i = 0; i < stream->codecpar->nb_coded_side_data; i++) {
-            if (stream->codecpar->coded_side_data[i].type == AV_PKT_DATA_CONTENT_LIGHT_LEVEL) {
-                const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)stream->codecpar->coded_side_data[i].data;
+        for (int i = 0; i < stream->nb_side_data; i++) {
+            if (stream->side_data[i].type == AV_PKT_DATA_CONTENT_LIGHT_LEVEL) {
+                const AVContentLightMetadata *content_light = (const AVContentLightMetadata *)stream->side_data[i].data;
                 if (content_light->MaxCLL || content_light->MaxFALL) {
                     vsapi->propSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, paReplace);
                     vsapi->propSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, paReplace);
