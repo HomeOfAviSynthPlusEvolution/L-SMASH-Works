@@ -688,10 +688,10 @@ void avs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durat
         }
     }
     if (stream && (!frame_has_primaries || !frame_has_luminance)) {
-        for (int i = 0; i < stream->codecpar->nb_coded_side_data; ++i) {
-            if (stream->codecpar->coded_side_data[i].type == AV_PKT_DATA_MASTERING_DISPLAY_METADATA) {
+        for (int i = 0; i < stream->nb_side_data; ++i) {
+            if (stream->side_data[i].type == AV_PKT_DATA_MASTERING_DISPLAY_METADATA) {
                 const AVMasteringDisplayMetadata* mastering_display
-                    = (const AVMasteringDisplayMetadata*)stream->codecpar->coded_side_data[i].data;
+                    = (const AVMasteringDisplayMetadata*)stream->side_data[i].data;
                 if (mastering_display->has_primaries && !frame_has_primaries) {
                     double display_primaries_x[3], display_primaries_y[3];
                     for (int i = 0; i < 3; ++i) {
@@ -721,9 +721,9 @@ void avs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durat
         }
     }
     if (stream && !frame_has_light_level) {
-        for (int i = 0; i < stream->codecpar->nb_coded_side_data; ++i) {
-            if (stream->codecpar->coded_side_data[i].type == AV_PKT_DATA_CONTENT_LIGHT_LEVEL) {
-                const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)stream->codecpar->coded_side_data[i].data;
+        for (int i = 0; i < stream->nb_side_data; ++i) {
+            if (stream->side_data[i].type == AV_PKT_DATA_CONTENT_LIGHT_LEVEL) {
+                const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)stream->side_data[i].data;
                 if (content_light->MaxCLL || content_light->MaxFALL) {
                     env->propSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, 0);
                     env->propSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, 0);
