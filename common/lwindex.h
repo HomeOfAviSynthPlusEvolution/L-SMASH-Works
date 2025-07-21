@@ -78,6 +78,11 @@ int lwlibav_construct_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_h
 
 int lwlibav_import_av_index_entry(lwlibav_decode_handler_t* dhp);
 
+
+#ifndef AV_FRAME_FLAG_KEY
+#define AV_FRAME_FLAG_KEY LW_VFRAME_FLAG_KEY
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
