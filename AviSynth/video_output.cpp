@@ -659,8 +659,8 @@ void avs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durat
     env->propSetData(props, "_PictType", &pict_type, 1, 0);
     /* BFF or TFF */
     int field_based = 0;
-    if (av_frame->flags & AV_FRAME_FLAG_INTERLACED)
-        field_based = (av_frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST) ? 2 : 1;
+    if (av_frame->interlaced_frame)
+        field_based = av_frame->top_field_first ? 2 : 1;
     env->propSetInt(props, "_FieldBased", field_based, 0);
     if (top > -1) {
         env->propSetInt(props, "_EncodedFrameTop", top, 0);
