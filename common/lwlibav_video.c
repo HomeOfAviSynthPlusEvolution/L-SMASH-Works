@@ -657,7 +657,7 @@ static inline int copy_last_req_frame(lwlibav_video_decode_handler_t* vdhp, AVFr
 /* Answer whether field of picture in the frame buffer is the first or the second. */
 static inline int field_number_of_picture_in_frame(lwlibav_video_decode_handler_t* vdhp, AVFrame* frame, uint32_t output_picture_number)
 {
-    if (!!(frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST))
+    if (frame->top_field_first)
         return vdhp->frame_list[output_picture_number].field_info == LW_FIELD_INFO_TOP   ? 1
             : vdhp->frame_list[output_picture_number].field_info == LW_FIELD_INFO_BOTTOM ? 2
                                                                                          : 0;
@@ -959,14 +959,8 @@ static inline int copy_field(lw_log_handler_t* lhp, AVFrame* dst, AVFrame* src, 
         }
     }
     /* Treat this frame as interlaced. */
-    if (!!(src->flags & AV_FRAME_FLAG_INTERLACED))
-        dst->flags |= AV_FRAME_FLAG_INTERLACED;
-    else
-        dst->flags &= ~AV_FRAME_FLAG_INTERLACED;
-    if (!!top_field_first)
-        dst->flags |= AV_FRAME_FLAG_TOP_FIELD_FIRST;
-    else
-        dst->flags &= ~AV_FRAME_FLAG_TOP_FIELD_FIRST;
+    dst->interlaced_frame = src->interlaced_frame;
+    dst->top_field_first  = top_field_first;
     return 0;
 }
 
@@ -1000,10 +994,7 @@ static int lwlibav_repeat_control(lwlibav_video_decode_handler_t* vdhp, lwlibav_
             if (get_requested_picture(vdhp, vdhp->frame_buffer, first_field_number) < 0)
                 return -1;
             /* Treat this frame as interlaced. */
-            if (!!(vdhp->last_req_frame->flags & AV_FRAME_FLAG_INTERLACED))
-                vdhp->frame_buffer->flags |= AV_FRAME_FLAG_INTERLACED;
-            else
-                vdhp->frame_buffer->flags &= ~AV_FRAME_FLAG_INTERLACED;
+            vdhp->frame_buffer->interlaced_frame = vdhp->last_req_frame->interlaced_frame;
             return 0;
         }
     } else {
