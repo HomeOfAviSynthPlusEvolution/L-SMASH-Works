@@ -1714,8 +1714,8 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
         fprintf(index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1);
         audio_index_pos = ftell(index);
         fprintf(index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", adhp->stream_index);
-        fprintf(index, "<DefaultAudioStreamIndex>%+011d</DefaultAudioStreamIndex>\n", -1);
-        fprintf(index, "<FillAudioGaps>%d</FillAudioGaps>\n", aohp->fill_audio_gaps);
+        // fprintf(index, "<DefaultAudioStreamIndex>%+011d</DefaultAudioStreamIndex>\n", -1);
+        // fprintf(index, "<FillAudioGaps>%d</FillAudioGaps>\n", aohp->fill_audio_gaps);
     }
     AVPacket pkt = { 0 };
     int pix_fmt_investigated = 0;
@@ -1966,9 +1966,9 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
             /* Write a video packet info to the index file. */
             print_index(index,
                 "Index=%d,POS=%" PRId64 ",PTS=%" PRId64 ",DTS=%" PRId64 ",EDI=%d\n"
-                "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d,Super=%d\n",
+                "Key=%d,Pic=%d,POC=%d,Repeat=%d,Field=%d\n",
                 pkt.stream_index, pkt.pos, pkt.pts, pkt.dts, extradata_index, !!(pkt.flags & AV_PKT_FLAG_KEY), pict_type, poc, repeat_pict,
-                field_info, is_superframe);
+                field_info);
         } else if (adhp->stream_index != -2) {
             if (adhp->stream_index == -1 && (!opt->force_audio || (opt->force_audio && pkt.stream_index == opt->force_audio_index))) {
                 /* Update active audio stream. */
@@ -1976,7 +1976,7 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
                     int32_t current_pos = ftell(index);
                     fseek(index, audio_index_pos, SEEK_SET);
                     fprintf(index, "<ActiveAudioStreamIndex>%+011d</ActiveAudioStreamIndex>\n", pkt.stream_index);
-                    fprintf(index, "<DefaultAudioStreamIndex>%+011d</DefaultAudioStreamIndex>\n", pkt.stream_index);
+                    // fprintf(index, "<DefaultAudioStreamIndex>%+011d</DefaultAudioStreamIndex>\n", pkt.stream_index);
                     fseek(index, current_pos, SEEK_SET);
                 }
                 adhp->ctx = pkt_ctx;
@@ -2139,7 +2139,7 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
     }
     print_index(index, "</LibavReaderIndex>\n");
     const int consistent_field_and_repeat = consistent_field_order && consistent_repeat_pict;
-    print_index(index, "<VideoConsistentFieldRepeatPict>%d</VideoConsistentFieldRepeatPict>\n", consistent_field_and_repeat);
+    // print_index(index, "<VideoConsistentFieldRepeatPict>%d</VideoConsistentFieldRepeatPict>\n", consistent_field_and_repeat);
     /* Deallocate video frame info if no active video stream. */
     if (vdhp->stream_index < 0)
         lw_freep(&video_info);
