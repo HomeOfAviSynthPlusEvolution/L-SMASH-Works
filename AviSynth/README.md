@@ -321,7 +321,7 @@
                 Whether to print indexing progress to stderr.
             + ff_options (default: "")
                 Same as 'ff_options' of LSMASHVideoSource().
-            + rap_verification (default: true)
+            + rap_verification (default: false)
                 Whether to verify if the determined RAP by demuxer/parser is valid RAP (the frame is decoded).
                 This is done in the indexing step.
                 To avoid the indexing speed penalty set this to `false`.

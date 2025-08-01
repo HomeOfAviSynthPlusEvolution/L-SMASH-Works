@@ -194,8 +194,8 @@
                 Create *.lwi file under this directory with names encoding the full path to avoid collisions.
             + ff_options (default: "")
                 Same as 'ff_options' of LibavSMASHSource().
-            + rap_verification (default: true)
+            + rap_verification (default: 0)
                 Whether to verify if the determined RAP by demuxer/parser is valid RAP (the frame is decoded).
                 This is done in the indexing step.
-                To avoid the indexing speed penalty set this to false.
+                To avoid the indexing speed penalty set this to `0`.
                 Switching between `1` and `0` requires manual deletion of the index file.

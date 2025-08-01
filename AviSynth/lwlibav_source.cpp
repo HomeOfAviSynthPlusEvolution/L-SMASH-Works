@@ -441,7 +441,7 @@ AVSValue __cdecl CreateLWLibavVideoSource(AVSValue args, void* user_data, IScrip
     const char* cdir = args[16].AsString(nullptr);
     const bool progress = args[17].AsBool(true);
     const char* ff_options = args[18].AsString(nullptr);
-    const bool rap_verification = args[19].AsBool(true);
+    const bool rap_verification = args[19].AsBool(false);
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
     opt.file_path = source;
