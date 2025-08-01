@@ -17,11 +17,11 @@ jobs:
         fetch-depth: 1
         submodules: true
 
-    - name: Install macos automake, cmake
+    - name: Install macos cmake, zlib
       if: ${{ matrix.os == 'macos-latest' }}
       run: |
         brew update
-        brew install automake cmake zlib
+        brew install cmake zlib
 
     - name: Install ubuntu cmake
       if: ${{ matrix.os == 'ubuntu-latest' }}
