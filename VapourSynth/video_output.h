@@ -34,17 +34,17 @@ enum {
 #define component_reorder_get_order(order) ((order) & ~component_reorder_bigendian)
 #define component_reorder_is_bigendian(order) (!!((order) & component_reorder_bigendian))
 
-typedef void func_make_black_background(VSFrameRef* vs_frame, const VSAPI* vsapi);
+typedef void func_make_black_background(VSFrame* vs_frame, const VSAPI* vsapi);
 
 typedef void func_make_frame(lw_video_scaler_handler_t* vshp, AVFrame* av_picture, const component_reorder_t* component_reorder,
-    VSFrameRef* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi);
+    VSFrame* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi);
 
 typedef struct {
     int variable_info;
     int direct_rendering;
     const component_reorder_t* component_reorder[2];
-    VSPresetFormat vs_output_pixel_format;
-    VSFrameRef* background_frame[2];
+    VSPresetVideoFormat vs_output_pixel_format;
+    VSFrame* background_frame[2];
     func_make_black_background* make_black_background[2];
     func_make_frame* make_frame[2];
     VSFrameContext* frame_ctx;
@@ -52,15 +52,15 @@ typedef struct {
     const VSAPI* vsapi;
 } vs_video_output_handler_t;
 
-VSPresetFormat get_vs_output_pixel_format(const char* format_name);
+VSPresetVideoFormat get_vs_output_pixel_format(const char* format_name);
 
-VSFrameRef* make_frame(lw_video_output_handler_t* vohp, AVFrame* av_frame, int output_index);
+VSFrame* make_frame(lw_video_output_handler_t* vohp, AVFrame* av_frame, int output_index);
 
 int vs_setup_video_rendering(lw_video_output_handler_t* lw_vohp, AVCodecContext* ctx, VSVideoInfo* vi, VSMap* out, int width, int height);
 
 vs_video_output_handler_t* vs_allocate_video_output_handler(lw_video_output_handler_t* vohp);
 
-void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t duration_num, int64_t duration_den, VSFrameRef* vs_frame, int top,
+void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t duration_num, int64_t duration_den, VSFrame* vs_frame, int top,
     int bottom, const VSAPI* vsapi, int n);
 
 #endif // !VS_VIDEO_OUTPUT_H

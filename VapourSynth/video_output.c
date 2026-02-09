@@ -27,7 +27,7 @@
 #include <strings.h>
 #endif
 
-#include <VSHelper.h>
+#include <VSHelper4.h>
 #include <libavutil/mastering_display_metadata.h>
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
@@ -40,15 +40,15 @@ typedef struct {
     int linesize[4];
 } vs_picture_t;
 
-static void make_black_background_planar_yuv8(VSFrameRef* vs_frame, const VSAPI* vsapi)
+static void make_black_background_planar_yuv8(VSFrame* vs_frame, const VSAPI* vsapi)
 {
     for (int i = 0; i < 3; i++)
         memset(vsapi->getWritePtr(vs_frame, i), i ? 0x80 : 0x00, vsapi->getStride(vs_frame, i) * vsapi->getFrameHeight(vs_frame, i));
 }
 
-static void make_black_background_planar_yuv16(VSFrameRef* vs_frame, const VSAPI* vsapi)
+static void make_black_background_planar_yuv16(VSFrame* vs_frame, const VSAPI* vsapi)
 {
-    int shift = vsapi->getFrameFormat(vs_frame)->bitsPerSample - 8;
+    int shift = vsapi->getVideoFrameFormat(vs_frame)->bitsPerSample - 8;
     for (int i = 0; i < 3; i++) {
         int v = i ? 0x00000080 << shift : 0x00000000;
         uint8_t* data = vsapi->getWritePtr(vs_frame, i);
@@ -62,19 +62,19 @@ static void make_black_background_planar_yuv16(VSFrameRef* vs_frame, const VSAPI
     }
 }
 
-static void make_black_background_planar_gray(VSFrameRef* vs_frame, const VSAPI* vsapi)
+static void make_black_background_planar_gray(VSFrame* vs_frame, const VSAPI* vsapi)
 {
     memset(vsapi->getWritePtr(vs_frame, 0), 0x00, vsapi->getStride(vs_frame, 0) * vsapi->getFrameHeight(vs_frame, 0));
 }
 
-static void make_black_background_planar_rgb(VSFrameRef* vs_frame, const VSAPI* vsapi)
+static void make_black_background_planar_rgb(VSFrame* vs_frame, const VSAPI* vsapi)
 {
     for (int i = 0; i < 3; i++)
         memset(vsapi->getWritePtr(vs_frame, i), 0x00, vsapi->getStride(vs_frame, i) * vsapi->getFrameHeight(vs_frame, i));
 }
 
 static void make_frame_planar_yuv(lw_video_scaler_handler_t* vshp, AVFrame* av_picture, const component_reorder_t* component_reorder,
-    VSFrameRef* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
+    VSFrame* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
 {
     vs_picture_t vs_picture = { /* data */
         { vsapi->getWritePtr(vs_frame, 0), vsapi->getWritePtr(vs_frame, 1), vsapi->getWritePtr(vs_frame, 2), NULL },
@@ -109,7 +109,7 @@ static void make_frame_planar_yuv(lw_video_scaler_handler_t* vshp, AVFrame* av_p
 }
 
 static void make_frame_planar_gray(lw_video_scaler_handler_t* vshp, AVFrame* av_picture, const component_reorder_t* component_reorder,
-    VSFrameRef* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
+    VSFrame* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
 {
     vs_picture_t vs_picture = { /* data */
         { vsapi->getWritePtr(vs_frame, 0), NULL, NULL, NULL },
@@ -121,7 +121,7 @@ static void make_frame_planar_gray(lw_video_scaler_handler_t* vshp, AVFrame* av_
 }
 
 static void make_frame_planar_rgb(lw_video_scaler_handler_t* vshp, AVFrame* av_picture, const component_reorder_t* component_reorder,
-    VSFrameRef* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
+    VSFrame* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
 {
     vs_picture_t vs_picture = { /* data */
         { vsapi->getWritePtr(vs_frame, component_reorder[0]), vsapi->getWritePtr(vs_frame, component_reorder[1]),
@@ -136,18 +136,18 @@ static void make_frame_planar_rgb(lw_video_scaler_handler_t* vshp, AVFrame* av_p
 }
 
 static void make_frame_planar_alpha(lw_video_scaler_handler_t* vshp, AVFrame* av_picture, const component_reorder_t* component_reorder,
-    VSFrameRef* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
+    VSFrame* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
 {
-    vs_bitblt(vsapi->getWritePtr(vs_frame, 0), vsapi->getStride(vs_frame, 0), av_picture->data[3], av_picture->linesize[3],
-        av_picture->width * vsapi->getFrameFormat(vs_frame)->bytesPerSample, av_picture->height);
+    vsh_bitblt(vsapi->getWritePtr(vs_frame, 0), vsapi->getStride(vs_frame, 0), av_picture->data[3], av_picture->linesize[3],
+        av_picture->width * vsapi->getVideoFrameFormat(vs_frame)->bytesPerSample, av_picture->height);
 }
 
 static void make_frame_planar_alpha8(lw_video_scaler_handler_t* vshp, AVFrame* av_picture, const component_reorder_t* component_reorder,
-    VSFrameRef* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
+    VSFrame* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
 {
     uint8_t* vs_frame_data = vsapi->getWritePtr(vs_frame, 0);
-    int vs_frame_linesize = vsapi->getStride(vs_frame, 0);
-    int vs_pixel_offset = 0;
+    ptrdiff_t vs_frame_linesize = vsapi->getStride(vs_frame, 0);
+    ptrdiff_t vs_pixel_offset = 0;
     int av_pixel_offset = 0;
     for (int i = 0; i < av_picture->height; i++) {
         uint8_t* av_pixel = av_picture->data[0] + av_pixel_offset + component_reorder[3];
@@ -162,11 +162,11 @@ static void make_frame_planar_alpha8(lw_video_scaler_handler_t* vshp, AVFrame* a
 }
 
 static void make_frame_planar_alpha16(lw_video_scaler_handler_t* vshp, AVFrame* av_picture, const component_reorder_t* component_reorder,
-    VSFrameRef* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
+    VSFrame* vs_frame, VSFrameContext* frame_ctx, const VSAPI* vsapi)
 {
     uint8_t* vs_frame_data = vsapi->getWritePtr(vs_frame, 0);
-    int vs_frame_linesize = vsapi->getStride(vs_frame, 0);
-    int vs_pixel_offset = 0;
+    ptrdiff_t vs_frame_linesize = vsapi->getStride(vs_frame, 0);
+    ptrdiff_t vs_pixel_offset = 0;
     int av_pixel_offset = 0;
     const int be = component_reorder_is_bigendian(component_reorder[3]);
     for (int i = 0; i < av_picture->height; i++) {
@@ -181,13 +181,13 @@ static void make_frame_planar_alpha16(lw_video_scaler_handler_t* vshp, AVFrame* 
     }
 }
 
-VSPresetFormat get_vs_output_pixel_format(const char* format_name)
+VSPresetVideoFormat get_vs_output_pixel_format(const char* format_name)
 {
     if (!format_name)
         return pfNone;
     static const struct {
         const char* format_name;
-        VSPresetFormat vs_output_pixel_format;
+        VSPresetVideoFormat vs_output_pixel_format;
     } format_table[] = { { "YUV420P8", pfYUV420P8 }, { "YUV422P8", pfYUV422P8 }, { "YUV444P8", pfYUV444P8 }, { "YUV410P8", pfYUV410P8 },
         { "YUV411P8", pfYUV411P8 }, { "YUV440P8", pfYUV440P8 }, { "YUV420P9", pfYUV420P9 }, { "YUV422P9", pfYUV422P9 },
         { "YUV444P9", pfYUV444P9 }, { "YUV420P10", pfYUV420P10 }, { "YUV422P10", pfYUV422P10 }, { "YUV444P10", pfYUV444P10 },
@@ -201,10 +201,10 @@ VSPresetFormat get_vs_output_pixel_format(const char* format_name)
     return pfNone;
 }
 
-static enum AVPixelFormat vs_to_av_output_pixel_format(VSPresetFormat vs_output_pixel_format)
+static enum AVPixelFormat vs_to_av_output_pixel_format(VSPresetVideoFormat vs_output_pixel_format)
 {
     static const struct {
-        VSPresetFormat vs_output_pixel_format;
+        VSPresetVideoFormat vs_output_pixel_format;
         enum AVPixelFormat av_output_pixel_format;
     } format_table[] = { { pfYUV420P8, AV_PIX_FMT_YUV420P }, { pfYUV422P8, AV_PIX_FMT_YUV422P }, { pfYUV444P8, AV_PIX_FMT_YUV444P },
         { pfYUV410P8, AV_PIX_FMT_YUV410P }, { pfYUV411P8, AV_PIX_FMT_YUV411P }, { pfYUV440P8, AV_PIX_FMT_YUV440P },
@@ -266,7 +266,7 @@ static const component_reorder_t* get_component_reorder(enum AVPixelFormat av_ou
 static inline int set_frame_maker(vs_video_output_handler_t* vs_vohp, int output_index)
 {
     static const struct {
-        VSPresetFormat vs_output_pixel_format;
+        VSPresetVideoFormat vs_output_pixel_format;
         int output_index;
         func_make_black_background* func_make_black_background;
         func_make_frame* func_make_frame;
@@ -323,7 +323,7 @@ static int determine_colorspace_conversion(
     avoid_yuv_scale_conversion(&input_pixel_format);
     static const struct {
         enum AVPixelFormat av_input_pixel_format;
-        VSPresetFormat vs_output_pixel_format;
+        VSPresetVideoFormat vs_output_pixel_format;
         int fmt_conv_required;
     } conversion_table[] = { { AV_PIX_FMT_YUV420P, pfYUV420P8, 0 }, { AV_PIX_FMT_NV12, pfYUV420P8, 1 }, { AV_PIX_FMT_NV21, pfYUV420P8, 1 },
         { AV_PIX_FMT_YUV422P, pfYUV422P8, 0 }, { AV_PIX_FMT_YUYV422, pfYUV422P8, 1 }, { AV_PIX_FMT_UYVY422, pfYUV422P8, 1 },
@@ -388,18 +388,19 @@ static int determine_colorspace_conversion(
 }
 
 typedef struct {
-    VSFrameRef* vs_frame_buffer;
+    VSFrame* vs_frame_buffer;
     const VSAPI* vsapi;
 } vs_video_buffer_handler_t;
 
-static VSFrameRef* new_output_video_frame(vs_video_output_handler_t* vs_vohp, const AVFrame* av_frame, int output_index,
+static VSFrame* new_output_video_frame(vs_video_output_handler_t* vs_vohp, const AVFrame* av_frame, int output_index,
     enum AVPixelFormat* output_pixel_format, int input_pix_fmt_change, VSFrameContext* frame_ctx, VSCore* core, const VSAPI* vsapi)
 {
     if (vs_vohp->variable_info) {
         if (!av_frame->opaque && determine_colorspace_conversion(vs_vohp, output_index, av_frame->format, output_pixel_format) < 0)
             goto fail;
-        const VSFormat* vs_format = vsapi->getFormatPreset(vs_vohp->vs_output_pixel_format, core);
-        return vsapi->newVideoFrame(vs_format, av_frame->width, av_frame->height, NULL, core);
+        VSVideoFormat vs_format;
+        vsapi->getVideoFormatByID(&vs_format, vs_vohp->vs_output_pixel_format, core);
+        return vsapi->newVideoFrame(&vs_format, av_frame->width, av_frame->height, NULL, core);
     } else {
         if (!av_frame->opaque && input_pix_fmt_change
             && determine_colorspace_conversion(vs_vohp, output_index, av_frame->format, output_pixel_format) < 0)
@@ -412,7 +413,7 @@ fail:
     return NULL;
 }
 
-VSFrameRef* make_frame(lw_video_output_handler_t* vohp, AVFrame* av_frame, int output_index)
+VSFrame* make_frame(lw_video_output_handler_t* vohp, AVFrame* av_frame, int output_index)
 {
     vs_video_output_handler_t* vs_vohp = (vs_video_output_handler_t*)vohp->private_handler;
     lw_video_scaler_handler_t* vshp = &vohp->scaler;
@@ -422,11 +423,11 @@ VSFrameRef* make_frame(lw_video_output_handler_t* vohp, AVFrame* av_frame, int o
     if (av_frame->opaque) {
         /* Render from the decoder directly. */
         vs_video_buffer_handler_t* vs_vbhp = (vs_video_buffer_handler_t*)av_frame->opaque;
-        return vs_vbhp ? (VSFrameRef*)vs_vbhp->vsapi->cloneFrameRef(vs_vbhp->vs_frame_buffer) : NULL;
+        return vs_vbhp ? vsapi->copyFrame(vs_vbhp->vs_frame_buffer, core) : NULL;
     }
     /* Make video frame.
      * Convert pixel format if needed. We don't change the presentation resolution. */
-    VSFrameRef* vs_frame = new_output_video_frame(vs_vohp, av_frame, output_index, &vshp->output_pixel_format,
+    VSFrame* vs_frame = new_output_video_frame(vs_vohp, av_frame, output_index, &vshp->output_pixel_format,
         !!(vshp->frame_prop_change_flags & LW_FRAME_PROP_CHANGE_FLAG_PIXEL_FORMAT), frame_ctx, core, vsapi);
     if (!vs_vohp->make_frame[output_index])
         return NULL;
@@ -479,7 +480,7 @@ static inline int vs_create_plane_buffer(
         av_buffer_unref(&vs_buffer_handler);
         return -1;
     }
-    av_frame->linesize[av_plane] = vs_vbhp->vsapi->getStride(vs_vbhp->vs_frame_buffer, vs_plane);
+    av_frame->linesize[av_plane] = (int)vs_vbhp->vsapi->getStride(vs_vbhp->vs_frame_buffer, vs_plane);
     int vs_plane_size = vs_vbhp->vsapi->getFrameHeight(vs_vbhp->vs_frame_buffer, vs_plane) * av_frame->linesize[av_plane];
     av_frame->buf[av_plane] = av_buffer_create(
         vs_vbhp->vsapi->getWritePtr(vs_vbhp->vs_frame_buffer, vs_plane), vs_plane_size, vs_video_unref_buffer_handler, vs_buffer_ref, 0);
@@ -507,7 +508,7 @@ static int vs_video_get_buffer(AVCodecContext* ctx, AVFrame* av_frame, int flags
     }
     av_frame->opaque = vs_vbhp;
     avcodec_align_dimensions2(ctx, &av_frame->width, &av_frame->height, av_frame->linesize);
-    VSFrameRef* vs_frame_buffer = new_output_video_frame(vs_vohp, av_frame, 0, NULL, 0, vs_vohp->frame_ctx, vs_vohp->core, vs_vohp->vsapi);
+    VSFrame* vs_frame_buffer = new_output_video_frame(vs_vohp, av_frame, 0, NULL, 0, vs_vohp->frame_ctx, vs_vohp->core, vs_vohp->vsapi);
     if (!vs_frame_buffer) {
         free(vs_vbhp);
         av_frame_unref(av_frame);
@@ -560,17 +561,14 @@ int vs_setup_video_rendering(lw_video_output_handler_t* lw_vohp, AVCodecContext*
     int (*dr_get_buffer)(struct AVCodecContext*, AVFrame*, int) = vs_vohp->direct_rendering ? vs_video_get_buffer : NULL;
     setup_video_rendering(lw_vohp, SWS_FAST_BILINEAR, width, height, output_pixel_format, ctx, dr_get_buffer);
     if (vs_vohp->variable_info) {
-        vi->format = NULL;
+        memset(&vi->format, 0, sizeof(vi->format));
         vi->width = 0;
         vi->height = 0;
-        /* Unused */
-        // lw_vohp->output_width  = 0;
-        // lw_vohp->output_height = 0;
     } else {
-        vi->format = vsapi->getFormatPreset(vs_vohp->vs_output_pixel_format, vs_vohp->core);
+        vsapi->getVideoFormatByID(&vi->format, vs_vohp->vs_output_pixel_format, vs_vohp->core);
         vi->width = lw_vohp->output_width;
         vi->height = lw_vohp->output_height;
-        vs_vohp->background_frame[0] = vsapi->newVideoFrame(vi->format, vi->width, vi->height, NULL, vs_vohp->core);
+        vs_vohp->background_frame[0] = vsapi->newVideoFrame(&vi->format, vi->width, vi->height, NULL, vs_vohp->core);
         if (!vs_vohp->background_frame[0]) {
             set_error_on_init(out, vsapi, "lsmas: failed to allocate memory for the background black frame data.");
             return -1;
@@ -601,49 +599,49 @@ vs_video_output_handler_t* vs_allocate_video_output_handler(lw_video_output_hand
     return vs_vohp;
 }
 
-void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t duration_num, int64_t duration_den, VSFrameRef* vs_frame, int top,
+void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t duration_num, int64_t duration_den, VSFrame* vs_frame, int top,
     int bottom, const VSAPI* vsapi, int n)
 {
-    VSMap* props = vsapi->getFramePropsRW(vs_frame);
+    VSMap* props = vsapi->getFramePropertiesRW(vs_frame);
     /* Sample aspect ratio */
     const AVRational sar = av_guess_sample_aspect_ratio(NULL, stream, av_frame);
-    vsapi->propSetInt(props, "_SARNum", sar.num, paReplace);
-    vsapi->propSetInt(props, "_SARDen", sar.den, paReplace);
+    vsapi->mapSetInt(props, "_SARNum", sar.num, maReplace);
+    vsapi->mapSetInt(props, "_SARDen", sar.den, maReplace);
     /* Sample duration */
-    vsapi->propSetInt(props, "_DurationNum", duration_num, paReplace);
-    vsapi->propSetInt(props, "_DurationDen", duration_den, paReplace);
+    vsapi->mapSetInt(props, "_DurationNum", duration_num, maReplace);
+    vsapi->mapSetInt(props, "_DurationDen", duration_den, maReplace);
     if (stream)
-        vsapi->propSetFloat(props, "_AbsoluteTime",
+        vsapi->mapSetFloat(props, "_AbsoluteTime",
             ((stream->start_time != AV_NOPTS_VALUE) ? ((double)(stream->start_time) / stream->time_base.den * stream->time_base.num) : 0.0)
                 + (double)(stream->time_base.num) * av_frame->pts / stream->time_base.den,
-            paReplace);
+            maReplace);
     else
-        vsapi->propSetFloat(props, "_AbsoluteTime", (double)(n * duration_num) / duration_den, paReplace);
+        vsapi->mapSetFloat(props, "_AbsoluteTime", (double)(n * duration_num) / duration_den, maReplace);
     /* Color format
      * The decoded color format may not match with the output. Set proper properties when
      * no YUV->RGB conversion is there. */
-    const VSFormat* vs_format = vsapi->getFrameFormat(vs_frame);
-    if (vs_format->colorFamily != cmRGB) {
+    const VSVideoFormat* vs_format = vsapi->getVideoFrameFormat(vs_frame);
+    if (vs_format->colorFamily != cfRGB) {
         if (av_frame->color_range != AVCOL_RANGE_UNSPECIFIED)
-            vsapi->propSetInt(props, "_ColorRange", av_frame->color_range == AVCOL_RANGE_MPEG, paReplace);
-        vsapi->propSetInt(props, "_Primaries", av_frame->color_primaries, paReplace);
-        vsapi->propSetInt(props, "_Transfer", av_frame->color_trc, paReplace);
-        vsapi->propSetInt(props, "_Matrix", av_frame->colorspace, paReplace);
+            vsapi->mapSetInt(props, "_ColorRange", av_frame->color_range == AVCOL_RANGE_MPEG, maReplace);
+        vsapi->mapSetInt(props, "_Primaries", av_frame->color_primaries, maReplace);
+        vsapi->mapSetInt(props, "_Transfer", av_frame->color_trc, maReplace);
+        vsapi->mapSetInt(props, "_Matrix", av_frame->colorspace, maReplace);
         if (av_frame->chroma_location > 0)
-            vsapi->propSetInt(props, "_ChromaLocation", av_frame->chroma_location - 1, paReplace);
+            vsapi->mapSetInt(props, "_ChromaLocation", av_frame->chroma_location - 1, maReplace);
     }
     /* Picture type */
     char pict_type
         = (av_frame->pict_type == 80 || av_frame->pict_type == 73) ? av_frame->pict_type : av_get_picture_type_char(av_frame->pict_type);
-    vsapi->propSetData(props, "_PictType", &pict_type, 1, paReplace);
+    vsapi->mapSetData(props, "_PictType", &pict_type, 1, dtUtf8, maReplace);
     /* BFF or TFF */
     int field_based = 0;
     if (av_frame->flags & AV_FRAME_FLAG_INTERLACED)
         field_based = av_frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST ? 2 : 1;
-    vsapi->propSetInt(props, "_FieldBased", field_based, paReplace);
+    vsapi->mapSetInt(props, "_FieldBased", field_based, maReplace);
     if (top > -1) {
-        vsapi->propSetInt(props, "_EncodedFrameTop", top, paReplace);
-        vsapi->propSetInt(props, "_EncodedFrameBottom", bottom, paReplace);
+        vsapi->mapSetInt(props, "_EncodedFrameTop", top, maReplace);
+        vsapi->mapSetInt(props, "_EncodedFrameBottom", bottom, maReplace);
     }
     /* Mastering display color volume */
     int frame_has_primaries = 0, frame_has_luminance = 0;
@@ -656,14 +654,14 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
                 display_primaries_x[i] = av_q2d(mastering_display->display_primaries[i][0]);
                 display_primaries_y[i] = av_q2d(mastering_display->display_primaries[i][1]);
             }
-            vsapi->propSetFloatArray(props, "MasteringDisplayPrimariesX", display_primaries_x, 3);
-            vsapi->propSetFloatArray(props, "MasteringDisplayPrimariesY", display_primaries_y, 3);
-            vsapi->propSetFloat(props, "MasteringDisplayWhitePointX", av_q2d(mastering_display->white_point[0]), paReplace);
-            vsapi->propSetFloat(props, "MasteringDisplayWhitePointY", av_q2d(mastering_display->white_point[1]), paReplace);
+            vsapi->mapSetFloatArray(props, "MasteringDisplayPrimariesX", display_primaries_x, 3);
+            vsapi->mapSetFloatArray(props, "MasteringDisplayPrimariesY", display_primaries_y, 3);
+            vsapi->mapSetFloat(props, "MasteringDisplayWhitePointX", av_q2d(mastering_display->white_point[0]), maReplace);
+            vsapi->mapSetFloat(props, "MasteringDisplayWhitePointY", av_q2d(mastering_display->white_point[1]), maReplace);
         }
         if ((frame_has_luminance = mastering_display->has_luminance)) {
-            vsapi->propSetFloat(props, "MasteringDisplayMinLuminance", av_q2d(mastering_display->min_luminance), paReplace);
-            vsapi->propSetFloat(props, "MasteringDisplayMaxLuminance", av_q2d(mastering_display->max_luminance), paReplace);
+            vsapi->mapSetFloat(props, "MasteringDisplayMinLuminance", av_q2d(mastering_display->min_luminance), maReplace);
+            vsapi->mapSetFloat(props, "MasteringDisplayMaxLuminance", av_q2d(mastering_display->max_luminance), maReplace);
         }
     }
     if (stream && (!frame_has_primaries || !frame_has_luminance)) {
@@ -677,14 +675,14 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
                         display_primaries_x[i] = av_q2d(mastering_display->display_primaries[i][0]);
                         display_primaries_y[i] = av_q2d(mastering_display->display_primaries[i][1]);
                     }
-                    vsapi->propSetFloatArray(props, "MasteringDisplayPrimariesX", display_primaries_x, 3);
-                    vsapi->propSetFloatArray(props, "MasteringDisplayPrimariesY", display_primaries_y, 3);
-                    vsapi->propSetFloat(props, "MasteringDisplayWhitePointX", av_q2d(mastering_display->white_point[0]), paReplace);
-                    vsapi->propSetFloat(props, "MasteringDisplayWhitePointY", av_q2d(mastering_display->white_point[1]), paReplace);
+                    vsapi->mapSetFloatArray(props, "MasteringDisplayPrimariesX", display_primaries_x, 3);
+                    vsapi->mapSetFloatArray(props, "MasteringDisplayPrimariesY", display_primaries_y, 3);
+                    vsapi->mapSetFloat(props, "MasteringDisplayWhitePointX", av_q2d(mastering_display->white_point[0]), maReplace);
+                    vsapi->mapSetFloat(props, "MasteringDisplayWhitePointY", av_q2d(mastering_display->white_point[1]), maReplace);
                 }
                 if (mastering_display->has_luminance && !frame_has_luminance) {
-                    vsapi->propSetFloat(props, "MasteringDisplayMinLuminance", av_q2d(mastering_display->min_luminance), paReplace);
-                    vsapi->propSetFloat(props, "MasteringDisplayMaxLuminance", av_q2d(mastering_display->max_luminance), paReplace);
+                    vsapi->mapSetFloat(props, "MasteringDisplayMinLuminance", av_q2d(mastering_display->min_luminance), maReplace);
+                    vsapi->mapSetFloat(props, "MasteringDisplayMaxLuminance", av_q2d(mastering_display->max_luminance), maReplace);
                 }
                 break;
             }
@@ -696,8 +694,8 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
     if (content_light_side_data) {
         const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)content_light_side_data->data;
         if ((frame_has_light_level = content_light->MaxCLL || content_light->MaxFALL)) {
-            vsapi->propSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, paReplace);
-            vsapi->propSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, paReplace);
+            vsapi->mapSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, maReplace);
+            vsapi->mapSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, maReplace);
         }
     }
     if (stream && !frame_has_light_level) {
@@ -705,8 +703,8 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
             if (stream->codecpar->coded_side_data[i].type == AV_PKT_DATA_CONTENT_LIGHT_LEVEL) {
                 const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)stream->codecpar->coded_side_data[i].data;
                 if (content_light->MaxCLL || content_light->MaxFALL) {
-                    vsapi->propSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, paReplace);
-                    vsapi->propSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, paReplace);
+                    vsapi->mapSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, maReplace);
+                    vsapi->mapSetInt(props, "ContentLightLevelAverage", content_light->MaxFALL, maReplace);
                 }
                 break;
             }
@@ -717,7 +715,7 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
     // Dobly RPU
     const AVFrameSideData* rpu_side_data = av_frame_get_side_data(av_frame, AV_FRAME_DATA_DOVI_RPU_BUFFER);
     if (rpu_side_data && rpu_side_data->size > 0) {
-        vsapi->propSetData(props, "DolbyVisionRPU", (const char*)rpu_side_data->data, rpu_side_data->size, paReplace);
+        vsapi->mapSetData(props, "DolbyVisionRPU", (const char*)rpu_side_data->data, rpu_side_data->size, dtBinary, maReplace);
     }
 #endif
 }

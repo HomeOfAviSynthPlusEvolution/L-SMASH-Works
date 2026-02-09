@@ -24,7 +24,7 @@
 #ifndef VS_LSMASHSOURCE_H
 #define VS_LSMASHSOURCE_H
 
-#include <VapourSynth.h>
+#include <VapourSynth4.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -45,7 +45,7 @@ void set_error_on_init(VSMap* out, const VSAPI* vsapi, const char* format, ...);
 static inline void set_option_int64(int64_t* opt, int64_t default_value, const char* arg, const VSMap* in, const VSAPI* vsapi)
 {
     int e;
-    *opt = vsapi->propGetInt(in, arg, 0, &e);
+    *opt = vsapi->mapGetInt(in, arg, 0, &e);
     if (e)
         *opt = default_value;
 }
@@ -53,7 +53,7 @@ static inline void set_option_int64(int64_t* opt, int64_t default_value, const c
 static inline void set_option_string(const char** opt, const char* default_value, const char* arg, const VSMap* in, const VSAPI* vsapi)
 {
     int e;
-    *opt = vsapi->propGetData(in, arg, 0, &e);
+    *opt = vsapi->mapGetData(in, arg, 0, &e);
     if (e)
         *opt = default_value;
 }

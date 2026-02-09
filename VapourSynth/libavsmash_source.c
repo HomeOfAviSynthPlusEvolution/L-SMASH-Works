@@ -37,7 +37,7 @@
 #include "../common/libavsmash_video.h"
 
 typedef struct {
-    VSVideoInfo vi[2];
+    VSVideoInfo vi;
     libavsmash_video_decode_handler_t* vdhp;
     libavsmash_video_output_handler_t* vohp;
     lsmash_file_parameters_t file_param;
@@ -81,13 +81,6 @@ static lsmas_handler_t* alloc_handler(void)
     return hp;
 }
 
-static void VS_CC vs_filter_init(VSMap* in, VSMap* out, void** instance_data, VSNode* node, VSCore* core, const VSAPI* vsapi)
-{
-    lsmas_handler_t* hp = (lsmas_handler_t*)*instance_data;
-    AVCodecContext* ctx = libavsmash_video_get_codec_context(hp->vdhp);
-    vsapi->setVideoInfo(hp->vi, (av_pix_fmt_desc_get(ctx->pix_fmt)->flags & AV_PIX_FMT_FLAG_ALPHA) ? 2 : 1, node);
-}
-
 static int get_composition_duration(
     libavsmash_video_decode_handler_t* vdhp, uint32_t composition_sample_number, uint32_t last_sample_number)
 {
@@ -124,7 +117,7 @@ static void get_sample_duration(
     }
 }
 
-static void set_frame_properties(libavsmash_video_decode_handler_t* vdhp, VSVideoInfo* vi, AVFrame* av_frame, VSFrameRef* vs_frame,
+static void set_frame_properties(libavsmash_video_decode_handler_t* vdhp, VSVideoInfo* vi, AVFrame* av_frame, VSFrame* vs_frame,
     uint32_t sample_number, int top, int bottom, const VSAPI* vsapi, int n)
 {
     int64_t duration_num;
@@ -137,7 +130,7 @@ static int prepare_video_decoding(lsmas_handler_t* hp, int threads, VSMap* out, 
 {
     libavsmash_video_decode_handler_t* vdhp = hp->vdhp;
     libavsmash_video_output_handler_t* vohp = hp->vohp;
-    VSVideoInfo* vi = &hp->vi[0];
+    VSVideoInfo* vi = &hp->vi;
     /* Initialize the video decoder configuration. */
     if (libavsmash_video_initialize_decoder_configuration(vdhp, hp->format_ctx, threads) < 0) {
         set_error_on_init(out, vsapi, "lsmas: failed to initialize the decoder configuration.");
@@ -171,13 +164,13 @@ static int prepare_video_decoding(lsmas_handler_t* hp, int threads, VSMap* out, 
         return -1;
     }
     /* Setup filter specific info. */
-    hp->vi[0].fpsNum = fps_num;
-    hp->vi[0].fpsDen = fps_den;
-    hp->vi[0].numFrames = vohp->frame_count;
-    if ((av_pix_fmt_desc_get(ctx->pix_fmt)->flags & AV_PIX_FMT_FLAG_ALPHA) && hp->vi[0].format) {
-        hp->vi[1] = hp->vi[0];
-        hp->vi[1].format = vsapi->registerFormat(cmGray, hp->vi[0].format->sampleType, hp->vi[0].format->bitsPerSample, 0, 0, core);
-        vs_vohp->background_frame[1] = vsapi->newVideoFrame(hp->vi[1].format, hp->vi[1].width, hp->vi[1].height, NULL, core);
+    hp->vi.fpsNum = fps_num;
+    hp->vi.fpsDen = fps_den;
+    hp->vi.numFrames = vohp->frame_count;
+    if ((av_pix_fmt_desc_get(ctx->pix_fmt)->flags & AV_PIX_FMT_FLAG_ALPHA) && hp->vi.format.colorFamily != cfUndefined) {
+        VSVideoFormat alpha_format;
+        vsapi->queryVideoFormat(&alpha_format, cfGray, hp->vi.format.sampleType, hp->vi.format.bitsPerSample, 0, 0, core);
+        vs_vohp->background_frame[1] = vsapi->newVideoFrame(&alpha_format, hp->vi.width, hp->vi.height, NULL, core);
         if (!vs_vohp->background_frame[1]) {
             set_error_on_init(out, vsapi, "lsmas: failed to allocate memory for the alpha frame data.");
             return -1;
@@ -188,13 +181,13 @@ static int prepare_video_decoding(lsmas_handler_t* hp, int threads, VSMap* out, 
     return 0;
 }
 
-static const VSFrameRef* VS_CC vs_filter_get_frame(
-    int n, int activation_reason, void** instance_data, void** frame_data, VSFrameContext* frame_ctx, VSCore* core, const VSAPI* vsapi)
+static const VSFrame* VS_CC vs_filter_get_frame(
+    int n, int activation_reason, void* instance_data, void** frame_data, VSFrameContext* frame_ctx, VSCore* core, const VSAPI* vsapi)
 {
     if (activation_reason != arInitial)
         return NULL;
-    lsmas_handler_t* hp = (lsmas_handler_t*)*instance_data;
-    VSVideoInfo* vi = &hp->vi[0];
+    lsmas_handler_t* hp = (lsmas_handler_t*)instance_data;
+    VSVideoInfo* vi = &hp->vi;
     uint32_t sample_number = MIN(n + 1, vi->numFrames); /* For L-SMASH, sample_number is 1-origin. */
     libavsmash_video_decode_handler_t* vdhp = hp->vdhp;
     libavsmash_video_output_handler_t* vohp = hp->vohp;
@@ -221,25 +214,22 @@ static const VSFrameRef* VS_CC vs_filter_get_frame(
     }
     /* Output video frame. */
     AVFrame* av_frame = libavsmash_video_get_frame_buffer(vdhp);
-    int output_index = vsapi->getOutputIndex(frame_ctx);
-    VSFrameRef* vs_frame = make_frame(vohp, av_frame, output_index);
+    VSFrame* vs_frame = make_frame(vohp, av_frame, 0);
     if (!vs_frame) {
         vsapi->setFilterError("lsmas: failed to output a video frame.", frame_ctx);
         return NULL;
     }
     AVCodecContext* ctx = libavsmash_video_get_codec_context(vdhp);
-    if (output_index == 0 && (av_pix_fmt_desc_get(ctx->pix_fmt)->flags & AV_PIX_FMT_FLAG_ALPHA)) {
-        /* api4 compat: save alpha clip into the _Alpha property */
-        VSFrameRef* vs_frame2 = make_frame(vohp, av_frame, 1);
+    if (av_pix_fmt_desc_get(ctx->pix_fmt)->flags & AV_PIX_FMT_FLAG_ALPHA) {
+        VSFrame* vs_frame2 = make_frame(vohp, av_frame, 1);
         if (!vs_frame2) {
             vsapi->setFilterError("lsmas: failed to output an alpha video frame.", frame_ctx);
             return NULL;
         }
-        VSMap* props = vsapi->getFramePropsRW(vs_frame2);
-        vsapi->propSetInt(props, "_ColorRange", 0, paReplace); // alpha clip always full range
-        props = vsapi->getFramePropsRW(vs_frame);
-        vsapi->propSetFrame(props, "_Alpha", vs_frame2, paAppend);
-        vsapi->freeFrame(vs_frame2);
+        VSMap* props = vsapi->getFramePropertiesRW(vs_frame2);
+        vsapi->mapSetInt(props, "_ColorRange", 0, maReplace);
+        props = vsapi->getFramePropertiesRW(vs_frame);
+        vsapi->mapConsumeFrame(props, "_Alpha", vs_frame2, maAppend);
     }
     int top = -1;
     if (vohp->repeat_control && vohp->repeat_requested) {
@@ -272,11 +262,11 @@ static uint32_t open_file(lsmas_handler_t* hp, const char* source, lw_log_handle
 
 void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_data, VSCore* core, const VSAPI* vsapi)
 {
-    const char* file_name = vsapi->propGetData(in, "source", 0, NULL);
+    const char* file_name = vsapi->mapGetData(in, "source", 0, NULL);
     /* Allocate the handler of this plugin. */
     lsmas_handler_t* hp = alloc_handler();
     if (!hp) {
-        vsapi->setError(out, "lsmas: failed to allocate the handler.");
+        vsapi->mapSetError(out, "lsmas: failed to allocate the handler.");
         return;
     }
     libavsmash_video_decode_handler_t* vdhp = hp->vdhp;
@@ -284,7 +274,7 @@ void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_da
     vs_video_output_handler_t* vs_vohp = vs_allocate_video_output_handler(vohp);
     if (!vs_vohp) {
         free_handler(&hp);
-        vsapi->setError(out, "lsmas: failed to allocate the VapourSynth video output handler.");
+        vsapi->mapSetError(out, "lsmas: failed to allocate the VapourSynth video output handler.");
         return;
     }
     /* Set up VapourSynth error handler. */
@@ -301,7 +291,7 @@ void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_da
     uint32_t number_of_tracks = open_file(hp, file_name, &lh);
     if (number_of_tracks == 0) {
         free_handler(&hp);
-        vsapi->setError(out, "lsmas: failed to open file.");
+        vsapi->mapSetError(out, "lsmas: failed to open file.");
         return;
     }
     /* Get options. */
@@ -371,7 +361,7 @@ void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_da
     /* Get video track. */
     if (libavsmash_video_get_track(vdhp, track_number) < 0) {
         free_handler(&hp);
-        vsapi->setError(out, "lsmas: failed to get video track.");
+        vsapi->mapSetError(out, "lsmas: failed to get video track.");
         return;
     }
     /* Set up decoders for this track. */
@@ -384,9 +374,13 @@ void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_da
     AVFrame* av_frame = libavsmash_video_get_frame_buffer(vdhp);
     if (!av_frame->data[0] && hp->prefer_hw) {
         free_handler(&hp);
-        vsapi->setError(out, "lsmas: the GPU driver doesn't support this hardware decoding.");
+        vsapi->mapSetError(out, "lsmas: the GPU driver doesn't support this hardware decoding.");
         return;
     }
-    vsapi->createFilter(
-        in, out, "LibavSMASHSource", vs_filter_init, vs_filter_get_frame, vs_filter_free, fmUnordered, nfMakeLinear, hp, core);
+    VSFilterDependency deps[] = { {NULL, rpGeneral} };
+    VSNode* node = vsapi->createVideoFilter2("LibavSMASHSource", &hp->vi, vs_filter_get_frame, vs_filter_free, fmUnordered, deps, 0, hp, core);
+    if (node) {
+        vsapi->setLinearFilter(node);
+        vsapi->mapConsumeNode(out, "clip", node, maAppend);
+    }
 }
