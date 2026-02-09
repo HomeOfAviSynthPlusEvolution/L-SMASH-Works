@@ -129,6 +129,16 @@ static enum AVPixelFormat d3d11va_get_format(AVCodecContext* ctx, const enum AVP
     return AV_PIX_FMT_NONE;
 }
 
+static enum AVPixelFormat d3d12va_get_format(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts)
+{
+    while (*pix_fmts != AV_PIX_FMT_NONE) {
+        if (*pix_fmts == AV_PIX_FMT_D3D12)
+            return *pix_fmts;
+        pix_fmts++;
+    }
+    return AV_PIX_FMT_NONE;
+}
+
 static enum AVPixelFormat vulkan_get_format(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts)
 {
     while (*pix_fmts != AV_PIX_FMT_NONE) {
@@ -139,7 +149,7 @@ static enum AVPixelFormat vulkan_get_format(AVCodecContext* ctx, const enum AVPi
     return AV_PIX_FMT_NONE;
 }
 
-static const char* hw_device_names[] = { [4] = "dxva2", [5] = "d3d11va", [6] = "vulkan" };
+static const char* hw_device_names[] = { "dxva2", "d3d11va", "d3d12va", "vulkan" };
 
 int open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const AVCodec* codec, const int thread_count, const double drc,
     const char* ff_options, int* prefer_hw_decoder, AVBufferRef* hw_device_ctx)
@@ -186,7 +196,7 @@ int open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const 
             enum AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
             if (*prefer_hw_decoder == 3)
                 ++*prefer_hw_decoder;
-            type = av_hwdevice_find_type_by_name(hw_device_names[*prefer_hw_decoder]);
+            type = av_hwdevice_find_type_by_name(hw_device_names[*prefer_hw_decoder - 4]);
             if (type != AV_HWDEVICE_TYPE_NONE) {
                 for (int i = 0;; ++i) {
                     const AVCodecHWConfig* config = avcodec_get_hw_config(codec, i);
@@ -205,6 +215,9 @@ int open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const 
                     break;
                 case AV_PIX_FMT_D3D11:
                     c->get_format = d3d11va_get_format;
+                    break;
+                case AV_PIX_FMT_D3D12:
+                    c->get_format = d3d12va_get_format;
                     break;
                 default:
                     c->get_format = vulkan_get_format;

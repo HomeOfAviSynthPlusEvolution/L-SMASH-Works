@@ -182,6 +182,8 @@ LSMASHVideoSource::LSMASHVideoSource(const char* source, uint32_t track_number, 
             return "HWAccel: DXVA2";
         case 5:
             return "HWAccel: D3D11VA";
+        case 6:
+            return "HWAccel: D3D12VA";
         default:
             return "HWAccel: VULKAN";
         }
@@ -449,7 +451,7 @@ AVSValue __cdecl CreateLSMASHVideoSource(AVSValue args, void* user_data, IScript
     seek_mode = CLIP_VALUE(seek_mode, 0, 2);
     forward_seek_threshold = CLIP_VALUE(forward_seek_threshold, 1, 999);
     direct_rendering &= (pixel_format == AV_PIX_FMT_NONE);
-    prefer_hw_decoder = CLIP_VALUE(prefer_hw_decoder, 0, 6);
+    prefer_hw_decoder = CLIP_VALUE(prefer_hw_decoder, 0, 7);
     set_av_log_level(ff_loglevel);
     return new LSMASHVideoSource(source, track_number, threads, seek_mode, forward_seek_threshold, direct_rendering, fps_num, fps_den,
         pixel_format, preferred_decoder_names, prefer_hw_decoder, ff_options, env);

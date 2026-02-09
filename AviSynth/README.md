@@ -125,10 +125,11 @@
                     - 0 : Use default software decoder.
                     - 1 : Use NVIDIA CUVID acceleration for supported codec, otherwise use default software decoder.
                     - 2 : Use Intel Quick Sync Video acceleration for supported codec, otherwise use default software decoder.
-                    - 3 : Try hardware decoder in the order of CUVID->QSV->DXVA2->D3D11VA->VULKAN. If none is available then use default software decoder.
+                    - 3 : Try hardware decoder in the order of CUVID->QSV->DXVA2->D3D11VA->D3D12VA->VULKAN. If none is available then use default software decoder.
                     - 4 : Use DXVA2 hardware acceleration for supported codec, otherwise use default software decoder.
                     - 5 : Use D3D11 hardware acceleration for supported codec, otherwise use default software decoder.
-                    - 6 : Use VULKAN hardware acceleration for supported codec, otherwise use default software decoder.
+                    - 6 : Use D3D12 hardware acceleration for supported codec, otherwise use default software decoder.
+                    - 7 : Use VULKAN hardware acceleration for supported codec, otherwise use default software decoder.
                 The LWLDECODER variable can be used to see what decoder is used.
             + ff_loglevel (default : 0)
                 Set the log level in FFmpeg.
