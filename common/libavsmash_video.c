@@ -51,6 +51,7 @@ void libavsmash_video_free_decode_handler(libavsmash_video_decode_handler_t* vdh
 {
     if (!vdhp)
         return;
+    av_packet_unref(&vdhp->packet);
     lw_freep(&vdhp->keyframe_list);
     lw_freep(&vdhp->order_converter);
     av_frame_free(&vdhp->movable_frame_buffer);
@@ -425,27 +426,62 @@ setup_finish:;
     return err;
 }
 
-static int decode_video_sample(libavsmash_video_decode_handler_t* vdhp, AVFrame* picture, int* got_picture, uint32_t sample_number)
+static int decode_video_sample(
+    libavsmash_video_decode_handler_t* vdhp, AVFrame* picture, int* got_picture, uint32_t sample_number, int64_t* pkt_pts)
 {
     codec_configuration_t* config = &vdhp->config;
-    AVPacket pkt = { 0 };
-    int ret = get_sample(vdhp->root, vdhp->track_id, sample_number, config, &pkt);
-    if (ret)
-        return ret;
-    if (pkt.flags != ISOM_SAMPLE_RANDOM_ACCESS_FLAG_NONE) {
-        pkt.flags = AV_PKT_FLAG_KEY;
-        vdhp->last_rap_number = sample_number;
-    } else
-        pkt.flags = 0;
-    av_frame_unref(picture);
-    uint64_t cts = pkt.pts;
-    AVFrame* mov_frame = vdhp->movable_frame_buffer;
-    ret = decode_video_packet(config->ctx, mov_frame, got_picture, &pkt);
+    AVPacket* pkt = &vdhp->packet;
+    AVFrame* mov_frame = NULL;
+    int get_new_pkt = 0;
+    int ret = 0;
+    do {
+        get_new_pkt = 0;
+        if (!vdhp->reuse_pkt) {
+            ret = get_sample(vdhp->root, vdhp->track_id, sample_number, config, pkt);
+            if (ret)
+                return ret;
+            if (pkt->flags != ISOM_SAMPLE_RANDOM_ACCESS_FLAG_NONE) {
+                pkt->flags = AV_PKT_FLAG_KEY;
+                vdhp->last_rap_number = sample_number;
+            } else
+                pkt->flags = 0;
+        }
+        av_frame_unref(picture);
+        mov_frame = vdhp->movable_frame_buffer;
+        int retry_send = 0;
+        do {
+            retry_send = 0;
+            ret = decode_video_packet(config->ctx, mov_frame, got_picture, pkt);
+            if (ret == AVERROR(EAGAIN)) {
+                int drain_ret;
+                do {
+                    drain_ret = avcodec_receive_frame(config->ctx, mov_frame);
+                    if (drain_ret >= 0 && !vdhp->reuse_pkt) {
+                        vdhp->reuse_pkt = 1;
+                        *got_picture = 1;
+                        ret = 0;
+                        goto got_frame;
+                    }
+                } while (drain_ret >= 0);
+                if (drain_ret == AVERROR(EAGAIN))
+                    retry_send = 1;
+                else if (drain_ret < 0 && drain_ret != AVERROR_EOF)
+                    return drain_ret;
+            } else if (ret < 0)
+                break;
+            else if (vdhp->reuse_pkt) {
+                vdhp->reuse_pkt = 0;
+                get_new_pkt = 1;
+            } else
+                break;
+        } while (retry_send);
+    } while (get_new_pkt);
+got_frame:
     if (transfer_frame_data(picture, mov_frame)) {
         lw_log_show(&config->lh, LW_LOG_WARNING, "Failed to transfer a video frame.");
         return -1;
     }
-    picture->pts = cts;
+    *pkt_pts = pkt->pts;
     if (ret < 0) {
         lw_log_show(&config->lh, LW_LOG_WARNING, "Failed to decode a video frame.");
         return -1;
@@ -522,10 +558,13 @@ static uint32_t seek_video(
     uint32_t i;
     uint32_t decoder_delay = get_decoder_delay(config->ctx);
     uint32_t goal = composition_sample_number + decoder_delay;
+    if (vdhp->reuse_pkt)
+        vdhp->reuse_pkt = 0;
     for (i = rap_number; i < goal; i++) {
         if (config->index == config->queue.index)
             config->delay_count = MIN(decoder_delay, i - rap_number);
-        int ret = decode_video_sample(vdhp, picture, &got_picture, i);
+        int64_t pkt_pts;
+        int ret = decode_video_sample(vdhp, picture, &got_picture, i, &pkt_pts);
         if (got_picture) {
             output_ready = 1;
             if (decoder_delay > config->delay_count) {
@@ -541,9 +580,9 @@ static uint32_t seek_video(
         }
         /* Some decoders return -1 when feeding a leading sample.
          * We don't consider as an error if the return value -1 is caused by a leading sample since it's not fatal at all. */
-        if (i == vdhp->last_rap_number)
-            rap_cts = picture->pts;
-        if (ret == -1 && (uint64_t)picture->pts >= rap_cts && !error_ignorance) {
+        if (i == vdhp->last_rap_number && pkt_pts != AV_NOPTS_VALUE)
+            rap_cts = pkt_pts;
+        if (ret == -1 && (pkt_pts == AV_NOPTS_VALUE || pkt_pts >= rap_cts) && !error_ignorance) {
             lw_log_show(&config->lh, LW_LOG_WARNING, "Failed to decode a video frame.");
             return 0;
         } else if (ret >= 1)
@@ -560,7 +599,8 @@ static int get_picture(libavsmash_video_decode_handler_t* vdhp, AVFrame* picture
     codec_configuration_t* config = &vdhp->config;
     int got_picture = (current > goal);
     while (current <= goal) {
-        int ret = decode_video_sample(vdhp, picture, &got_picture, current);
+        int64_t dummy;
+        int ret = decode_video_sample(vdhp, picture, &got_picture, current, &dummy);
         if (ret == -1)
             return -1;
         else if (ret == 1)
@@ -766,11 +806,11 @@ int libavsmash_video_find_first_valid_frame(libavsmash_video_decode_handler_t* v
         return -1;
     codec_configuration_t* config = &vdhp->config;
     for (uint32_t i = 1; i <= vdhp->sample_count + get_decoder_delay(config->ctx); i++) {
-        AVPacket pkt = { 0 };
-        get_sample(vdhp->root, vdhp->track_id, i, config, &pkt);
+        AVPacket* pkt = &vdhp->packet;
+        get_sample(vdhp->root, vdhp->track_id, i, config, pkt);
         av_frame_unref(vdhp->frame_buffer);
         int got_picture;
-        if (decode_video_packet(config->ctx, vdhp->movable_frame_buffer, &got_picture, &pkt) >= 0 && got_picture) {
+        if (decode_video_packet(config->ctx, vdhp->movable_frame_buffer, &got_picture, pkt) >= 0 && got_picture) {
             if (transfer_frame_data(vdhp->frame_buffer, vdhp->movable_frame_buffer)) {
                 lw_log_show(&config->lh, LW_LOG_WARNING, "Failed to transfer a video frame.");
                 return -1;
@@ -783,7 +823,7 @@ int libavsmash_video_find_first_valid_frame(libavsmash_video_decode_handler_t* v
                 av_frame_unref(vdhp->frame_buffer);
             }
             break;
-        } else if (pkt.data)
+        } else if (pkt->data)
             ++config->delay_count;
         av_frame_unref(vdhp->movable_frame_buffer);
     }

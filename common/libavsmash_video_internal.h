@@ -38,6 +38,7 @@ struct libavsmash_video_decode_handler_tag {
     uint32_t track_id;
     codec_configuration_t config;
     AVFrame* frame_buffer;
+    AVPacket packet;
     uint32_t forward_seek_threshold;
     int seek_mode;
     order_converter_t* order_converter;
@@ -51,6 +52,7 @@ struct libavsmash_video_decode_handler_tag {
     uint64_t media_duration;
     uint64_t min_cts;
     AVFrame* movable_frame_buffer; /* the frame buffer where the decoder outputs temporally stored frame data */
+    int reuse_pkt;
 };
 
 #endif // !LIBAVSMASH_VIDEO_INTERNAL_H
