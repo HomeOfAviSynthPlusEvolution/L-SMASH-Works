@@ -150,8 +150,6 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         "${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/common/osdep.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/common/progress.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.c"
-        "${CMAKE_CURRENT_SOURCE_DIR}/common/qsv.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/common/utils.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/common/utils.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/common/video_output.c"

@@ -30,7 +30,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "decode.h"
-#include "qsv.h"
 #include "utils.h"
 
 static const enum AVHWDeviceType hw_device_types[] = { [1] = AV_HWDEVICE_TYPE_CUDA, [2] = AV_HWDEVICE_TYPE_QSV };
@@ -175,7 +174,7 @@ int open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const 
         goto fail;
     else if (!strcmp(codec->name, "vp9") && (thread_count > 4 || !thread_count))
         c->thread_count = MIN(4, (!thread_count) ? av_cpu_count() : thread_count);
-    if (codec->wrapper_name && !strcmp(codec->wrapper_name, "cuvid"))
+    if (codec->wrapper_name && (!strcmp(codec->wrapper_name, "cuvid") || !strcmp(codec->wrapper_name, "qsv")))
         c->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
     AVDictionary* ff_d = NULL;
     if (codec->id == AV_CODEC_ID_AC3 && drc > -1) {
@@ -239,9 +238,6 @@ int open_decoder(AVCodecContext** ctx, const AVCodecParameters* codecpar, const 
     av_dict_free(&ff_d);
     if (ret < 0)
         goto fail;
-    if (is_qsv_decoder(c->codec))
-        if ((ret = do_qsv_decoder_workaround(c)) < 0)
-            goto fail;
     *ctx = c;
     return ret;
 fail:
