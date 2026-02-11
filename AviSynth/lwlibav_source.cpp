@@ -179,7 +179,7 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame(int n, IScriptEnvironment* en
         return env->NewVideoFrame(vi);
     PVideoFrame as_frame;
     if (make_frame(vohp, av_frame, as_frame, env) < 0)
-        env->ThrowError("LWLibavVideoSource: failed to make a frame (%s).", env->GetVar("LWLDECODER"));
+        env->ThrowError("LWLibavVideoSource: failed to make a frame (%s).", env->GetVar("LWLDECODER").AsString());
     if (has_at_least_v8) {
         const int top = [&]() {
             if (vohp->repeat_control && vohp->repeat_requested)
