@@ -679,9 +679,10 @@ static int is_picture_stored_in_frame(lwlibav_video_decode_handler_t* vdhp, AVFr
     int64_t output_id = get_output_order_id(frame);
     if (output_id != AV_NOPTS_VALUE) {
         uint32_t reliable_picture_number = (uint32_t)output_id;
-        if (picture_number == reliable_picture_number)
+        uint32_t target_decoding_id = vdhp->frame_list[picture_number].sample_number;
+        if (picture_number == reliable_picture_number && (int64_t)target_decoding_id == frame->pkt_dts)
             return 1;
-        else if (is_half_frame(vdhp, reliable_picture_number)) {
+        else if (is_half_frame(vdhp, reliable_picture_number) && (int64_t)target_decoding_id == frame->pkt_dts) {
             int field_number = field_number_of_picture_in_frame(vdhp, frame, reliable_picture_number);
             if ((field_number == 1 && picture_number == reliable_picture_number + 1)
                 || (field_number == 2 && picture_number == reliable_picture_number - 1))
