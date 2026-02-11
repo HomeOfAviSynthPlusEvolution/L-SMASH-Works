@@ -138,14 +138,6 @@ LWLibavVideoSource::LWLibavVideoSource(lwlibav_option_t* opt, int seek_mode, uin
     prepare_video_decoding(vdhp, vohp, direct_rendering, pixel_format, env);
     has_at_least_v8 = env->FunctionExists("propShow");
     av_frame = lwlibav_video_get_frame_buffer(vdhp);
-    if (!av_frame->data[0] && prefer_hw)
-        env->ThrowError("LWLibavVideoSource: the GPU driver doesn't support this hardware decoding.");
-    int num = av_frame->sample_aspect_ratio.num;
-    int den = av_frame->sample_aspect_ratio.den;
-    env->SetVar(env->Sprintf("%s", "FFSAR_NUM"), num);
-    env->SetVar(env->Sprintf("%s", "FFSAR_DEN"), den);
-    if (num > 0 && den > 0)
-        env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
     const char* used_decoder = [&]() {
         switch (prefer_hw) {
         case 4:
@@ -158,6 +150,14 @@ LWLibavVideoSource::LWLibavVideoSource(lwlibav_option_t* opt, int seek_mode, uin
             return "HWAccel: VULKAN";
         }
     }();
+    if (!av_frame->data[0] && prefer_hw)
+        env->ThrowError("LWLibavVideoSource: the GPU driver doesn't support this hardware decoding (%s).", used_decoder);
+    int num = av_frame->sample_aspect_ratio.num;
+    int den = av_frame->sample_aspect_ratio.den;
+    env->SetVar(env->Sprintf("%s", "FFSAR_NUM"), num);
+    env->SetVar(env->Sprintf("%s", "FFSAR_DEN"), den);
+    if (num > 0 && den > 0)
+        env->SetVar(env->Sprintf("%s", "FFSAR"), num / static_cast<double>(den));
     env->SetVar(env->Sprintf("%s", "LWLDECODER"), (vdhp->ctx->hw_device_ctx) ? used_decoder : vdhp->ctx->codec->name);
 }
 
@@ -179,7 +179,7 @@ PVideoFrame __stdcall LWLibavVideoSource::GetFrame(int n, IScriptEnvironment* en
         return env->NewVideoFrame(vi);
     PVideoFrame as_frame;
     if (make_frame(vohp, av_frame, as_frame, env) < 0)
-        env->ThrowError("LWLibavVideoSource: failed to make a frame.");
+        env->ThrowError("LWLibavVideoSource: failed to make a frame (%s).", env->GetVar("LWLDECODER"));
     if (has_at_least_v8) {
         const int top = [&]() {
             if (vohp->repeat_control && vohp->repeat_requested)
