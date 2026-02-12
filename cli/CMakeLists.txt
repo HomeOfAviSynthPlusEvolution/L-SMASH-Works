@@ -26,8 +26,6 @@ target_sources(LSMASHSource_indexing PRIVATE
     "${PROJECT_SOURCE_DIR}/common/osdep.h"
     "${PROJECT_SOURCE_DIR}/common/resample.c"
     "${PROJECT_SOURCE_DIR}/common/resample.h"
-    "${PROJECT_SOURCE_DIR}/common/qsv.c"
-    "${PROJECT_SOURCE_DIR}/common/qsv.h"
     "${PROJECT_SOURCE_DIR}/common/utils.c"
     "${PROJECT_SOURCE_DIR}/common/utils.h"
     "${PROJECT_SOURCE_DIR}/common/video_output.c"
