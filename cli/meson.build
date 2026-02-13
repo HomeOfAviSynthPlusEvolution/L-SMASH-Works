@@ -29,8 +29,6 @@ sources = [
   '../common/osdep.h',
   '../common/resample.c',
   '../common/resample.h',
-  '../common/qsv.c',
-  '../common/qsv.h',
   '../common/utils.c',
   '../common/utils.h',
   '../common/video_output.c',

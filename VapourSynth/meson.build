@@ -41,8 +41,6 @@ sources = [
   '../common/lwlibav_video.h',
   '../common/osdep.c',
   '../common/osdep.h',
-  '../common/qsv.c',
-  '../common/qsv.h',
   '../common/utils.c',
   '../common/utils.h',
   '../common/video_output.c',

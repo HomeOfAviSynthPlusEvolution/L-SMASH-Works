@@ -47,8 +47,6 @@ sources = [
   '../common/osdep.c',
   '../common/osdep.h',
   '../common/progress.h',
-  '../common/qsv.c',
-  '../common/qsv.h',
   '../common/resample.c',
   '../common/resample.h',
   '../common/utils.c',
