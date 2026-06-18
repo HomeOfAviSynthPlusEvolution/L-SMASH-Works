@@ -1867,7 +1867,9 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
                         field_info = LW_FIELD_INFO_BOTTOM;
                     else
                         field_info = helper->last_field_info;
-                    if (get_ticks_per_frame(pkt_ctx) == 2 && helper->parser_ctx->repeat_pict != 0)
+                    if (pkt_ctx->codec_id == AV_CODEC_ID_MPEG1VIDEO)
+                        repeat_pict = 1;
+                    else if (get_ticks_per_frame(pkt_ctx) == 2 && helper->parser_ctx->repeat_pict != 0)
                         repeat_pict = helper->parser_ctx->repeat_pict;
                     else
                         repeat_pict = 2 * helper->parser_ctx->repeat_pict + 1;
