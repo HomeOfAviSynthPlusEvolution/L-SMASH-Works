@@ -627,8 +627,9 @@ void avs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durat
 {
     AVSMap* props = env->getFramePropsRW(avs_frame);
     /* Sample aspect ratio */
-    env->propSetInt(props, "_SARNum", av_frame->sample_aspect_ratio.num, 0);
-    env->propSetInt(props, "_SARDen", av_frame->sample_aspect_ratio.den, 0);
+    const AVRational sar = av_guess_sample_aspect_ratio(NULL, stream, av_frame);
+    env->propSetInt(props, "_SARNum", sar.num, 0);
+    env->propSetInt(props, "_SARDen", sar.den, 0);
     /* Sample duration */
     env->propSetInt(props, "_DurationNum", duration_num, 0);
     env->propSetInt(props, "_DurationDen", duration_den, 0);

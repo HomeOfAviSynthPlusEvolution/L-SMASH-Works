@@ -606,8 +606,9 @@ void vs_set_frame_properties(AVFrame* av_frame, AVStream* stream, int64_t durati
 {
     VSMap* props = vsapi->getFramePropsRW(vs_frame);
     /* Sample aspect ratio */
-    vsapi->propSetInt(props, "_SARNum", av_frame->sample_aspect_ratio.num, paReplace);
-    vsapi->propSetInt(props, "_SARDen", av_frame->sample_aspect_ratio.den, paReplace);
+    const AVRational sar = av_guess_sample_aspect_ratio(NULL, stream, av_frame);
+    vsapi->propSetInt(props, "_SARNum", sar.num, paReplace);
+    vsapi->propSetInt(props, "_SARDen", sar.den, paReplace);
     /* Sample duration */
     vsapi->propSetInt(props, "_DurationNum", duration_num, paReplace);
     vsapi->propSetInt(props, "_DurationDen", duration_den, paReplace);
