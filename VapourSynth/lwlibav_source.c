@@ -226,6 +226,7 @@ static const VSFrame* VS_CC vs_filter_get_frame(
         VSFrame* vs_frame2 = make_frame(vohp, av_frame, 1);
         if (!vs_frame2) {
             vsapi->setFilterError("lsmas: failed to output an alpha video frame.", frame_ctx);
+            vsapi->freeFrame(vs_frame);
             return NULL;
         }
         VSMap* props = vsapi->getFramePropertiesRW(vs_frame2);
