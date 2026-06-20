@@ -263,8 +263,11 @@ static const component_reorder_t* get_component_reorder(enum AVPixelFormat av_ou
     return reorder_table[i].component_reorder;
 }
 
-static inline int set_frame_maker(vs_video_output_handler_t* vs_vohp, int output_index)
+static inline int set_frame_maker(vs_video_output_handler_t* vs_vohp, int output_index, enum AVPixelFormat input_pixel_format)
 {
+    const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(input_pixel_format);
+    const int is_planar = desc && (desc->flags & AV_PIX_FMT_FLAG_PLANAR);
+
     static const struct {
         VSPresetVideoFormat vs_output_pixel_format;
         int output_index;
@@ -308,7 +311,12 @@ static inline int set_frame_maker(vs_video_output_handler_t* vs_vohp, int output
         if (vs_vohp->vs_output_pixel_format == frame_maker_table[i].vs_output_pixel_format
             && output_index == frame_maker_table[i].output_index) {
             vs_vohp->make_black_background[output_index] = frame_maker_table[i].func_make_black_background;
-            vs_vohp->make_frame[output_index] = frame_maker_table[i].func_make_frame;
+
+            if (output_index == 1 && is_planar) {
+                vs_vohp->make_frame[output_index] = make_frame_planar_alpha;
+            } else {
+                vs_vohp->make_frame[output_index] = frame_maker_table[i].func_make_frame;
+            }
             return 0;
         }
     vs_vohp->make_black_background[output_index] = NULL;
@@ -384,7 +392,7 @@ static int determine_colorspace_conversion(
     if (*output_pixel_format == AV_PIX_FMT_NONE)
         return -1;
     vs_vohp->component_reorder[output_index] = get_component_reorder(output_index ? input_pixel_format : *output_pixel_format);
-    return set_frame_maker(vs_vohp, output_index);
+    return set_frame_maker(vs_vohp, output_index, input_pixel_format);
 }
 
 typedef struct {
