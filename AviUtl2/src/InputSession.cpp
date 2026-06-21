@@ -5,6 +5,7 @@
 #include "../../common/utils.h"
 
 extern "C" {
+#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/error.h>
 }
@@ -15,6 +16,7 @@ extern "C" {
 #include <cstring>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 
 namespace au2 {
 namespace {
@@ -68,6 +70,37 @@ ReaderOptions default_reader_options()
     options.threads = auto_threads();
     options.preferred_decoder_names = nullptr;
     return options;
+}
+
+bool has_decoder(const AVCodecParameters* codecpar) noexcept
+{
+    return codecpar && avcodec_find_decoder(codecpar->codec_id) != nullptr;
+}
+
+InputTrackList probe_tracks(const char* path) noexcept
+{
+    InputTrackList tracks;
+    AVFormatContext* format = nullptr;
+    if (avformat_open_input(&format, path, nullptr, nullptr) != 0) {
+        return tracks;
+    }
+    if (avformat_find_stream_info(format, nullptr) < 0) {
+        avformat_close_input(&format);
+        return tracks;
+    }
+    for (unsigned int i = 0; i < format->nb_streams; ++i) {
+        const AVCodecParameters* codecpar = format->streams[i]->codecpar;
+        if (!has_decoder(codecpar)) {
+            continue;
+        }
+        if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            tracks.video.push_back({ static_cast<int>(i), static_cast<int>(tracks.video.size()) });
+        } else if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            tracks.audio.push_back({ static_cast<int>(i), static_cast<int>(tracks.audio.size()) });
+        }
+    }
+    avformat_close_input(&format);
+    return tracks;
 }
 
 void close_core(SessionCore& core) noexcept
@@ -149,14 +182,44 @@ bool try_reader(SessionCore& core, const ReaderCallbacks& reader, char* path, Re
     return true;
 }
 
+bool build_core(SessionCore& core, std::string& path, ReaderOptions& options) noexcept
+{
+    SessionCore next;
+
+    try_reader(next, libavsmash_reader(), path.data(), options);
+    if (next.video_reader == ReaderType::None || next.audio_reader == ReaderType::None) {
+        try_reader(next, lwlibav_reader(), path.data(), options);
+    }
+
+    if (next.video_reader == next.audio_reader && next.video_reader != ReaderType::None) {
+        next.global_private = next.video_private;
+        next.close_file = next.close_video_file;
+        next.close_video_file = nullptr;
+        next.close_audio_file = nullptr;
+    }
+
+    if (next.video_reader == ReaderType::None && next.audio_reader == ReaderType::None) {
+        debug_log("no streams selected");
+        close_core(next);
+        return false;
+    }
+
+    close_core(core);
+    core = next;
+    next = {};
+    return true;
+}
+
 } // namespace
 
 void au2_log_noop(lw_log_handler_t*, lw_log_level, const char*)
 {
 }
 
-InputSession::InputSession(SessionCore core) noexcept
-    : core_(core)
+InputSession::InputSession(std::string path, ReaderOptions options, InputTrackList tracks) noexcept
+    : path_(std::move(path))
+    , options_(options)
+    , tracks_(std::move(tracks))
 {
 }
 
@@ -181,28 +244,14 @@ std::unique_ptr<InputSession> InputSession::open(LPCWSTR path)
     debug_probe_avformat(utf8_path.c_str());
 
     ReaderOptions options = default_reader_options();
-    SessionCore core;
-
-    try_reader(core, libavsmash_reader(), utf8_path.data(), options);
-    if (core.video_reader == ReaderType::None || core.audio_reader == ReaderType::None) {
-        try_reader(core, lwlibav_reader(), utf8_path.data(), options);
-    }
-
-    if (core.video_reader == core.audio_reader && core.video_reader != ReaderType::None) {
-        core.global_private = core.video_private;
-        core.close_file = core.close_video_file;
-        core.close_video_file = nullptr;
-        core.close_audio_file = nullptr;
-    }
-
-    if (core.video_reader == ReaderType::None && core.audio_reader == ReaderType::None) {
-        debug_log("no streams selected");
-        close_core(core);
+    InputTrackList tracks = probe_tracks(utf8_path.c_str());
+    std::unique_ptr<InputSession> session(new InputSession(std::move(utf8_path), options, std::move(tracks)));
+    if (!session->rebuild_core()) {
         return nullptr;
     }
 
     debug_log("session opened");
-    return std::unique_ptr<InputSession>(new InputSession(core));
+    return session;
 }
 
 bool InputSession::info(INPUT_INFO& out) const noexcept
@@ -254,6 +303,49 @@ bool InputSession::is_keyframe(int frame) noexcept
         return false;
     }
     return core_.is_keyframe ? core_.is_keyframe(&core_, frame) != 0 : true;
+}
+
+int InputSession::set_track(int type, int index) noexcept
+{
+    if (index == -1) {
+        return track_count(type);
+    }
+    if (type == INPUT_PLUGIN_TABLE::TRACK_TYPE_VIDEO) {
+        if (index < 0 || index >= static_cast<int>(tracks_.video.size())) {
+            return -1;
+        }
+        options_.force_video = 1;
+        const auto& track = tracks_.video[static_cast<size_t>(index)];
+        options_.force_video_index = track.stream_index;
+        options_.libavsmash_video_media_index = track.media_track_index;
+    } else if (type == INPUT_PLUGIN_TABLE::TRACK_TYPE_AUDIO) {
+        if (index < 0 || index >= static_cast<int>(tracks_.audio.size())) {
+            return -1;
+        }
+        options_.force_audio = 1;
+        const auto& track = tracks_.audio[static_cast<size_t>(index)];
+        options_.force_audio_index = track.stream_index;
+        options_.libavsmash_audio_media_index = track.media_track_index;
+    } else {
+        return -1;
+    }
+    return rebuild_core() ? index : -1;
+}
+
+bool InputSession::rebuild_core() noexcept
+{
+    return build_core(core_, path_, options_);
+}
+
+int InputSession::track_count(int type) const noexcept
+{
+    if (type == INPUT_PLUGIN_TABLE::TRACK_TYPE_VIDEO) {
+        return static_cast<int>(tracks_.video.size());
+    }
+    if (type == INPUT_PLUGIN_TABLE::TRACK_TYPE_AUDIO) {
+        return static_cast<int>(tracks_.audio.size());
+    }
+    return -1;
 }
 
 } // namespace au2

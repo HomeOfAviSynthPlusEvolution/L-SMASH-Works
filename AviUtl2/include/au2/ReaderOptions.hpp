@@ -62,6 +62,8 @@ struct ReaderOptions {
     int force_video_index = -1;
     int force_audio = 0;
     int force_audio_index = -1;
+    int libavsmash_video_media_index = 0;
+    int libavsmash_audio_media_index = 0;
     VideoOptions video;
     AudioOptions audio;
 };

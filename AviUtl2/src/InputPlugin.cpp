@@ -49,13 +49,19 @@ int read_audio(INPUT_HANDLE ih, int start, int length, void* buf)
     return session ? session->read_audio(start, length, buf) : 0;
 }
 
+int set_track(INPUT_HANDLE ih, int type, int index)
+{
+    auto* session = from_handle(ih);
+    return session ? session->set_track(type, index) : -1;
+}
+
 bool config(HWND, HINSTANCE)
 {
     return true;
 }
 
 INPUT_PLUGIN_TABLE g_input_plugin_table {
-    INPUT_PLUGIN_TABLE::FLAG_VIDEO | INPUT_PLUGIN_TABLE::FLAG_AUDIO,
+    INPUT_PLUGIN_TABLE::FLAG_VIDEO | INPUT_PLUGIN_TABLE::FLAG_AUDIO | INPUT_PLUGIN_TABLE::FLAG_MULTI_TRACK,
     L"L-SMASH Works File Reader2",
     L"Media Files (*.mp4;*.mkv;*.mov;*.avi;*.m2ts;*.mts;*.ts;*.mpg;*.mpeg;*.webm;*.flv)\0*.mp4;*.mkv;*.mov;*.avi;*.m2ts;*.mts;*.ts;*.mpg;*.mpeg;*.webm;*.flv\0All Files (*.*)\0*.*\0",
     L"L-SMASH Works AviUtl2 source filter",
@@ -65,7 +71,7 @@ INPUT_PLUGIN_TABLE g_input_plugin_table {
     read_video,
     read_audio,
     config,
-    nullptr,
+    set_track,
     nullptr,
 };
 

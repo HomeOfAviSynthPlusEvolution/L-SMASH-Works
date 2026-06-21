@@ -42,9 +42,11 @@ struct LibavsmashHandler {
     AVFormatContext* format_ctx = nullptr;
     int threads = 0;
     LibavsmashVideoInfo vih;
+    int libavsmash_video_media_index = 0;
     libavsmash_video_decode_handler_t* vdhp = nullptr;
     libavsmash_video_output_handler_t* vohp = nullptr;
     LibavsmashAudioInfo aih;
+    int libavsmash_audio_media_index = 0;
     libavsmash_audio_decode_handler_t* adhp = nullptr;
     libavsmash_audio_output_handler_t* aohp = nullptr;
     int64_t av_gap = 0;
@@ -76,7 +78,7 @@ LibavsmashHandler* alloc_handler()
     return hp;
 }
 
-int get_first_track_of_type(SessionCore* session, uint32_t type)
+int get_track_of_type(SessionCore* session, uint32_t type, int track_number)
 {
     int ret = -1;
     lw_log_handler_t* lhp = nullptr;
@@ -84,17 +86,47 @@ int get_first_track_of_type(SessionCore* session, uint32_t type)
         auto* hp = static_cast<LibavsmashHandler*>(session->video_private);
         lhp = libavsmash_video_get_log_handler(hp->vdhp);
         libavsmash_video_set_root(hp->vdhp, hp->root);
-        ret = libavsmash_video_get_track(hp->vdhp, 0);
+        ret = libavsmash_video_get_track(hp->vdhp, static_cast<uint32_t>(track_number < 0 ? 0 : track_number));
     } else {
         auto* hp = static_cast<LibavsmashHandler*>(session->audio_private);
         lhp = libavsmash_audio_get_log_handler(hp->adhp);
         libavsmash_audio_set_root(hp->adhp, hp->root);
-        ret = libavsmash_audio_get_track(hp->adhp, 0);
+        ret = libavsmash_audio_get_track(hp->adhp, static_cast<uint32_t>(track_number < 0 ? 0 : track_number));
     }
     if (lhp) {
         lhp->level = LW_LOG_WARNING;
     }
     return ret;
+}
+
+int get_track_number_by_media_index(lsmash_root_t* root, uint32_t type, int media_index)
+{
+    if (media_index <= 0) {
+        return 0;
+    }
+
+    lsmash_movie_parameters_t movie_param;
+    if (lsmash_get_movie_parameters(root, &movie_param) < 0) {
+        return -1;
+    }
+
+    int current_index = 0;
+    for (uint32_t track_number = 1; track_number <= movie_param.number_of_tracks; ++track_number) {
+        const uint32_t track_id = lsmash_get_track_ID(root, track_number);
+        if (track_id == 0) {
+            continue;
+        }
+        lsmash_media_parameters_t media_param;
+        lsmash_initialize_media_parameters(&media_param);
+        if (lsmash_get_media_parameters(root, track_id, &media_param) < 0 || media_param.handler_type != type) {
+            continue;
+        }
+        if (current_index == media_index) {
+            return static_cast<int>(track_number);
+        }
+        ++current_index;
+    }
+    return -1;
 }
 
 int get_ctd_shift(lsmash_root_t* root, uint32_t track_id, uint32_t* ctd_shift)
@@ -259,6 +291,8 @@ void* open_file(char* file_name, ReaderOptions* opt)
     hp->number_of_tracks = hp->movie_param.number_of_tracks;
     hp->threads = opt->threads;
     hp->av_sync = opt->av_sync;
+    hp->libavsmash_video_media_index = opt->libavsmash_video_media_index;
+    hp->libavsmash_audio_media_index = opt->libavsmash_audio_media_index;
     libavsmash_video_set_preferred_decoder_names(hp->vdhp, opt->preferred_decoder_names);
     libavsmash_audio_set_preferred_decoder_names(hp->adhp, opt->preferred_decoder_names);
     *alhp = *vlhp;
@@ -268,7 +302,11 @@ void* open_file(char* file_name, ReaderOptions* opt)
 int get_first_video_track(SessionCore* session, VideoOptions* opt)
 {
     auto* hp = static_cast<LibavsmashHandler*>(session->video_private);
-    if (get_first_track_of_type(session, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK) != 0) {
+    const int track_number = get_track_number_by_media_index(hp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, hp->libavsmash_video_media_index);
+    if (track_number < 0) {
+        return -1;
+    }
+    if (get_track_of_type(session, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, track_number) != 0) {
         const uint32_t track_id = libavsmash_video_get_track_id(hp->vdhp);
         lsmash_destruct_timeline(hp->root, track_id);
         libavsmash_video_close_codec_context(hp->vdhp);
@@ -287,7 +325,11 @@ int get_first_video_track(SessionCore* session, VideoOptions* opt)
 int get_first_audio_track(SessionCore* session, AudioOptions* opt)
 {
     auto* hp = static_cast<LibavsmashHandler*>(session->audio_private);
-    if (get_first_track_of_type(session, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK) != 0) {
+    const int track_number = get_track_number_by_media_index(hp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, hp->libavsmash_audio_media_index);
+    if (track_number < 0) {
+        return -1;
+    }
+    if (get_track_of_type(session, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, track_number) != 0) {
         const uint32_t track_id = libavsmash_audio_get_track_id(hp->adhp);
         lsmash_destruct_timeline(hp->root, track_id);
         libavsmash_audio_close_codec_context(hp->adhp);
