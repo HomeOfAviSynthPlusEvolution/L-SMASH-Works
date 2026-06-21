@@ -416,6 +416,10 @@ void close_file(void* private_stuff)
     if (!hp) {
         return;
     }
+    libavsmash_video_free_decode_handler_ptr(&hp->vdhp);
+    libavsmash_video_free_output_handler_ptr(&hp->vohp);
+    libavsmash_audio_free_decode_handler_ptr(&hp->adhp);
+    libavsmash_audio_free_output_handler_ptr(&hp->aohp);
     avformat_close_input(&hp->format_ctx);
     lsmash_close_file(&hp->file_param);
     lsmash_destroy_root(hp->root);

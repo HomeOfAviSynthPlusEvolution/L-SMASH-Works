@@ -266,6 +266,10 @@ void close_file(void* private_stuff)
     if (!hp) {
         return;
     }
+    lwlibav_video_free_decode_handler_ptr(&hp->vdhp);
+    lwlibav_video_free_output_handler_ptr(&hp->vohp);
+    lwlibav_audio_free_decode_handler_ptr(&hp->adhp);
+    lwlibav_audio_free_output_handler_ptr(&hp->aohp);
     lw_free(hp->lwh.file_path);
     delete hp;
 }
