@@ -3,6 +3,9 @@ project('L-SMASH-Works', 'c',
   meson_version: '>=0.48.0'
 )
 
+# Deprecation warning
+warning('The Meson build system is deprecated for L-SMASH-Works. Please use CMake instead.')
+
 version_h = declare_dependency(
     sources: vcs_tag(
         command: ['git', 'describe', '--tags', '--long'],

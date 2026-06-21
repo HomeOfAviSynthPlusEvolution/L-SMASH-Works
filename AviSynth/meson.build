@@ -3,6 +3,9 @@ project('L-SMASH-Works', 'c', 'cpp',
   meson_version: '>=0.48.0'
 )
 
+# Deprecation warning
+warning('The Meson build system is deprecated for L-SMASH-Works. Please use CMake instead.')
+
 add_project_arguments('-Wno-sign-compare', '-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', language: ['c', 'cpp'])
 
 sources = [
