@@ -66,13 +66,9 @@ int setup_audio_rendering(lw_audio_output_handler_t* aohp, AVCodecContext* ctx, 
         aohp->output_sample_rate = ctx->sample_rate;
     }
 
-    aohp->output_sample_format = decide_audio_output_sample_format(aohp->output_sample_format, aohp->output_bits_per_sample);
-    if (aohp->output_sample_format == AV_SAMPLE_FMT_S32 && (aohp->output_bits_per_sample == 0 || aohp->output_bits_per_sample == 24)) {
-        aohp->s24_output = 1;
-        aohp->output_bits_per_sample = 24;
-    } else {
-        aohp->output_bits_per_sample = av_get_bytes_per_sample(aohp->output_sample_format) * 8;
-    }
+    /* AviUtl2 input audio is most compatible with standard 16-bit PCM. */
+    aohp->output_sample_format = AV_SAMPLE_FMT_S16;
+    aohp->output_bits_per_sample = av_get_bytes_per_sample(aohp->output_sample_format) * 8;
 
     const int input_channels = ctx->ch_layout.nb_channels;
     if (av_sample_fmt_is_planar(ctx->sample_fmt)) {
