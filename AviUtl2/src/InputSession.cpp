@@ -310,6 +310,7 @@ int InputSession::set_track(int type, int index) noexcept
     if (index == -1) {
         return track_count(type);
     }
+    ReaderOptions previous_options = options_;
     if (type == INPUT_PLUGIN_TABLE::TRACK_TYPE_VIDEO) {
         if (index < 0 || index >= static_cast<int>(tracks_.video.size())) {
             return -1;
@@ -329,7 +330,11 @@ int InputSession::set_track(int type, int index) noexcept
     } else {
         return -1;
     }
-    return rebuild_core() ? index : -1;
+    if (rebuild_core()) {
+        return index;
+    }
+    options_ = previous_options;
+    return -1;
 }
 
 bool InputSession::rebuild_core() noexcept
