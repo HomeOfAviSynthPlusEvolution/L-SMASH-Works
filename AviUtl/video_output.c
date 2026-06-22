@@ -219,8 +219,13 @@ int au_setup_video_rendering(lw_video_output_handler_t* vohp, video_option_t* op
     format->biCompression = colorspace_table[index].compression;
     /* Set up a black frame of back ground. */
     au_vohp->output_linesize = MAKE_AVIUTL_PITCH(output_width * format->biBitCount);
-    au_vohp->output_frame_size = au_vohp->output_linesize * output_height;
-    au_vohp->back_ground = au_vohp->output_frame_size > 0 ? lw_malloc_zero(au_vohp->output_frame_size) : NULL;
+    uint64_t frame_size = (uint64_t)au_vohp->output_linesize * output_height;
+    if (frame_size == 0 || frame_size > UINT32_MAX) {
+        DEBUG_VIDEO_MESSAGE_BOX_DESKTOP(MB_ICONERROR | MB_OK, "Frame size overflow or zero detected.");
+        return -1;
+    }
+    au_vohp->output_frame_size = (uint32_t)frame_size;
+    au_vohp->back_ground = lw_malloc_zero(au_vohp->output_frame_size);
     if (!au_vohp->back_ground) {
         DEBUG_VIDEO_MESSAGE_BOX_DESKTOP(MB_ICONERROR | MB_OK, "Failed to allocate the back ground frame buffer.");
         return -1;
