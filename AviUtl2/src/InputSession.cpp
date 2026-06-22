@@ -187,7 +187,7 @@ bool build_core(SessionCore& core, std::string& path, ReaderOptions& options) no
     SessionCore next;
 
     try_reader(next, libavsmash_reader(), path.data(), options);
-    if (next.video_reader == ReaderType::None || next.audio_reader == ReaderType::None) {
+    if (next.video_reader == ReaderType::None && next.audio_reader == ReaderType::None) {
         try_reader(next, lwlibav_reader(), path.data(), options);
     }
 
