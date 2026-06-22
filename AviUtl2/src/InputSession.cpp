@@ -8,6 +8,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/error.h>
+#include <lsmash.h>
 }
 
 #include <algorithm>
@@ -77,6 +78,102 @@ bool has_decoder(const AVCodecParameters* codecpar) noexcept
     return codecpar && avcodec_find_decoder(codecpar->codec_id) != nullptr;
 }
 
+int find_stream_index_by_track_id(const AVFormatContext* format, AVMediaType type, uint32_t track_id) noexcept
+{
+    for (unsigned int i = 0; i < format->nb_streams; ++i) {
+        const AVStream* stream = format->streams[i];
+        const AVCodecParameters* codecpar = stream->codecpar;
+        if (has_decoder(codecpar) && codecpar->codec_type == type && static_cast<uint32_t>(stream->id) == track_id) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+void probe_tracks_with_avformat_order(InputTrackList& tracks, const AVFormatContext* format) noexcept
+{
+    for (unsigned int i = 0; i < format->nb_streams; ++i) {
+        const AVCodecParameters* codecpar = format->streams[i]->codecpar;
+        if (!has_decoder(codecpar)) {
+            continue;
+        }
+        if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            tracks.video.push_back({ static_cast<int>(i), static_cast<int>(tracks.video.size()) });
+        } else if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            tracks.audio.push_back({ static_cast<int>(i), static_cast<int>(tracks.audio.size()) });
+        }
+    }
+}
+
+InputTrackList probe_tracks_with_avformat_order(const AVFormatContext* format) noexcept
+{
+    InputTrackList tracks;
+    probe_tracks_with_avformat_order(tracks, format);
+    return tracks;
+}
+
+bool probe_tracks_with_lsmash_order(InputTrackList& tracks, const char* path, const AVFormatContext* format) noexcept
+{
+    const InputTrackList avformat_tracks = probe_tracks_with_avformat_order(format);
+    InputTrackList lsmash_tracks;
+    lsmash_root_t* root = lsmash_create_root();
+    if (!root) {
+        return false;
+    }
+
+    lsmash_file_parameters_t file_param {};
+    if (lsmash_open_file(path, 1, &file_param) < 0) {
+        lsmash_destroy_root(root);
+        return false;
+    }
+    lsmash_file_t* file = lsmash_set_file(root, &file_param);
+    if (!file || lsmash_read_file(file, &file_param) < 0) {
+        lsmash_close_file(&file_param);
+        lsmash_destroy_root(root);
+        return false;
+    }
+
+    lsmash_movie_parameters_t movie_param;
+    lsmash_initialize_movie_parameters(&movie_param);
+    if (lsmash_get_movie_parameters(root, &movie_param) < 0) {
+        lsmash_close_file(&file_param);
+        lsmash_destroy_root(root);
+        return false;
+    }
+
+    for (uint32_t track_number = 1; track_number <= movie_param.number_of_tracks; ++track_number) {
+        const uint32_t track_id = lsmash_get_track_ID(root, track_number);
+        if (track_id == 0) {
+            continue;
+        }
+        lsmash_media_parameters_t media_param;
+        lsmash_initialize_media_parameters(&media_param);
+        if (lsmash_get_media_parameters(root, track_id, &media_param) < 0) {
+            continue;
+        }
+        if (media_param.handler_type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK) {
+            const int stream_index = find_stream_index_by_track_id(format, AVMEDIA_TYPE_VIDEO, track_id);
+            if (stream_index >= 0) {
+                lsmash_tracks.video.push_back({ stream_index, static_cast<int>(lsmash_tracks.video.size()) });
+            }
+        } else if (media_param.handler_type == ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK) {
+            const int stream_index = find_stream_index_by_track_id(format, AVMEDIA_TYPE_AUDIO, track_id);
+            if (stream_index >= 0) {
+                lsmash_tracks.audio.push_back({ stream_index, static_cast<int>(lsmash_tracks.audio.size()) });
+            }
+        }
+    }
+
+    lsmash_close_file(&file_param);
+    lsmash_destroy_root(root);
+    if (lsmash_tracks.video.size() != avformat_tracks.video.size() || lsmash_tracks.audio.size() != avformat_tracks.audio.size()
+        || (lsmash_tracks.video.empty() && lsmash_tracks.audio.empty())) {
+        return false;
+    }
+    tracks = std::move(lsmash_tracks);
+    return true;
+}
+
 InputTrackList probe_tracks(const char* path) noexcept
 {
     InputTrackList tracks;
@@ -88,16 +185,8 @@ InputTrackList probe_tracks(const char* path) noexcept
         avformat_close_input(&format);
         return tracks;
     }
-    for (unsigned int i = 0; i < format->nb_streams; ++i) {
-        const AVCodecParameters* codecpar = format->streams[i]->codecpar;
-        if (!has_decoder(codecpar)) {
-            continue;
-        }
-        if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            tracks.video.push_back({ static_cast<int>(i), static_cast<int>(tracks.video.size()) });
-        } else if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-            tracks.audio.push_back({ static_cast<int>(i), static_cast<int>(tracks.audio.size()) });
-        }
+    if (!probe_tracks_with_lsmash_order(tracks, path, format)) {
+        probe_tracks_with_avformat_order(tracks, format);
     }
     avformat_close_input(&format);
     return tracks;
