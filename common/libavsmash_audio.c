@@ -221,6 +221,22 @@ static uint64_t libavsmash_audio_fetch_min_cts(libavsmash_audio_decode_handler_t
 /*****************************************************************************
  * Others
  *****************************************************************************/
+static AVCodecParameters* libavsmash_audio_find_codecpar(AVFormatContext* format_ctx, uint32_t track_id)
+{
+    AVCodecParameters* fallback = NULL;
+    for (uint32_t i = 0; i < format_ctx->nb_streams; i++) {
+        AVStream* stream = format_ctx->streams[i];
+        AVCodecParameters* codecpar = stream->codecpar;
+        if (codecpar->codec_type != AVMEDIA_TYPE_AUDIO)
+            continue;
+        if (!fallback)
+            fallback = codecpar;
+        if ((uint32_t)stream->id == track_id)
+            return codecpar;
+    }
+    return fallback;
+}
+
 int libavsmash_audio_get_track(libavsmash_audio_decode_handler_t* adhp, uint32_t track_number)
 {
     lw_log_handler_t* lhp = libavsmash_audio_get_log_handler(adhp);
@@ -242,16 +258,12 @@ int libavsmash_audio_initialize_decoder_configuration(libavsmash_audio_decode_ha
     if (libavsmash_audio_get_summaries(adhp) < 0)
         return -1;
     /* libavformat */
-    uint32_t type = AVMEDIA_TYPE_AUDIO;
-    uint32_t i;
-    for (i = 0; i < format_ctx->nb_streams && format_ctx->streams[i]->codecpar->codec_type != type; i++)
-        ;
-    if (i == format_ctx->nb_streams) {
+    AVCodecParameters* codecpar = libavsmash_audio_find_codecpar(format_ctx, adhp->track_id);
+    if (!codecpar) {
         strcpy(error_string, "Failed to find stream by libavformat.\n");
         goto fail;
     }
     /* libavcodec */
-    AVCodecParameters* codecpar = format_ctx->streams[i]->codecpar;
     if (libavsmash_find_and_open_decoder(&adhp->config, codecpar, threads) < 0) {
         strcpy(error_string, "Failed to find and open the audio decoder.\n");
         goto fail;

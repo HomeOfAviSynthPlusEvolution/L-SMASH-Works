@@ -13,6 +13,12 @@ message(STATUS "Build plugin for AviSynth: ${BUILD_AVS_PLUGIN}.")
 option(BUILD_VS_PLUGIN "Build plugin for VapourSynth" ON)
 message(STATUS "Build plugin for VapourSynth: ${BUILD_VS_PLUGIN}.")
 
+option(BUILD_AU2_PLUGIN "Build plugin for AviUtl2" OFF)
+message(STATUS "Build plugin for AviUtl2: ${BUILD_AU2_PLUGIN}.")
+if (BUILD_AU2_PLUGIN AND NOT WIN32)
+    message(FATAL_ERROR "AviUtl2 input plugin is Windows-only.")
+endif()
+
 option(ENABLE_DAV1D "Enable dav1d AV1 decoding" ON)
 message(STATUS "Enable dav1d AV1 decoding: ${ENABLE_DAV1D}.")
 option(dav1d_USE_STATIC_LIBS "Look for static dav1d libraries" ON)
@@ -67,6 +73,7 @@ find_package(FFMPEG REQUIRED COMPONENTS
     swresample
     avutil
 )
+
 find_package(ZLIB REQUIRED)
 
 if (ENABLE_DAV1D)
@@ -113,13 +120,15 @@ if (WIN32)
     endif()
 endif()
 
-if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
+if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/obuparse")
 
     # l-smash options
     option(LSMASH_BUILD_TOOLS "Build the l-smash tools" OFF)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/l-smash")
+endif()
 
+if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
     add_library(LSMASHSource MODULE
         "${CMAKE_CURRENT_SOURCE_DIR}/common/cpp_compat.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/common/decode.c"
@@ -160,12 +169,17 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
         target_sources(LSMASHSource PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/common/planar_yuv_sse2.c")
     endif()
 
-    if (BUILD_AVS_PLUGIN)
+    if (BUILD_AVS_PLUGIN OR BUILD_AU2_PLUGIN)
         target_sources(LSMASHSource PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/common/resample.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/common/resample.h"
+        )
+    endif()
+
+    if (BUILD_AVS_PLUGIN)
+        target_sources(LSMASHSource PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/audio_output.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/AviSynth/libavsmash_source.cpp"
@@ -188,6 +202,30 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN)
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.h"
         )
+    endif()
+
+    if (BUILD_AU2_PLUGIN)
+        target_sources(LSMASHSource PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/AudioOutputAdapter.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/InputPlugin.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/InputSession.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/Path.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/ReaderBackend.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/ReaderOptions.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/VideoOutputAdapter.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include/au2/input2.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/AudioOutputAdapter.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/InputPlugin.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/InputSession.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/LibavsmashBackend.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/LwlibavBackend.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/Path.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/PluginExports.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/src/VideoOutputAdapter.cpp"
+        )
+
+        target_include_directories(LSMASHSource PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/AviUtl2/include")
+        target_compile_definitions(LSMASHSource PRIVATE NOMINMAX)
     endif()
 
     target_include_directories(LSMASHSource PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
