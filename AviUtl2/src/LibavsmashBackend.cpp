@@ -80,18 +80,21 @@ LibavsmashHandler* alloc_handler()
 
 int get_track_of_type(SessionCore* session, uint32_t type, int track_number)
 {
+    if (track_number < 0) {
+        return -1;
+    }
     int ret = -1;
     lw_log_handler_t* lhp = nullptr;
     if (type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK) {
         auto* hp = static_cast<LibavsmashHandler*>(session->video_private);
         lhp = libavsmash_video_get_log_handler(hp->vdhp);
         libavsmash_video_set_root(hp->vdhp, hp->root);
-        ret = libavsmash_video_get_track(hp->vdhp, static_cast<uint32_t>(track_number < 0 ? 0 : track_number));
+        ret = libavsmash_video_get_track(hp->vdhp, static_cast<uint32_t>(track_number));
     } else {
         auto* hp = static_cast<LibavsmashHandler*>(session->audio_private);
         lhp = libavsmash_audio_get_log_handler(hp->adhp);
         libavsmash_audio_set_root(hp->adhp, hp->root);
-        ret = libavsmash_audio_get_track(hp->adhp, static_cast<uint32_t>(track_number < 0 ? 0 : track_number));
+        ret = libavsmash_audio_get_track(hp->adhp, static_cast<uint32_t>(track_number));
     }
     if (lhp) {
         lhp->level = LW_LOG_WARNING;
