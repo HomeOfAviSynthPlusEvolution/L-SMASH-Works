@@ -1107,7 +1107,7 @@ static lwindex_helper_t* get_index_helper(lwindex_indexer_t* indexer, AVStream* 
             if (codecpar->codec_id == AV_CODEC_ID_H264
                 && codecpar->extradata_size >= 8 /* 8 is the offset of the first byte of the first SPS in AVCConfigurationRecord. */
                 && codecpar->extradata[0] == 1 /* configurationVersion == 1 */
-                && helper->parser_ctx->parser {
+                && helper->parser_ctx->parser) {
                 /* Since a SPS shall have no start code and no its emulation,
                  * therefore, this stream is not encapsulated as byte stream format. */
                 helper->bsf = av_bsf_get_by_name("h264_mp4toannexb");
