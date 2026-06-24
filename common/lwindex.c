@@ -1107,8 +1107,7 @@ static lwindex_helper_t* get_index_helper(lwindex_indexer_t* indexer, AVStream* 
             if (codecpar->codec_id == AV_CODEC_ID_H264
                 && codecpar->extradata_size >= 8 /* 8 is the offset of the first byte of the first SPS in AVCConfigurationRecord. */
                 && codecpar->extradata[0] == 1 /* configurationVersion == 1 */
-                && helper->parser_ctx->parser && helper->parser_ctx->parser->split
-                && helper->parser_ctx->parser->split(helper->codec_ctx, codecpar->extradata + 8, codecpar->extradata_size - 8) <= 0) {
+                && helper->parser_ctx->parser {
                 /* Since a SPS shall have no start code and no its emulation,
                  * therefore, this stream is not encapsulated as byte stream format. */
                 helper->bsf = av_bsf_get_by_name("h264_mp4toannexb");
@@ -1288,24 +1287,7 @@ static int append_extradata_if_new(lwindex_helper_t* helper, AVCodecContext* ctx
     if (current.extradata == ctx->extradata) {
         AVCodecParserContext* parser_ctx = helper->parser_ctx;
         if (parser_ctx && parser_ctx->parser) {
-            if (parser_ctx->parser->split) {
-                /* For H.264 stream without start codes, don't split extradata from pkt->data.
-                 * Its extradata is stored as global header. so, pkt->data shall contain no extradata.
-                 * Libavcodec may not remove meaningless data which precedes data actually needed for decoding,
-                 * so get the offset to such significant data here to deduplicate extradata as much as possible. */
-                int extradata_size = helper->bsf ? 0 : parser_ctx->parser->split(ctx, pkt->data, pkt->size);
-                if (extradata_size > 0) {
-                    int offset = get_offset_to_significant_extradata(ctx, pkt);
-                    current.extradata = pkt->data + (uintptr_t)offset;
-                    current.extradata_size = extradata_size - offset;
-                } else if (list->entry_count > 0)
-                    /* Probably, this frame is a keyframe in CODEC level
-                     * but should not be a random accessible point in container level.
-                     * For instance, an IDR-picture which corresponding SPSs and PPSs
-                     * do not precede immediately might not be decodable correctly
-                     * when decoding from there in MPEG-2 transport stream. */
-                    return list->current_index;
-            } else if (helper->bsf && ctx->codec_id == AV_CODEC_ID_AAC) {
+            if (helper->bsf && ctx->codec_id == AV_CODEC_ID_AAC) {
                 /* Try to generate AudioSpecificConfig for each ADTS AAC frame by reopening the bitstream filter.
                  * AVCodecContext.sample_rate is initialized by already upsampled AVCodecParameters.sample_rate and no SBR
                  * signalling, so if you initialize the AAC decoder without actual decoding, then the AAC decoder will
