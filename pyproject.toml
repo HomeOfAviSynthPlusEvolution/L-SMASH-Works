@@ -1,0 +1,61 @@
+[build-system]
+requires = [
+    "scikit-build-core>=0.10",
+    "VapourSynth>=74",
+    "setuptools-scm>=8.0"
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "vapoursynth-lsmashsource"
+description = "LSMASHSource plugin for VapourSynth"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "ISC AND LGPL-2.1-or-later"
+license-files = ["VapourSynth/LICENSE"]
+authors = [{name = "LSMASH Contributors"}]
+keywords = ["vapoursynth", "lsmash", "video", "source"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Plugins",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C",
+    "Programming Language :: C++",
+    "Topic :: Multimedia :: Video",
+]
+dependencies = ["VapourSynth>=74"]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works"
+Issues = "https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/issues"
+
+[tool.scikit-build]
+minimum-version = "0.10"
+cmake.version = ">=3.28"
+ninja.make-fallback = true
+wheel.install-dir = "vapoursynth/plugins"
+wheel.py-api = "py3"
+sdist.reproducible = true
+wheel.expand-macos-universal-tags = true
+
+[tool.scikit-build.cmake.define]
+BUILD_AVS_PLUGIN = "OFF"
+BUILD_AU2_PLUGIN = "OFF"
+BUILD_VS_PLUGIN = "ON"
+BUILD_INDEXING_TOOL = "OFF"
+ENABLE_DAV1D = "ON"
+ENABLE_XML2 = "ON"
+ENABLE_VPX = "ON"
+ENABLE_VULKAN = "ON"
+ZLIB_USE_STATIC_LIBS = "ON"
+BUILD_SHARED_LIBS = "OFF"
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.setuptools_scm"
+
+[tool.setuptools_scm]

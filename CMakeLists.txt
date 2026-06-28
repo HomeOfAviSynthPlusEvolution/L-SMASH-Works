@@ -24,7 +24,11 @@ message(STATUS "Enable dav1d AV1 decoding: ${ENABLE_DAV1D}.")
 option(dav1d_USE_STATIC_LIBS "Look for static dav1d libraries" ON)
 message(STATUS "Look for static dav1d libraries: ${dav1d_USE_STATIC_LIBS}.")
 
-option(ENABLE_MFX "Enable Intel HW decoding" ON)
+set(MFX_DEFAULT OFF)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i.86" AND NOT APPLE)
+    set(MFX_DEFAULT ON)
+endif()
+option(ENABLE_MFX "Enable Intel HW decoding" ${MFX_DEFAULT})
 message(STATUS "Enable Intel HW decoding: ${ENABLE_MFX}.")
 
 option(ENABLE_XML2 "Enable DNXHD support" ON)
@@ -93,7 +97,7 @@ if (ENABLE_VPX)
 endif()
 
 if (ENABLE_VULKAN)
-    find_package(Vulkan REQUIRED COMPONENTS shaderc_combined)
+    find_package(Vulkan REQUIRED)
 endif()
 
 if (WIN32)
@@ -263,7 +267,10 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
     endif()
 
     if (ENABLE_XML2)
-        target_link_libraries(LSMASHSource PRIVATE LibXml2::LibXml2)
+        target_link_libraries(LSMASHSource PRIVATE
+            LibXml2::LibXml2
+            ZLIB::ZLIB
+        )
     endif()
 
     if (ENABLE_VPX)
@@ -271,10 +278,7 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
     endif()
 
     if (ENABLE_VULKAN)
-        target_link_libraries(LSMASHSource PRIVATE
-            Vulkan::Vulkan
-            Vulkan::shaderc_combined
-        )
+        target_link_libraries(LSMASHSource PRIVATE Vulkan::Vulkan)
     endif()
 
     if (MINGW)
@@ -285,7 +289,10 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
         target_link_libraries(LSMASHSource PRIVATE bcrypt)
     endif()
 
-    target_compile_features(LSMASHSource PRIVATE cxx_std_17)
+    if (BUILD_AVS_PLUGIN OR BUILD_AU2_PLUGIN OR ENABLE_MFX)
+        set_target_properties(LSMASHSource PROPERTIES LINKER_LANGUAGE CXX)
+        target_compile_features(LSMASHSource PRIVATE cxx_std_17)
+    endif()
 
     target_compile_definitions(LSMASHSource PRIVATE
         $<$<CONFIG:Debug>:DEBUG_BUILD>
@@ -304,38 +311,41 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
             "${CMAKE_CURRENT_BINARY_DIR}/version.rc"
         )
         target_sources(LSMASHSource PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/version.rc")
-    endif()
-
-    if (WIN32)
         set_target_properties(LSMASHSource PROPERTIES
             PREFIX ""
             OUTPUT_NAME "LSMASHSource"
         )
     else()
-        if (GIT_FOUND)
+        if (SKBUILD)
+            set_target_properties(LSMASHSource PROPERTIES OUTPUT_NAME "lsmashsource")
+        elseif (GIT_FOUND)
             set_target_properties(LSMASHSource PROPERTIES OUTPUT_NAME "lsmashsource.${ver}")
         endif()
+    endif()
 
-        include(GNUInstallDirs)
+    include(GNUInstallDirs)
 
-        if (BUILD_AVS_PLUGIN)
-            INSTALL(TARGETS LSMASHSource LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/avisynth")
-        endif()
+    if (BUILD_AVS_PLUGIN)
+        INSTALL(TARGETS LSMASHSource LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/avisynth")
+    endif()
 
-        if (BUILD_VS_PLUGIN)
+    if (BUILD_VS_PLUGIN)
+        if (SKBUILD)
+            INSTALL(TARGETS LSMASHSource LIBRARY DESTINATION ".")
+        else()
             INSTALL(TARGETS LSMASHSource LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/vapoursynth")
         endif()
+    endif()
 
-        # uninstall target
-        if(NOT TARGET uninstall)
-        configure_file(
-            "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-            "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-            IMMEDIATE @ONLY)
+    # uninstall target
+    if(NOT TARGET uninstall)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        IMMEDIATE @ONLY)
 
-        add_custom_target(uninstall
-            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-        endif()
+    add_custom_target(uninstall
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
     endif()
 endif()
 
