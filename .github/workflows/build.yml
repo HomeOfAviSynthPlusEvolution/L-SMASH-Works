@@ -155,6 +155,71 @@ jobs:
         output-dir: dist
         extras: uv
 
+    - name: Test macOS Wheel
+      if: runner.os == 'macOS'
+      run: |
+        export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+        brew install vapoursynth
+        BREW_PREFIX=$(brew --prefix)
+
+        python3 -m venv test_env
+        source test_env/bin/activate
+
+        export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
+        export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+        export DYLD_FALLBACK_LIBRARY_PATH="$BREW_PREFIX/lib:$DYLD_FALLBACK_LIBRARY_PATH"
+
+        pip install --upgrade pip
+        pip install vapoursynth
+        pip install dist/*macosx*.whl
+
+        python3 -c "import vapoursynth, os; core = vapoursynth.core; plugins = [p.name for p in core.plugins()]; print('Successfully loaded plugins:', plugins); p_dir = os.path.join(os.path.dirname(vapoursynth.__file__), 'plugins'); print('Contents of plugins directory:', os.listdir(p_dir) if os.path.exists(p_dir) else 'DIR NOT FOUND'); assert any('lsmash' in p.lower() for p in plugins), 'lsmashsource plugin failed to autoload!'"
+
+    #- name: Test macOS Wheel
+    #  if: runner.os == 'macOS'
+    #  run: |
+    #    export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+    #    brew install vapoursynth
+    #    BREW_PREFIX=$(brew --prefix)
+    #
+    #    python3 -m venv test_env
+    #    source test_env/bin/activate
+    #
+    #    export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
+    #    export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+    #    export DYLD_FALLBACK_LIBRARY_PATH="$BREW_PREFIX/lib:$DYLD_FALLBACK_LIBRARY_PATH"
+    #
+    #    pip install --upgrade pip
+    #    pip install vapoursynth
+    #    pip install dist/*macosx*.whl
+    #
+    #    echo "Locating installed plugin..."
+    #    # Use Python to find the exact path pip installed the .so file to
+    #    PLUGIN_PATH=$(python3 -c "import vapoursynth, os; print(os.path.join(os.path.dirname(vapoursynth.__file__), 'plugins', 'liblsmashsource.so'))")
+    #    echo "Plugin located at: $PLUGIN_PATH"
+    #
+    #    echo "--- Checking dynamic dependencies (otool) ---"
+    #    # This shows what the plugin THINKS it needs
+    #    otool -L "$PLUGIN_PATH"
+    #
+    #    echo "--- Forcing macOS dyld to load the plugin (ctypes) ---"
+    #    # This will intentionally crash and print the EXACT missing library or architecture error
+    #    python3 -c "import ctypes; ctypes.CDLL('$PLUGIN_PATH')"
+
+    - name: Test Linux Wheel
+      if: runner.os == 'Linux'
+      run: |
+        python3 -m venv test_env
+        source test_env/bin/activate
+
+        pip install --upgrade pip
+        pip install vapoursynth
+
+        pip install dist/*manylinux*.whl
+
+        echo "Testing VapourSynth Autoloading..."
+        python3 -c "import vapoursynth; core = vapoursynth.core; plugins = [p.name for p in core.plugins()]; print('Successfully loaded plugins:', plugins); assert any('lsmash' in p.lower() for p in plugins), 'Plugin failed to autoload!'; print('✅ SUCCESS: Plugin autoloaded correctly!')"
+
     - uses: actions/upload-artifact@v7.0.1
       with:
         name: lsmashsource-${{ matrix.arch }}
@@ -202,6 +267,27 @@ jobs:
         python -m pip install build scikit-build-core --break-system-packages
         export LDFLAGS="-static-libgcc -static-libstdc++ -static"
         python -m build --wheel --outdir dist
+
+    - name: Test Windows Wheel
+      run: |
+        echo "Creating isolated Python virtual environment..."
+        python -m venv test_env
+        source test_env/bin/activate
+
+        echo "Installing VapourSynth via pip..."
+        pip install --upgrade pip
+        # Pulls the official, latest VapourSynth directly from PyPI
+        pip install vapoursynth
+
+        echo "Installing the built wheel for testing..."
+        pip install dist/*ucrt_gnu.whl
+
+        echo "Testing VapourSynth Autoloading on Windows..."
+        python -c "import vapoursynth; core = vapoursynth.core; plugins = [p.name for p in core.plugins()]; print('Successfully loaded plugins:', plugins); assert any('lsmash' in p.lower() for p in plugins), 'Plugin failed to autoload!'; print('SUCCESS: Plugin autoloaded correctly!')"
+
+    - name: Retag Wheel for Distribution
+      run: |
+        echo "Test passed! Retagging wheel to win_amd64 for standard Windows users..."
         python -m wheel tags --platform-tag=win_amd64 --remove dist/*.whl
 
     - uses: actions/upload-artifact@v7.0.1

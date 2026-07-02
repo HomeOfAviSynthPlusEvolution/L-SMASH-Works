@@ -42,6 +42,20 @@ wheel.install-dir = "vapoursynth/plugins"
 wheel.py-api = "py3"
 sdist.reproducible = true
 wheel.expand-macos-universal-tags = true
+wheel.exclude = [
+    # Exclude directories and their contents explicitly
+    "**/bin/",              # Excludes the bin folder (and obudump)
+    "**/include/",          # Excludes the include folder (headers)
+    "**/lib/cmake/",        # Excludes the cmake config folder
+    "**/lib/pkgconfig/",    # Excludes the pkgconfig folder
+    "**/share/",            # Excludes share folder (man pages/docs, if any)
+    
+    # Exclude specific static library files
+    "**/lib/*.a",           # Linux/macOS static libraries
+    "**/lib/*.lib",         # Windows static libraries
+    "**/*.lib",             # Catch-all for Windows static libs just in case
+    "**/*.a"                # Catch-all for Unix static libs just in case
+]
 
 [tool.scikit-build.cmake.define]
 BUILD_AVS_PLUGIN = "OFF"

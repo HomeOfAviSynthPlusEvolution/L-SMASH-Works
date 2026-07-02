@@ -322,6 +322,10 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
             set_target_properties(LSMASHSource PROPERTIES OUTPUT_NAME "lsmashsource.${ver}")
         endif()
     endif()
+    
+    if (APPLE)
+        set_target_properties(LSMASHSource PROPERTIES SUFFIX ".dylib")
+    endif()
 
     include(GNUInstallDirs)
 
