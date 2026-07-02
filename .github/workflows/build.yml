@@ -1,0 +1,301 @@
+name: Build Wheel
+
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  dav1d_version: "1.5.3"
+  libxml2_version: "v2.15.3"
+  nv_version: "n13.0.19.0"
+  libmfx_version: "master"
+  libvpx_version: "v1.16.0"
+  glslang_version: "16.3.0"
+  BUILD_COMMANDS: |
+    set -e
+    JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu || echo 2)
+    REPO_ROOT=$(pwd)
+
+    # Patch obuparse MinGW-w64 (UCRT64)
+    if [[ "$PREFIX" == "/ucrt64" ]]; then
+      sed -i 's|#define off_t __int64|// #define off_t __int64|g' obuparse/tools/obudump.c
+      sed -i 's|#define fseeko _fseeki64|// #define fseeko _fseeki64|g' obuparse/tools/obudump.c
+      sed -i 's|#define ftello _fseeki64|// #define ftello _fseeki64|g' obuparse/tools/obudump.c
+    fi
+
+    # dav1d
+    wget "https://code.videolan.org/videolan/dav1d/-/archive/$dav1d_version/dav1d-$dav1d_version.tar.bz2" -O - | tar xfvj -
+    cd dav1d-"$dav1d_version"
+    meson setup build -Dprefix="$PREFIX" -Denable_tools=false -Denable_examples=false -Denable_tests=false --default-library=static --buildtype=release --strip
+    meson compile -C build
+    $SUDO meson install -C build
+    cd .. && rm -rf dav1d-"$dav1d_version"
+
+    # mfx_dispatch build (Linux/Windows only)
+    if [[ "$EXTRA_FFMPEG_FLAGS" == *"--enable-libmfx"* ]]; then
+      git clone -b "$libmfx_version" --depth 1 https://github.com/lu-zero/mfx_dispatch
+      cd mfx_dispatch
+      autoreconf -i
+      CPPFLAGS="-O2 -s -pipe" ./configure --prefix="$PREFIX"
+      make -j$(nproc)
+      $SUDO make -j "$JOBS" install
+      cd .. && rm -rf mfx_dispatch
+    fi
+
+    # nv-codec-headers (Linux/Windows only)
+    if [[ "$EXTRA_FFMPEG_FLAGS" == *"--enable-nvdec"* ]]; then
+      git clone -b "$nv_version" --depth 1 https://git.videolan.org/git/ffmpeg/nv-codec-headers
+      cd nv-codec-headers
+      $SUDO make install PREFIX="$PREFIX"
+      cd .. && rm -rf nv-codec-headers
+    fi
+
+    # libxml2
+    git clone -b "$libxml2_version" --depth 1 https://github.com/gnome/libxml2
+    cd libxml2
+    cmake -B build -G Ninja -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_FTP=OFF -DLIBXML2_WITH_HTML=ON -DLIBXML2_WITH_C14N=ON -DLIBXML2_WITH_CATALOG=OFF -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_DOCB=ON -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_ISO8859X=ON -DLIBXML2_WITH_ZLIB=ON -DLIBXML2_WITH_ICU=OFF -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_LEGACY=ON -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=ON -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=ON -DLIBXML2_WITH_PUSH=ON -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=ON -DLIBXML2_WITH_REGEXPS=ON  -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=ON -DLIBXML2_WITH_SCHEMAS=ON -DLIBXML2_WITH_SCHEMATRON=ON -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON -DLIBXML2_WITH_VALID=ON -DLIBXML2_WITH_WRITER=ON -DLIBXML2_WITH_XINCLUDE=ON -DLIBXML2_WITH_XPATH=ON -DLIBXML2_WITH_XPTR=ON -DCMAKE_C_FLAGS_RELEASE="-DIN_LIBXML" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$PREFIX" -DCMAKE_INSTALL_PREFIX="$PREFIX" -D BUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_PROGRAMS=OFF -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file:"
+    ninja -C build
+    $SUDO ninja -C build install
+    cd .. && rm -rf libxml2
+
+    # libvpx
+    git clone -b "$libvpx_version" --depth 1 https://github.com/webmproject/libvpx
+    cd libvpx
+    VPX_TARGET=""
+    if [[ "$PREFIX" == "/ucrt64" ]]; then
+      VPX_TARGET="--target=x86_64-win64-gcc"
+    fi
+    ./configure --prefix="$PREFIX" $VPX_TARGET --disable-examples --disable-tools --disable-docs --disable-unit-tests --enable-vp9-highbitdepth --disable-debug-libs --disable-shared --as=nasm --enable-runtime-cpu-detect --disable-debug --disable-vp8 --disable-vp9-encoder --disable-postproc --disable-webm-io --disable-libyuv
+    make -j "$JOBS"
+    $SUDO make -j "$JOBS" install
+    cd .. && rm -rf libvpx
+
+    # glslang
+    git clone -b "$glslang_version" --depth 1 https://github.com/KhronosGroup/glslang
+    cd glslang
+    python3 ./update_glslang_sources.py
+    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX" -DBUILD_SHARED_LIBS=OFF -DENABLE_OPT=OFF -DENABLE_HLSL=OFF -DENABLE_SPIRV=ON -DENABLE_GLSLANG_BINARIES=ON -DGLSLANG_TESTS=OFF
+    ninja -C build
+    $SUDO ninja -C build install
+    cd .. && rm -rf glslang
+
+    # FFmpeg
+    cd $REPO_ROOT/FFmpeg
+    ./configure --prefix="$PREFIX" --disable-muxers --disable-avdevice --disable-encoders --disable-filters --disable-devices --disable-network --enable-libdav1d --enable-zlib --enable-libxml2 --enable-libvpx --disable-programs --disable-doc --disable-debug --enable-gpl --enable-pic --disable-nvenc --enable-hwaccel=ffv1_vulkan --disable-bzlib --disable-iconv --disable-lzma --extra-cflags="-fPIC" --extra-ldflags="-fPIC" $EXTRA_FFMPEG_FLAGS  || {
+      echo "====================================================================="
+      echo "❌ FFmpeg configure FAILED! Dumping ffbuild/config.log..."
+      echo "====================================================================="
+      cat ffbuild/config.log
+      echo "====================================================================="
+      exit 1
+    }
+
+    make -j "$JOBS"
+    $SUDO make -j "$JOBS" install
+    cd ..
+
+jobs:
+  build-non-windows-wheel:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: linux_x86_64
+          - os: ubuntu-24.04-arm
+            arch: linux_aarch64
+          - os: macos-15-intel
+            arch: macosx_x86_64
+          - os: macos-15
+            arch: macosx_arm64
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        submodules: true
+
+    - uses: pypa/cibuildwheel@v4.1.0
+      env:
+        CIBW_BUILD: cp314-*
+        CIBW_BUILD_FRONTEND: uv
+        CIBW_ENVIRONMENT: >
+          dav1d_version=${{ env.dav1d_version }}
+          libxml2_version=${{ env.libxml2_version }}
+          nv_version=${{ env.nv_version }}
+          libmfx_version=${{ env.libmfx_version }}
+          libvpx_version=${{ env.libvpx_version }}
+          glslang_version=${{ env.glslang_version }}
+          PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig
+          CMAKE_ARGS="-DZLIB_USE_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC -DCMAKE_MODULE_LINKER_FLAGS=-Wl,-Bsymbolic"
+        CIBW_ENVIRONMENT_MACOS: >
+          MACOSX_DEPLOYMENT_TARGET=15
+          CMAKE_ARGS="-DZLIB_USE_STATIC_LIBS=OFF"
+        CIBW_BEFORE_ALL_LINUX: |
+          set -e
+          if command -v dnf >/dev/null 2>&1; then
+            dnf install -y epel-release dnf-plugins-core
+            dnf -y install wget curl git make gcc gcc-c++ cmake ninja-build nasm zlib-devel pkgconf-pkg-config diffutils python3-pip vulkan-headers vulkan-loader-devel autoconf automake libtool
+          else
+            apk add --no-cache wget curl git make gcc g++ cmake ninja nasm zlib-dev pkgconfig diffutils python3 py3-pip vulkan-headers vulkan-loader-dev autoconf automake libtool make
+          fi &&
+          pip3 install meson
+          ARCH=$(uname -m)
+          if [[ "$ARCH" == "x86_64" ]]; then
+            export PREFIX=/usr SUDO="" EXTRA_FFMPEG_FLAGS="--enable-cuvid --enable-nvdec --enable-libmfx"
+          else
+            export PREFIX=/usr SUDO="" EXTRA_FFMPEG_FLAGS="--enable-cuvid --enable-nvdec"
+          fi
+          ${{ env.BUILD_COMMANDS }}
+        CIBW_BEFORE_ALL_MACOS: |
+          brew install cmake meson nasm ninja pkg-config zlib wget vulkan-headers vulkan-loader autoconf automake libtool
+          export PREFIX=/usr/local SUDO="sudo" EXTRA_FFMPEG_FLAGS="--disable-videotoolbox --disable-audiotoolbox"
+          ${{ env.BUILD_COMMANDS }}
+      with:
+        output-dir: dist
+        extras: uv
+
+    - name: Test macOS Wheel
+      if: runner.os == 'macOS'
+      run: |
+        export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+        brew install vapoursynth
+        BREW_PREFIX=$(brew --prefix)
+
+        python3 -m venv test_env
+        source test_env/bin/activate
+
+        export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
+        export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+        export DYLD_FALLBACK_LIBRARY_PATH="$BREW_PREFIX/lib:$DYLD_FALLBACK_LIBRARY_PATH"
+
+        pip install --upgrade pip
+        pip install vapoursynth
+        pip install dist/*macosx*.whl
+
+        python3 -c "import vapoursynth, os; core = vapoursynth.core; plugins = [p.name for p in core.plugins()]; print('Successfully loaded plugins:', plugins); p_dir = os.path.join(os.path.dirname(vapoursynth.__file__), 'plugins'); print('Contents of plugins directory:', os.listdir(p_dir) if os.path.exists(p_dir) else 'DIR NOT FOUND'); assert any('lsmash' in p.lower() for p in plugins), 'lsmashsource plugin failed to autoload!'"
+
+    #- name: Test macOS Wheel
+    #  if: runner.os == 'macOS'
+    #  run: |
+    #    export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+    #    brew install vapoursynth
+    #    BREW_PREFIX=$(brew --prefix)
+    #
+    #    python3 -m venv test_env
+    #    source test_env/bin/activate
+    #
+    #    export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
+    #    export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+    #    export DYLD_FALLBACK_LIBRARY_PATH="$BREW_PREFIX/lib:$DYLD_FALLBACK_LIBRARY_PATH"
+    #
+    #    pip install --upgrade pip
+    #    pip install vapoursynth
+    #    pip install dist/*macosx*.whl
+    #
+    #    echo "Locating installed plugin..."
+    #    # Use Python to find the exact path pip installed the .so file to
+    #    PLUGIN_PATH=$(python3 -c "import vapoursynth, os; print(os.path.join(os.path.dirname(vapoursynth.__file__), 'plugins', 'liblsmashsource.so'))")
+    #    echo "Plugin located at: $PLUGIN_PATH"
+    #
+    #    echo "--- Checking dynamic dependencies (otool) ---"
+    #    # This shows what the plugin THINKS it needs
+    #    otool -L "$PLUGIN_PATH"
+    #
+    #    echo "--- Forcing macOS dyld to load the plugin (ctypes) ---"
+    #    # This will intentionally crash and print the EXACT missing library or architecture error
+    #    python3 -c "import ctypes; ctypes.CDLL('$PLUGIN_PATH')"
+
+    - name: Test Linux Wheel
+      if: runner.os == 'Linux'
+      run: |
+        python3 -m venv test_env
+        source test_env/bin/activate
+
+        pip install --upgrade pip
+        pip install vapoursynth
+
+        pip install dist/*manylinux*.whl
+
+        echo "Testing VapourSynth Autoloading..."
+        python3 -c "import vapoursynth; core = vapoursynth.core; plugins = [p.name for p in core.plugins()]; print('Successfully loaded plugins:', plugins); assert any('lsmash' in p.lower() for p in plugins), 'Plugin failed to autoload!'; print('✅ SUCCESS: Plugin autoloaded correctly!')"
+
+    - uses: actions/upload-artifact@v7.0.1
+      with:
+        name: lsmashsource-${{ matrix.arch }}
+        path: dist
+
+  build-windows-wheel:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: msys2/setup-msys2@v2.32.0
+      with:
+        msystem: UCRT64
+        update: true
+        install: >-
+          mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-meson
+          mingw-w64-ucrt-x86_64-ninja
+          mingw-w64-ucrt-x86_64-nasm
+          mingw-w64-ucrt-x86_64-pkgconf
+          mingw-w64-ucrt-x86_64-zlib
+          mingw-w64-ucrt-x86_64-vulkan-headers
+          mingw-w64-ucrt-x86_64-vulkan-loader
+          mingw-w64-ucrt-x86_64-glslang
+          mingw-w64-ucrt-x86_64-autotools
+          mingw-w64-ucrt-x86_64-python
+          mingw-w64-ucrt-x86_64-python-pip
+          mingw-w64-ucrt-x86_64-python-wheel
+          git
+          make
+          wget
+          diffutils
+
+    - name: Build Dependencies and Plugin
+      run: |
+        export PREFIX=/ucrt64 SUDO="" EXTRA_FFMPEG_FLAGS="--enable-cuvid --enable-nvdec --enable-libmfx --enable-w32threads --pkg-config-flags=-static"
+        ${{ env.BUILD_COMMANDS }}
+
+        python -m pip install build scikit-build-core --break-system-packages
+        export LDFLAGS="-static-libgcc -static-libstdc++ -static"
+        python -m build --wheel --outdir dist
+
+    - name: Test Windows Wheel
+      run: |
+        echo "Creating isolated Python virtual environment..."
+        python -m venv test_env
+        source test_env/bin/activate
+
+        echo "Installing VapourSynth via pip..."
+        pip install --upgrade pip
+        # Pulls the official, latest VapourSynth directly from PyPI
+        pip install vapoursynth
+
+        echo "Installing the built wheel for testing..."
+        pip install dist/*ucrt_gnu.whl
+
+        echo "Testing VapourSynth Autoloading on Windows..."
+        python -c "import vapoursynth; core = vapoursynth.core; plugins = [p.name for p in core.plugins()]; print('Successfully loaded plugins:', plugins); assert any('lsmash' in p.lower() for p in plugins), 'Plugin failed to autoload!'; print('SUCCESS: Plugin autoloaded correctly!')"
+
+    - name: Retag Wheel for Distribution
+      run: |
+        echo "Test passed! Retagging wheel to win_amd64 for standard Windows users..."
+        python -m wheel tags --platform-tag=win_amd64 --remove dist/*.whl
+
+    - uses: actions/upload-artifact@v7.0.1
+      with:
+        name: lsmashsource-sdist
+        path: dist/*.tar.gz
+
+    - uses: actions/upload-artifact@v7.0.1
+      with:
+        name: lsmashsource-win_amd64
+        path: dist/*.whl
