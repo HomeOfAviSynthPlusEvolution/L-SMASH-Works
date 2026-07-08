@@ -264,6 +264,11 @@ jobs:
         export PREFIX=/ucrt64 SUDO="" EXTRA_FFMPEG_FLAGS="--enable-cuvid --enable-nvdec --enable-libmfx --enable-w32threads --pkg-config-flags=-static"
         ${{ env.BUILD_COMMANDS }}
 
+        git config --global --add safe.directory /github/workspace
+        if [ "${{ github.ref_type }}" = "tag" ]; then
+          export SETUPTOOLS_SCM_PRETEND_VERSION="${{ github.ref_name }}"
+        fi
+
         python -m pip install build scikit-build-core --break-system-packages
         export LDFLAGS="-static-libgcc -static-libstdc++ -static"
         python -m build --outdir dist
