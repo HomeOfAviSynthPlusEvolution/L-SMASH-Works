@@ -51,6 +51,8 @@ void set_error_on_init(VSMap* out, const VSAPI* vsapi, const char* format, ...)
 
 extern void VS_CC vs_libavsmashsource_create(const VSMap* in, VSMap* out, void* user_data, VSCore* core, const VSAPI* vsapi);
 extern void VS_CC vs_lwlibavsource_create(const VSMap* in, VSMap* out, void* user_data, VSCore* core, const VSAPI* vsapi);
+extern void VS_CC vs_libavsmashaudiosource_create(const VSMap* in, VSMap* out, void* user_data, VSCore* core, const VSAPI* vsapi);
+extern void VS_CC vs_lwlibavaudiosource_create(const VSMap* in, VSMap* out, void* user_data, VSCore* core, const VSAPI* vsapi);
 
 /*void VS_CC vs_version_create( const VSMap *in, VSMap *out, void *user_data, VSCore *core, const VSAPI *vsapi )
 {
@@ -72,9 +74,17 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin* plugin, const VSPLUGINAPI
     "decoder:data:opt;prefer_hw:int:opt;"
     vspapi->registerFunction("LibavSMASHSource", "source:data;track:int:opt;" COMMON_OPTS "ff_loglevel:int:opt;ff_options:data:opt;",
         "clip:vnode;", vs_libavsmashsource_create, NULL, plugin);
+    vspapi->registerFunction("LibavSMASHAudioSource",
+        "source:data;track:int:opt;skip_priming:int:opt;layout:data:opt;rate:int:opt;decoder:data:opt;ff_loglevel:int:opt;drc_scale:"
+        "float:opt;ff_options:data:opt;",
+        "audio:anode;", vs_libavsmashaudiosource_create, NULL, plugin);
     vspapi->registerFunction("LWLibavSource",
         "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;" COMMON_OPTS
         "repeat:int:opt;dominance:int:opt;ff_loglevel:int:opt;cachedir:data:opt;ff_options:data:opt;rap_verification:int:opt;",
         "clip:vnode;", vs_lwlibavsource_create, NULL, plugin);
+    vspapi->registerFunction("LWLibavAudioSource",
+        "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;av_sync:int:opt;layout:data:opt;rate:int:opt;decoder:data:opt;"
+        "ff_loglevel:int:opt;cachedir:data:opt;indexingpr:int:opt;drc_scale:float:opt;ff_options:data:opt;fill_agaps:int:opt;",
+        "audio:anode;", vs_lwlibavaudiosource_create, NULL, plugin);
 #undef COMMON_OPTS
 }

@@ -31,41 +31,6 @@
 #include <libswscale/swscale.h> /* Colorspace converter */
 
 #include "../common/audio_output.h"
-#ifndef _MSC_VER
-/* Dummy definitions.
- * Audio resampler/buffer is NOT used at all in this filter. */
-typedef void AVAudioResampleContext;
-typedef void audio_samples_t;
-int flush_resampler_buffers(AVAudioResampleContext* avr)
-{
-    return 0;
-}
-int update_resampler_configuration(AVAudioResampleContext* avr, uint64_t out_channel_layout, int out_sample_rate,
-    enum AVSampleFormat out_sample_fmt, uint64_t in_channel_layout, int in_sample_rate, enum AVSampleFormat in_sample_fmt,
-    int* input_planes, int* input_block_align)
-{
-    return 0;
-}
-int resample_audio(AVAudioResampleContext* avr, audio_samples_t* out, audio_samples_t* in)
-{
-    return 0;
-}
-uint64_t output_pcm_samples_from_buffer(
-    lw_audio_output_handler_t* aohp, AVFrame* frame_buffer, uint8_t** output_buffer, enum audio_output_flag* output_flags)
-{
-    return 0;
-}
-
-uint64_t output_pcm_samples_from_packet(lw_audio_output_handler_t* aohp, AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame_buffer,
-    uint8_t** output_buffer, enum audio_output_flag* output_flags)
-{
-    return 0;
-}
-
-void lw_cleanup_audio_output_handler(lw_audio_output_handler_t* aohp)
-{
-}
-#endif
 
 #include "lsmashsource.h"
 #include "video_output.h"

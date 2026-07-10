@@ -173,7 +173,7 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
         target_sources(LSMASHSource PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/common/planar_yuv_sse2.c")
     endif()
 
-    if (BUILD_AVS_PLUGIN OR BUILD_AU2_PLUGIN)
+    if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
         target_sources(LSMASHSource PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/common/audio_output.h"
@@ -199,9 +199,13 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
 
     if (BUILD_VS_PLUGIN)
         target_sources(LSMASHSource PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/audio_output.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/audio_output.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/libavsmash_audio_source.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/libavsmash_source.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lsmashsource.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lwlibav_audio_source.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/lwlibav_source.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/VapourSynth/video_output.h"

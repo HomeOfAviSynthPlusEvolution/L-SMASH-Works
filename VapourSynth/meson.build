@@ -17,16 +17,24 @@ version_h = declare_dependency(
 add_project_arguments('-DXXH_INLINE_ALL', '-D_FILE_OFFSET_BITS=64', '-DDEFAULT_CACHEDIR=' + get_option('cachedir'), language: 'c')
 
 sources = [
+  'audio_output.c',
+  'audio_output.h',
+  'libavsmash_audio_source.c',
   'libavsmash_source.c',
   'lsmashsource.c',
   'lsmashsource.h',
+  'lwlibav_audio_source.c',
   'lwlibav_source.c',
   'video_output.c',
   'video_output.h',
+  '../common/audio_output.c',
+  '../common/audio_output.h',
   '../common/decode.c',
   '../common/decode.h',
   '../common/libavsmash.c',
   '../common/libavsmash.h',
+  '../common/libavsmash_audio.c',
+  '../common/libavsmash_audio.h',
   '../common/libavsmash_video.c',
   '../common/libavsmash_video.h',
   '../common/lwindex.c',
@@ -44,6 +52,8 @@ sources = [
   '../common/lwlibav_video.h',
   '../common/osdep.c',
   '../common/osdep.h',
+  '../common/resample.c',
+  '../common/resample.h',
   '../common/utils.c',
   '../common/utils.h',
   '../common/video_output.c',
@@ -58,6 +68,7 @@ deps = [
   dependency('libavcodec', version: '>=58.91.0'),
   dependency('libavformat', version: '>=58.45.0'),
   dependency('libavutil', version: '>=56.51.0'),
+  dependency('libswresample', version: '>=3.7.0'),
   dependency('libswscale', version: '>=5.7.0'),
   version_h
 ]
