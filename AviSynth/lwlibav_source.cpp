@@ -353,18 +353,18 @@ void __stdcall LWLibavAudioSource::GetAudio(void* buf, int64_t start, int64_t wa
     memset(buf, silence, (size_t)(wanted_length * aohp->output_block_align));
 }
 
-/* The gap list describes missing samples on the output timeline, but the source
- * audio is packed as if those samples did not exist. Render a request as follows:
+/* The gap list describes synthetic frames that occupy samples on the same
+ * timeline used by lwlibav_audio_get_pcm_samples(). Render a request as follows:
  *
  * 1. Fill the entire output buffer with silence, so every part covered by a gap
  *    already has its final value.
  * 2. Walk the ordered gap list and split the request into the non-gap ranges
  *    before, between, and after the gaps. Decode only those ranges, leaving the
  *    pre-filled silence untouched wherever the request overlaps a gap.
- * 3. Before decoding each range, subtract the total length of all preceding gaps
- *    from its output-timeline position. This maps that position back to the
- *    corresponding sample in the packed source audio. Apply the normal audio
- *    delay to each mapped range independently before asking the decoder for PCM.
+ * 3. Decode each non-gap range at its original timeline position. The synthetic
+ *    gap frames are included when the decoder counts PCM samples and locates the
+ *    starting frame, so preceding gap lengths must not be subtracted. Apply the
+ *    normal audio delay to each range before asking the decoder for PCM.
  *
  * Return 1 when this function has rendered the whole request. Return 0 only when
  * there is no gap list and GetAudio() must use its normal, single-range path. */
@@ -380,19 +380,16 @@ int LWLibavAudioSource::fill_audio_gaps(void* buf, int64_t* start, int64_t wante
     const int64_t request_start = *start;
     const int64_t request_end = request_start + wanted_length;
     int64_t current_start = request_start;
-    int64_t total_gap_length = 0;
     for (int i = 0; i < adhp->gap_count; ++i) {
         const int64_t gap_start = adhp->gap_list[i].pts_in_samples;
         const int64_t gap_length = adhp->gap_list[i].length;
         const int64_t gap_end = gap_start + gap_length;
-        if (gap_end <= current_start) {
-            total_gap_length += gap_length;
+        if (gap_end <= current_start)
             continue;
-        }
         if (gap_start >= request_end)
             break;
         if (gap_start > current_start) {
-            int64_t decode_start = current_start - total_gap_length;
+            int64_t decode_start = current_start;
             const int64_t decode_length = gap_start - current_start;
             if (delay_audio(&decode_start, decode_length)) {
                 (void)lwlibav_audio_get_pcm_samples(adhp, aohp,
@@ -400,11 +397,10 @@ int LWLibavAudioSource::fill_audio_gaps(void* buf, int64_t* start, int64_t wante
             }
         }
         current_start = gap_end;
-        total_gap_length += gap_length;
         if (current_start >= request_end)
             return 1;
     }
-    int64_t decode_start = current_start - total_gap_length;
+    int64_t decode_start = current_start;
     const int64_t decode_length = request_end - current_start;
     if (delay_audio(&decode_start, decode_length)) {
         (void)lwlibav_audio_get_pcm_samples(adhp, aohp,
