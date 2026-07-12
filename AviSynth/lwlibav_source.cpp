@@ -344,8 +344,6 @@ void __stdcall LWLibavAudioSource::GetAudio(void* buf, int64_t start, int64_t wa
     if (aohp->fill_audio_gaps) {
         if (fill_audio_gaps(buf, &start, wanted_length, adhp, aohp, vi))
             return;
-        if (wanted_length <= 0)
-            return;
     }
     if (delay_audio(&start, wanted_length))
         return (void)lwlibav_audio_get_pcm_samples(adhp, aohp, buf, start, wanted_length);
