@@ -325,7 +325,7 @@ LWLibavAudioSource::LWLibavAudioSource(lwlibav_option_t* opt, const char* channe
             const uint64_t frame_end = prior_sequences_resampled_count
                 + count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, aohp->output_sample_rate);
             if (info[i].file_offset == -1)
-                gap_info_list.emplace_back((int64_t)frame_start + lwh.av_gap, (int)(frame_end - frame_start));
+                gap_info_list.emplace_back(static_cast<int64_t>(frame_start) + lwh.av_gap, static_cast<int>(frame_end - frame_start));
         }
         const int gap_count = gap_info_list.size();
         if (gap_count > 0) {
