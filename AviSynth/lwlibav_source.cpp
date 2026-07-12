@@ -257,7 +257,7 @@ static void prepare_audio_decoding(lwlibav_audio_decode_handler_t* adhp, lwlibav
     if (vi.num_audio_samples == 0)
         env->ThrowError("LWLibavAudioSource: no valid audio frame.");
     if (lwh.av_gap && aohp->output_sample_rate != ctx->sample_rate)
-        lwh.av_gap = ((int64_t)lwh.av_gap * aohp->output_sample_rate - 1) / ctx->sample_rate + 1;
+        lwh.av_gap = av_rescale_rnd(lwh.av_gap, aohp->output_sample_rate, ctx->sample_rate, AV_ROUND_UP);
     vi.num_audio_samples += lwh.av_gap;
     /* Force seeking at the first reading. */
     lwlibav_audio_force_seek(adhp);
@@ -325,7 +325,7 @@ LWLibavAudioSource::LWLibavAudioSource(lwlibav_option_t* opt, const char* channe
             const uint64_t frame_end = prior_sequences_resampled_count
                 + count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, aohp->output_sample_rate);
             if (info[i].file_offset == -1)
-                gap_info_list.emplace_back((int64_t)frame_start, (int)(frame_end - frame_start));
+                gap_info_list.emplace_back((int64_t)frame_start + lwh.av_gap, (int)(frame_end - frame_start));
         }
         const int gap_count = gap_info_list.size();
         if (gap_count > 0) {
