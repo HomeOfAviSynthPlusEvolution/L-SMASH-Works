@@ -125,7 +125,7 @@ static int make_gap_list(lwlibav_audio_handler_t* hp, VSMap* out, const VSAPI* v
                 set_error_on_init(out, vsapi, "lsmas: the resampled audio gap is too large.");
                 return -1;
             }
-            adhp->gap_list[gap_index].pts_in_samples = gap_start;
+            adhp->gap_list[gap_index].pts_in_samples = gap_start + hp->lwh.av_gap;
             adhp->gap_list[gap_index].length = (int)gap_length;
             gap_index++;
         }
@@ -147,10 +147,10 @@ static int delay_audio(lwlibav_audio_handler_t* hp, int64_t* start, int64_t want
     return 1;
 }
 
-static int decode_audio_range(
-    uint8_t* buf, int64_t output_start, int64_t length, int64_t removed_gap_length, lwlibav_audio_handler_t* hp)
+static int decode_audio_range(uint8_t* buf, int64_t output_start, int64_t length, lwlibav_audio_handler_t* hp)
 {
-    int64_t source_start = output_start - removed_gap_length;
+    /* Synthetic gap frames are already part of the decoder's PCM timeline. */
+    int64_t source_start = output_start;
     if (!delay_audio(hp, &source_start, length))
         return 0;
     return lwlibav_audio_get_pcm_samples(hp->adhp, hp->aohp, buf, source_start, length) == (uint64_t)length ? 0 : -1;
@@ -161,35 +161,31 @@ static int render_audio(uint8_t* buf, int64_t start, int64_t wanted_length, lwli
     lwlibav_audio_decode_handler_t* adhp = hp->adhp;
     lwlibav_audio_output_handler_t* aohp = hp->aohp;
     if (!aohp->fill_audio_gaps || !adhp->gap_list)
-        return decode_audio_range(buf, start, wanted_length, 0, hp);
+        return decode_audio_range(buf, start, wanted_length, hp);
 
     int64_t end = start + wanted_length;
     int64_t cursor = start;
-    int64_t removed_gap_length = 0;
     for (int i = 0; i < adhp->gap_count; i++) {
-        int64_t gap_start = adhp->gap_list[i].pts_in_samples + hp->lwh.av_gap;
+        int64_t gap_start = adhp->gap_list[i].pts_in_samples;
         int64_t gap_length = adhp->gap_list[i].length;
         int64_t gap_end = gap_start + gap_length;
-        if (gap_end <= cursor) {
-            removed_gap_length += gap_length;
+        if (gap_end <= cursor)
             continue;
-        }
         if (gap_start >= end)
             break;
         if (gap_start > cursor) {
             int64_t decode_length = MIN(gap_start, end) - cursor;
             uint8_t* decode_buf = buf + (cursor - start) * aohp->output_block_align;
-            if (decode_audio_range(decode_buf, cursor, decode_length, removed_gap_length, hp) < 0)
+            if (decode_audio_range(decode_buf, cursor, decode_length, hp) < 0)
                 return -1;
         }
         cursor = MAX(cursor, gap_end);
-        removed_gap_length += gap_length;
         if (cursor >= end)
             return 0;
     }
     if (cursor < end) {
         uint8_t* decode_buf = buf + (cursor - start) * aohp->output_block_align;
-        if (decode_audio_range(decode_buf, cursor, end - cursor, removed_gap_length, hp) < 0)
+        if (decode_audio_range(decode_buf, cursor, end - cursor, hp) < 0)
             return -1;
     }
     return 0;

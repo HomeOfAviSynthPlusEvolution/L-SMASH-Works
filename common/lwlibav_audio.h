@@ -62,6 +62,8 @@ void lwlibav_audio_set_drc(lwlibav_audio_decode_handler_t* adhp, const double dr
 
 void lwlibav_audio_set_decoder_options(lwlibav_audio_decode_handler_t* adhp, const char* ff_options);
 
+void lwlibav_audio_set_log_handler(lwlibav_audio_decode_handler_t* adhp, lw_log_handler_t* lh);
+
 /*****************************************************************************
  * Getters
  *****************************************************************************/
