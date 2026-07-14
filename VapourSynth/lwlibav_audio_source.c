@@ -90,7 +90,7 @@ static int make_gap_list(lwlibav_audio_handler_t* hp, VSMap* out, const VSAPI* v
         return 0;
     const audio_frame_info_t* info = adhp->frame_list;
     int gap_count = 0;
-    for (uint32_t i = 1; i < adhp->frame_count; i++) {
+    for (uint32_t i = 1; i <= adhp->frame_count; i++) {
         if (info[i].file_offset == -1)
             gap_count++;
     }
@@ -106,7 +106,7 @@ static int make_gap_list(lwlibav_audio_handler_t* hp, VSMap* out, const VSAPI* v
     uint64_t sequence_sample_count = 0;
     uint64_t prior_sequence_sample_count = 0;
     int gap_index = 0;
-    for (uint32_t i = 1; i < adhp->frame_count; i++) {
+    for (uint32_t i = 1; i <= adhp->frame_count; i++) {
         if ((current_sample_rate != info[i].sample_rate && info[i].sample_rate > 0) || current_frame_length != info[i].length) {
             prior_sequence_sample_count += av_rescale_rnd(
                 sequence_sample_count, hp->aohp->output_sample_rate, current_sample_rate, AV_ROUND_UP);
@@ -338,7 +338,8 @@ void VS_CC vs_lwlibavaudiosource_create(const VSMap* in, VSMap* out, void* user_
         return;
     }
     if (hp->lwh.av_gap && hp->aohp->output_sample_rate != ctx->sample_rate)
-        hp->lwh.av_gap = (hp->lwh.av_gap * hp->aohp->output_sample_rate - 1) / ctx->sample_rate + 1;
+        hp->lwh.av_gap = av_rescale_rnd(
+            hp->lwh.av_gap, hp->aohp->output_sample_rate, ctx->sample_rate, AV_ROUND_UP);
     hp->ai.numSamples += hp->lwh.av_gap;
     hp->ai.numFrames = (int)((hp->ai.numSamples + VS_AUDIO_FRAME_SAMPLES - 1) / VS_AUDIO_FRAME_SAMPLES);
     if (make_gap_list(hp, out, vsapi) < 0) {
