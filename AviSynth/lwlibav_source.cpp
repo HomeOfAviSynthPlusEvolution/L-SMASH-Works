@@ -24,6 +24,10 @@
 #include <cstdio>
 #include <vector>
 
+extern "C" {
+#include <libavutil/mathematics.h>
+}
+
 #include "audio_output.h"
 #include "lwlibav_source.h"
 #include "video_output.h"
@@ -253,10 +257,17 @@ static void prepare_audio_decoding(lwlibav_audio_decode_handler_t* adhp, lwlibav
     if (vi.num_audio_samples == 0)
         env->ThrowError("LWLibavAudioSource: no valid audio frame.");
     if (lwh.av_gap && aohp->output_sample_rate != ctx->sample_rate)
-        lwh.av_gap = ((int64_t)lwh.av_gap * aohp->output_sample_rate - 1) / ctx->sample_rate + 1;
+        lwh.av_gap = av_rescale_rnd(lwh.av_gap, aohp->output_sample_rate, ctx->sample_rate, AV_ROUND_UP);
     vi.num_audio_samples += lwh.av_gap;
     /* Force seeking at the first reading. */
     lwlibav_audio_force_seek(adhp);
+}
+
+static uint64_t count_sequence_output_pcm_samples(uint64_t sequence_pcm_count, int current_sample_rate, int output_sample_rate)
+{
+    if (output_sample_rate == current_sample_rate)
+        return sequence_pcm_count;
+    return av_rescale_rnd(sequence_pcm_count, output_sample_rate, current_sample_rate, AV_ROUND_UP);
 }
 
 LWLibavAudioSource::LWLibavAudioSource(lwlibav_option_t* opt, const char* channel_layout, int sample_rate,
@@ -294,11 +305,27 @@ LWLibavAudioSource::LWLibavAudioSource(lwlibav_option_t* opt, const char* channe
     prepare_audio_decoding(adhp, aohp, channel_layout, sample_rate, lwh, vi, env);
     if (aohp->fill_audio_gaps && adhp->frame_list) {
         const audio_frame_info_t* const info = adhp->frame_list;
-        const AVRational sample_rate_tb = { 1, aohp->output_sample_rate };
         std::vector<std::pair<int64_t, int>> gap_info_list;
-        for (int i = 1; i < adhp->frame_count; ++i) {
+        int current_sample_rate = info[1].sample_rate > 0 ? info[1].sample_rate : adhp->ctx->sample_rate;
+        int current_frame_length = info[1].length;
+        uint64_t sequence_pcm_count = 0;
+        uint64_t prior_sequences_resampled_count = 0;
+        for (uint32_t i = 1; i <= adhp->frame_count; ++i) {
+            if ((current_sample_rate != info[i].sample_rate && info[i].sample_rate > 0)
+                || current_frame_length != info[i].length) {
+                prior_sequences_resampled_count +=
+                    count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, aohp->output_sample_rate);
+                sequence_pcm_count = 0;
+                current_sample_rate = info[i].sample_rate > 0 ? info[i].sample_rate : adhp->ctx->sample_rate;
+                current_frame_length = info[i].length;
+            }
+            const uint64_t frame_start = prior_sequences_resampled_count
+                + count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, aohp->output_sample_rate);
+            sequence_pcm_count += info[i].length;
+            const uint64_t frame_end = prior_sequences_resampled_count
+                + count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, aohp->output_sample_rate);
             if (info[i].file_offset == -1)
-                gap_info_list.emplace_back(av_rescale_q(info[i].pts, adhp->time_base, sample_rate_tb), info[i].length);
+                gap_info_list.emplace_back(static_cast<int64_t>(frame_start) + lwh.av_gap, static_cast<int>(frame_end - frame_start));
         }
         const int gap_count = gap_info_list.size();
         if (gap_count > 0) {
