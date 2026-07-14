@@ -222,12 +222,20 @@ static int find_start_audio_frame(
     if (*start_offset && current_sample_rate != output_sample_rate)
         *start_offset = (*start_offset * current_sample_rate - 1) / output_sample_rate + 1;
     if (frame_number > 1) {
-        /* Add pre-roll samples if needed.
-         * The condition is irresponsible. Patches welcome. */
+        /* Add one physical pre-roll frame for lossy audio.
+         * Synthetic gap entries have no packet and must not be used as pre-roll. */
         enum AVCodecID codec_id = adhp->exh.entries[frame_list[frame_number].extradata_index].codec_id;
         const AVCodecDescriptor* desc = avcodec_descriptor_get(codec_id);
-        if ((desc->props & AV_CODEC_PROP_LOSSY) && frame_list[frame_number].extradata_index == frame_list[frame_number - 1].extradata_index)
-            *start_offset += (uint64_t)frame_list[--frame_number].length;
+        if (desc->props & AV_CODEC_PROP_LOSSY) {
+            uint32_t pre_roll_frame = frame_number - 1;
+            while (pre_roll_frame > 0 && frame_list[pre_roll_frame].file_offset == -1)
+                --pre_roll_frame;
+            if (pre_roll_frame > 0
+                && frame_list[frame_number].extradata_index == frame_list[pre_roll_frame].extradata_index) {
+                *start_offset += (uint64_t)frame_list[pre_roll_frame].length;
+                frame_number = pre_roll_frame;
+            }
+        }
     }
     return frame_number;
 }
