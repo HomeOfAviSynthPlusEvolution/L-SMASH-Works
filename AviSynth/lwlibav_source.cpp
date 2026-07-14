@@ -310,7 +310,7 @@ LWLibavAudioSource::LWLibavAudioSource(lwlibav_option_t* opt, const char* channe
         int current_frame_length = info[1].length;
         uint64_t sequence_pcm_count = 0;
         uint64_t prior_sequences_resampled_count = 0;
-        for (uint32_t i = 1; i < adhp->frame_count; ++i) {
+        for (uint32_t i = 1; i <= adhp->frame_count; ++i) {
             if ((current_sample_rate != info[i].sample_rate && info[i].sample_rate > 0)
                 || current_frame_length != info[i].length) {
                 prior_sequences_resampled_count +=
