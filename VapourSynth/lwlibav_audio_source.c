@@ -153,7 +153,11 @@ static int decode_audio_range(uint8_t* buf, int64_t output_start, int64_t length
     int64_t source_start = output_start;
     if (!delay_audio(hp, &source_start, length))
         return 0;
-    return lwlibav_audio_get_pcm_samples(hp->adhp, hp->aohp, buf, source_start, length) == (uint64_t)length ? 0 : -1;
+    uint64_t output_length = lwlibav_audio_get_pcm_samples(hp->adhp, hp->aohp, buf, source_start, length);
+    if (output_length == (uint64_t)length)
+        return 0;
+    /* Index-derived lengths can include decoder-delay samples at EOF. The caller pre-fills that remainder with silence. */
+    return !hp->adhp->error && output_start == hp->ai.numSamples - length ? 0 : -1;
 }
 
 static int render_audio(uint8_t* buf, int64_t start, int64_t wanted_length, lwlibav_audio_handler_t* hp)
