@@ -265,7 +265,7 @@ static uint32_t shift_current_frame_number_pos(audio_frame_info_t* info, AVPacke
         if (i > goal)
             return 0;
     } else {
-        while ((pkt->dts != info[--i].file_offset) && i)
+        while ((pkt->pos != info[--i].file_offset) && i)
             ;
         if (i == 0)
             return 0;
