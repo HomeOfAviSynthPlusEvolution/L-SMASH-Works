@@ -73,4 +73,16 @@ uint64_t output_pcm_samples_from_packet(lw_audio_output_handler_t* aohp, AVCodec
 
 void lw_cleanup_audio_output_handler(lw_audio_output_handler_t* aohp);
 
+#define LW_AUDIO_GAP_FILE_OFFSET (-2)
+
+static inline int lw_audio_is_gap_offset(int64_t file_offset)
+{
+    return file_offset == LW_AUDIO_GAP_FILE_OFFSET;
+}
+
+static inline int lw_audio_has_valid_file_offset(int64_t file_offset)
+{
+    return file_offset >= 0;
+}
+
 #endif // AUDIO_OUTPUT_H
