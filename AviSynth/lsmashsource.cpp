@@ -57,7 +57,7 @@ extern "C" AVS_EXPORT const char* __stdcall AvisynthPluginInit3(IScriptEnvironme
         CreateLSMASHVideoSource, 0);
     /* LSMASHAudioSource */
     env->AddFunction("LSMASHAudioSource",
-        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s[ff_loglevel]i[drc_scale]f[ff_options]s", CreateLSMASHAudioSource, 0);
+        "[source]s[track]i[skip_priming]b[layout]s[rate]i[decoder]s[ff_loglevel]i[drc_scale]f[ff_options]s[skip_tail]b", CreateLSMASHAudioSource, 0);
     /* LWLibavVideoSource */
     env->AddFunction("LWLibavVideoSource",
         "[source]s[stream_index]i[threads]i[cache]b[cachefile]s[seek_mode]i[seek_threshold]i[dr]b[fpsnum]i[fpsden]i[repeat]b[dominance]i["

@@ -90,7 +90,7 @@ private:
 
 public:
     LSMASHAudioSource(const char* source, uint32_t track_number, bool skip_priming, const char* channel_layout, int sample_rate,
-        const char* preferred_decoder_names, const double drc, const char* ff_options, IScriptEnvironment* env);
+        const char* preferred_decoder_names, const double drc, const char* ff_options, bool skip_tail, IScriptEnvironment* env);
     ~LSMASHAudioSource();
     PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env)
     {
