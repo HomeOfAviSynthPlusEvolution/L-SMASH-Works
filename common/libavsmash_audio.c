@@ -266,6 +266,7 @@ int libavsmash_audio_initialize_decoder_configuration(libavsmash_audio_decode_ha
         strcpy(error_string, "Failed to find stream by libavformat.\n");
         goto fail;
     }
+    codecpar->initial_padding = 0;
     /* libavcodec */
     if (libavsmash_find_and_open_decoder(&adhp->config, codecpar, threads) < 0) {
         strcpy(error_string, "Failed to find and open the audio decoder.\n");
@@ -846,6 +847,9 @@ int libavsmash_audio_setup_sample_count(libavsmash_audio_decode_handler_t* adhp,
         if (have_itun_smpb) {
             if (priming_samples > total_codec_samples)
                 priming_samples = 0;
+            AVCodecContext* ctx = libavsmash_audio_get_codec_context(adhp);
+            if (ctx && ctx->delay > 0)
+                ctx->delay = 0;
             uint64_t priming_skip_output = 0;
             if (libavsmash_audio_convert_smpb_samples_to_output(adhp, aohp, priming_samples, &priming_skip_output, AV_ROUND_UP) < 0) {
                 if (error_msg)
