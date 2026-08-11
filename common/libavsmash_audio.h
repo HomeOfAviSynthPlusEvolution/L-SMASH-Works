@@ -127,10 +127,38 @@ void libavsmash_audio_apply_delay(libavsmash_audio_decode_handler_t* adhp, int64
 
 void libavsmash_audio_set_implicit_preroll(libavsmash_audio_decode_handler_t* adhp);
 
-uint64_t libavsmash_audio_count_overall_pcm_samples(libavsmash_audio_decode_handler_t* adhp, int output_sample_rate, uint64_t start_time);
+int libavsmash_audio_get_itun_smpb(lsmash_root_t* root, uint32_t* priming_samples, uint32_t* padding_samples, uint64_t* duration_samples);
+
+/*
+    start_output_samples:
+        Number of leading output samples to discard from the total count.
+        This is expressed in the output sample rate, not in media time.
+*/
+uint64_t libavsmash_audio_count_overall_pcm_samples(
+    libavsmash_audio_decode_handler_t* adhp, int output_sample_rate, uint64_t start_output_samples);
+
+/*
+    Convert an iTunSMPB sample count, which is normally expressed in codec samples, into output samples.
+    This is intended for priming now, and can also be reused for padding later.
+*/
+int libavsmash_audio_convert_smpb_samples_to_output(libavsmash_audio_decode_handler_t* adhp, lw_audio_output_handler_t* aohp,
+    uint64_t samples, uint64_t* output_samples, enum AVRounding rnd);
 
 uint64_t libavsmash_audio_get_pcm_samples(
     libavsmash_audio_decode_handler_t* adhp, libavsmash_audio_output_handler_t* aohp, void* buf, int64_t start, int64_t wanted_length);
+
+uint64_t libavsmash_audio_count_total_codec_samples(libavsmash_audio_decode_handler_t* adhp);
+
+int libavsmash_audio_apply_tail_trim(libavsmash_audio_decode_handler_t* adhp, lw_audio_output_handler_t* aohp, int have_smpb,
+    uint32_t priming_samples, uint32_t padding_samples, uint64_t duration_samples, int skip_priming, uint64_t total_codec_samples,
+    uint64_t base_output_samples, uint64_t* final_output_samples);
+
+/*
+    Calculates the final output sample count, applying priming skip and tail trimming.
+    Returns 0 on success, -1 on failure (with error_msg populated).
+*/
+int libavsmash_audio_setup_sample_count(libavsmash_audio_decode_handler_t* adhp, libavsmash_audio_output_handler_t* aohp, int skip_priming,
+    int skip_tail, uint64_t* out_final_num_samples, char* error_msg, size_t error_msg_size);
 
 #ifdef __cplusplus
 }

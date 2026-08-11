@@ -226,15 +226,11 @@ static int find_start_audio_frame(
          * Synthetic gap entries have no packet and must not be used as pre-roll. */
         enum AVCodecID codec_id = adhp->exh.entries[frame_list[frame_number].extradata_index].codec_id;
         const AVCodecDescriptor* desc = avcodec_descriptor_get(codec_id);
-        if (desc->props & AV_CODEC_PROP_LOSSY) {
-            uint32_t pre_roll_frame = frame_number - 1;
-            while (pre_roll_frame > 0 && frame_list[pre_roll_frame].file_offset == -1)
-                --pre_roll_frame;
-            if (pre_roll_frame > 0
-                && frame_list[frame_number].extradata_index == frame_list[pre_roll_frame].extradata_index) {
-                *start_offset += (uint64_t)frame_list[pre_roll_frame].length;
-                frame_number = pre_roll_frame;
-            }
+        uint32_t pre_roll_frame = frame_number - 1;
+        if ((desc->props & AV_CODEC_PROP_LOSSY) && !lw_audio_is_gap_offset(frame_list[pre_roll_frame].file_offset)
+            && frame_list[frame_number].extradata_index == frame_list[pre_roll_frame].extradata_index) {
+            *start_offset += (uint64_t)frame_list[pre_roll_frame].length;
+            frame_number = pre_roll_frame;
         }
     }
     return frame_number;
@@ -269,7 +265,7 @@ static uint32_t shift_current_frame_number_pos(audio_frame_info_t* info, AVPacke
         if (i > goal)
             return 0;
     } else {
-        while ((pkt->dts != info[--i].file_offset) && i)
+        while ((pkt->pos != info[--i].file_offset) && i)
             ;
         if (i == 0)
             return 0;
@@ -354,6 +350,9 @@ retry_seek:;
             if (adhp->lw_seek_flags & SEEK_POS_BASED) {
                 if (pkt->pos == -1 || adhp->frame_list[i].file_offset == -1)
                     continue;
+                /* Dummy gap entries have file_offset == LW_AUDIO_GAP_FILE_OFFSET.
+                 * They are intentionally not skipped here. shift_current_frame_number_pos()
+                 * will move past them while matching the current packet's valid file offset. */
                 i = shift_current_frame_number_pos(adhp->frame_list, pkt, i, frame_number);
             } else if (adhp->lw_seek_flags & SEEK_PTS_BASED) {
                 if (pkt->pts == AV_NOPTS_VALUE)

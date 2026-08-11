@@ -9,8 +9,8 @@
 
 #include <libavformat/avformat.h>
 #include <libavutil/log.h>
-#include <libavutil/mem.h>
 #include <libavutil/mathematics.h>
+#include <libavutil/mem.h>
 
 #include "audio_output.h"
 #include "lsmashsource.h"
@@ -63,86 +63,23 @@ static lsmas_audio_handler_t* alloc_handler(void)
     return hp;
 }
 
-static int64_t get_start_time(lsmash_root_t* root, uint32_t track_id)
+static int count_output_audio_samples(lsmas_audio_handler_t* hp, int skip_priming, int skip_tail, VSMap* out, const VSAPI* vsapi)
 {
-    uint32_t edit_count = lsmash_count_explicit_timeline_map(root, track_id);
-    for (uint32_t edit_number = 1; edit_number <= edit_count; edit_number++) {
-        lsmash_edit_t edit;
-        if (lsmash_get_explicit_timeline_map(root, track_id, edit_number, &edit) || edit.duration == 0)
-            return 0;
-        if (edit.start_time >= 0)
-            return edit.start_time;
-    }
-    return 0;
-}
-
-static char* duplicate_string(const void* src, size_t length)
-{
-    char* dst = (char*)malloc(length + 1);
-    if (!dst)
-        return NULL;
-    memcpy(dst, src, length);
-    dst[length] = '\0';
-    return dst;
-}
-
-static int count_output_audio_samples(lsmas_audio_handler_t* hp, int skip_priming, VSMap* out, const VSAPI* vsapi)
-{
-    libavsmash_audio_decode_handler_t* adhp = hp->adhp;
-    libavsmash_audio_output_handler_t* aohp = hp->aohp;
-    lsmash_root_t* root = libavsmash_audio_get_root(adhp);
-    uint32_t track_id = libavsmash_audio_get_track_id(adhp);
-    uint64_t start_time = 0;
-    if (skip_priming) {
-        uint32_t media_timescale = libavsmash_audio_get_media_timescale(adhp);
-        uint32_t metadata_count = lsmash_count_itunes_metadata(root);
-        for (uint32_t i = 1; i <= metadata_count; i++) {
-            lsmash_itunes_metadata_t metadata;
-            if (lsmash_get_itunes_metadata(root, i, &metadata) < 0)
-                continue;
-            int matches = metadata.item == ITUNES_METADATA_ITEM_CUSTOM
-                && (metadata.type == ITUNES_METADATA_TYPE_STRING || metadata.type == ITUNES_METADATA_TYPE_BINARY) && metadata.meaning
-                && metadata.name && !strcmp(metadata.meaning, "com.apple.iTunes") && !strcmp(metadata.name, "iTunSMPB");
-            char* value = NULL;
-            if (matches && metadata.type == ITUNES_METADATA_TYPE_STRING) {
-                size_t length = strlen(metadata.value.string);
-                if (length >= 116)
-                    value = duplicate_string(metadata.value.string, length);
-            } else if (matches && metadata.value.binary.size >= 116)
-                value = duplicate_string(metadata.value.binary.data, metadata.value.binary.size);
-            lsmash_cleanup_itunes_metadata(&metadata);
-            if (!value)
-                continue;
-            uint32_t dummy[9];
-            uint32_t priming_samples;
-            uint32_t padding;
-            uint64_t duration;
-            int fields = sscanf(value, " %x %x %x %" SCNx64 " %x %x %x %x %x %x %x %x", &dummy[0], &priming_samples, &padding,
-                &duration, &dummy[1], &dummy[2], &dummy[3], &dummy[4], &dummy[5], &dummy[6], &dummy[7], &dummy[8]);
-            lw_free(value);
-            if (fields != 12)
-                continue;
-            libavsmash_audio_set_implicit_preroll(adhp);
-            start_time = av_rescale(priming_samples, media_timescale, aohp->output_sample_rate);
-            aohp->skip_decoded_samples = priming_samples;
-            break;
-        }
-        if (aohp->skip_decoded_samples == 0) {
-            uint32_t ctd_shift;
-            if (lsmash_get_composition_to_decode_shift_from_media_timeline(root, track_id, &ctd_shift)) {
-                set_error_on_init(out, vsapi, "lsmas: failed to get the audio timeline shift.");
-                return -1;
-            }
-            start_time = ctd_shift + get_start_time(root, track_id);
-            aohp->skip_decoded_samples = av_rescale(start_time, aohp->output_sample_rate, media_timescale);
-        }
-    }
-    hp->ai.numSamples = libavsmash_audio_count_overall_pcm_samples(adhp, aohp->output_sample_rate, start_time);
-    if (hp->ai.numSamples <= 0) {
-        set_error_on_init(out, vsapi, "lsmas: no valid audio frame.");
+    uint64_t final_num_samples = 0;
+    char error_msg[256] = { 0 };
+    if (libavsmash_audio_setup_sample_count(hp->adhp, hp->aohp, skip_priming, skip_tail, &final_num_samples, error_msg, sizeof(error_msg))
+        < 0) {
+        char vs_msg[300];
+        snprintf(vs_msg, sizeof(vs_msg), "lsmas: %s", error_msg);
+        set_error_on_init(out, vsapi, vs_msg);
         return -1;
     }
-    hp->ai.numFrames = (int)((hp->ai.numSamples + VS_AUDIO_FRAME_SAMPLES - 1) / VS_AUDIO_FRAME_SAMPLES);
+    if (final_num_samples > (uint64_t)INT64_MAX) {
+        set_error_on_init(out, vsapi, "lsmas: audio sample count exceeds INT64_MAX.");
+        return -1;
+    }
+    hp->ai.numSamples = (int64_t)final_num_samples;
+    hp->ai.numFrames = (int)((final_num_samples + VS_AUDIO_FRAME_SAMPLES - 1) / VS_AUDIO_FRAME_SAMPLES);
     return 0;
 }
 
@@ -208,6 +145,7 @@ void VS_CC vs_libavsmashaudiosource_create(const VSMap* in, VSMap* out, void* us
     const char* layout;
     const char* decoder;
     const char* ff_options;
+    int64_t skip_tail;
     int error;
     double drc = vsapi->mapGetFloat(in, "drc_scale", 0, &error);
     if (error)
@@ -219,6 +157,7 @@ void VS_CC vs_libavsmashaudiosource_create(const VSMap* in, VSMap* out, void* us
     set_option_string(&layout, NULL, "layout", in, vsapi);
     set_option_string(&decoder, NULL, "decoder", in, vsapi);
     set_option_string(&ff_options, NULL, "ff_options", in, vsapi);
+    set_option_int64(&skip_tail, 0, "skip_tail", in, vsapi);
     set_av_log_level(ff_loglevel);
 
     lsmas_audio_handler_t* hp = alloc_handler();
@@ -261,7 +200,7 @@ void VS_CC vs_libavsmashaudiosource_create(const VSMap* in, VSMap* out, void* us
     hp->aohp->output_bits_per_sample = libavsmash_audio_get_best_used_bits_per_sample(hp->adhp);
     AVCodecContext* ctx = libavsmash_audio_get_codec_context(hp->adhp);
     if (vs_setup_audio_rendering(hp->aohp, ctx, layout, (int)MAX(rate, 0), &hp->ai, core, vsapi) < 0
-        || count_output_audio_samples(hp, skip_priming != 0, out, vsapi) < 0) {
+        || count_output_audio_samples(hp, skip_priming != 0, skip_tail != 0, out, vsapi) < 0) {
         free_handler(&hp);
         if (!vsapi->mapGetError(out))
             set_error_on_init(out, vsapi, "lsmas: failed to configure audio output.");
@@ -270,8 +209,7 @@ void VS_CC vs_libavsmashaudiosource_create(const VSMap* in, VSMap* out, void* us
     libavsmash_audio_force_seek(hp->adhp);
     lsmash_discard_boxes(root);
 
-    VSNode* node = vsapi->createAudioFilter2(
-        "LibavSMASHAudioSource", &hp->ai, audio_get_frame, audio_free, fmUnordered, NULL, 0, hp, core);
+    VSNode* node = vsapi->createAudioFilter2("LibavSMASHAudioSource", &hp->ai, audio_get_frame, audio_free, fmUnordered, NULL, 0, hp, core);
     if (!node) {
         free_handler(&hp);
         vsapi->mapSetError(out, "lsmas: failed to create the LibavSMASH audio node.");

@@ -252,32 +252,6 @@ uint32_t LSMASHAudioSource::open_file(const char* source, IScriptEnvironment* en
     return movie_param.number_of_tracks;
 }
 
-static int64_t get_start_time(lsmash_root_t* root, uint32_t track_ID)
-{
-    /* Consider start time of this media if any non-empty edit is present. */
-    uint32_t edit_count = lsmash_count_explicit_timeline_map(root, track_ID);
-    for (uint32_t edit_number = 1; edit_number <= edit_count; edit_number++) {
-        lsmash_edit_t edit;
-        if (lsmash_get_explicit_timeline_map(root, track_ID, edit_number, &edit))
-            return 0;
-        if (edit.duration == 0)
-            return 0; /* no edits */
-        if (edit.start_time >= 0)
-            return edit.start_time;
-    }
-    return 0;
-}
-
-static char* duplicate_as_string(void* src, size_t length)
-{
-    char* dst = new char[length + 1];
-    if (!dst)
-        return nullptr;
-    memcpy(dst, src, length);
-    dst[length] = '\0';
-    return dst;
-}
-
 void LSMASHAudioSource::get_audio_track(const char* source, uint32_t track_number, IScriptEnvironment* env)
 {
     libavsmash_audio_decode_handler_t* adhp = this->adhp.get();
@@ -289,70 +263,24 @@ void LSMASHAudioSource::get_audio_track(const char* source, uint32_t track_numbe
 }
 
 static void count_output_audio_samples(libavsmash_audio_decode_handler_t* adhp, libavsmash_audio_output_handler_t* aohp, bool skip_priming,
-    VideoInfo& vi, IScriptEnvironment* env)
+    bool skip_tail, VideoInfo& vi, IScriptEnvironment* env)
 {
-    lsmash_root_t* root = libavsmash_audio_get_root(adhp);
-    uint32_t track_id = libavsmash_audio_get_track_id(adhp);
-    uint64_t start_time = 0;
-    if (skip_priming) {
-        uint32_t media_timescale = libavsmash_audio_get_media_timescale(adhp);
-        uint32_t itunes_metadata_count = lsmash_count_itunes_metadata(root);
-        for (uint32_t i = 1; i <= itunes_metadata_count; i++) {
-            lsmash_itunes_metadata_t metadata;
-            if (lsmash_get_itunes_metadata(root, i, &metadata) < 0)
-                continue;
-            if (metadata.item != ITUNES_METADATA_ITEM_CUSTOM
-                || (metadata.type != ITUNES_METADATA_TYPE_STRING && metadata.type != ITUNES_METADATA_TYPE_BINARY) || !metadata.meaning
-                || !metadata.name || memcmp("com.apple.iTunes", metadata.meaning, strlen(metadata.meaning))
-                || memcmp("iTunSMPB", metadata.name, strlen(metadata.name))) {
-                lsmash_cleanup_itunes_metadata(&metadata);
-                continue;
-            }
-            char* value = nullptr;
-            if (metadata.type == ITUNES_METADATA_TYPE_STRING) {
-                size_t length = strlen(metadata.value.string);
-                if (length >= 116)
-                    value = duplicate_as_string(metadata.value.string, length);
-            } else /* metadata.type == ITUNES_METADATA_TYPE_BINARY */
-            {
-                if (metadata.value.binary.size >= 116)
-                    value = duplicate_as_string(metadata.value.binary.data, metadata.value.binary.size);
-            }
-            lsmash_cleanup_itunes_metadata(&metadata);
-            if (!value)
-                continue;
-            uint32_t dummy[9];
-            uint32_t priming_samples;
-            uint32_t padding;
-            uint64_t duration;
-            if (12
-                != sscanf(value, " %x %x %x %" SCNx64 " %x %x %x %x %x %x %x %x", &dummy[0], &priming_samples, &padding, &duration,
-                    &dummy[1], &dummy[2], &dummy[3], &dummy[4], &dummy[5], &dummy[6], &dummy[7], &dummy[8])) {
-                delete[] value;
-                continue;
-            }
-            delete[] value;
-            libavsmash_audio_set_implicit_preroll(adhp);
-            start_time = av_rescale(priming_samples, media_timescale, aohp->output_sample_rate);
-            aohp->skip_decoded_samples = priming_samples;
-            // vi.num_audio_samples = duration + priming_samples;
-            break;
-        }
-        if (aohp->skip_decoded_samples == 0) {
-            uint32_t ctd_shift;
-            if (lsmash_get_composition_to_decode_shift_from_media_timeline(root, track_id, &ctd_shift))
-                env->ThrowError("LSMASHAudioSource: failed to get the timeline shift.");
-            start_time = ctd_shift + get_start_time(root, track_id);
-            aohp->skip_decoded_samples = av_rescale(start_time, aohp->output_sample_rate, media_timescale);
-        }
+    uint64_t final_num_samples = 0;
+    char error_msg[256] = { 0 };
+    if (libavsmash_audio_setup_sample_count(
+            adhp, aohp, skip_priming ? 1 : 0, skip_tail ? 1 : 0, &final_num_samples, error_msg, sizeof(error_msg))
+        < 0) {
+        env->ThrowError("LSMASHAudioSource: %s", error_msg);
     }
-    vi.num_audio_samples = libavsmash_audio_count_overall_pcm_samples(adhp, aohp->output_sample_rate, start_time);
-    if (vi.num_audio_samples == 0)
-        env->ThrowError("LSMASHAudioSource: no valid audio frame.");
+    if (final_num_samples > (uint64_t)INT64_MAX) {
+        env->ThrowError("LSMASHAudioSource: audio sample count exceeds INT64_MAX.");
+    }
+    vi.num_audio_samples = (int64_t)final_num_samples;
 }
 
 static void prepare_audio_decoding(libavsmash_audio_decode_handler_t* adhp, libavsmash_audio_output_handler_t* aohp,
-    AVFormatContext* format_ctx, const char* channel_layout, int sample_rate, bool skip_priming, VideoInfo& vi, IScriptEnvironment* env)
+    AVFormatContext* format_ctx, const char* channel_layout, int sample_rate, bool skip_priming, bool skip_tail, VideoInfo& vi,
+    IScriptEnvironment* env)
 {
     /* Initialize the audio decoder configuration. */
     if (libavsmash_audio_initialize_decoder_configuration(adhp, format_ctx, 0) < 0)
@@ -363,13 +291,13 @@ static void prepare_audio_decoding(libavsmash_audio_decode_handler_t* adhp, liba
     aohp->output_bits_per_sample = libavsmash_audio_get_best_used_bits_per_sample(adhp);
     AVCodecContext* ctx = libavsmash_audio_get_codec_context(adhp);
     as_setup_audio_rendering(aohp, ctx, &vi, env, "LSMASHAudioSource", channel_layout, sample_rate);
-    count_output_audio_samples(adhp, aohp, skip_priming, vi, env);
+    count_output_audio_samples(adhp, aohp, skip_priming, skip_tail, vi, env);
     /* Force seeking at the first reading. */
     libavsmash_audio_force_seek(adhp);
 }
 
 LSMASHAudioSource::LSMASHAudioSource(const char* source, uint32_t track_number, bool skip_priming, const char* channel_layout,
-    int sample_rate, const char* preferred_decoder_names, const double drc, const char* ff_options, IScriptEnvironment* env)
+    int sample_rate, const char* preferred_decoder_names, const double drc, const char* ff_options, bool skip_tail, IScriptEnvironment* env)
     : LSMASHAudioSource {}
 {
     memset(&vi, 0, sizeof(VideoInfo));
@@ -380,7 +308,7 @@ LSMASHAudioSource::LSMASHAudioSource(const char* source, uint32_t track_number, 
     libavsmash_audio_set_drc(adhp, drc);
     libavsmash_audio_set_decoder_options(adhp, ff_options);
     get_audio_track(source, track_number, env);
-    prepare_audio_decoding(adhp, aohp, format_ctx.get(), channel_layout, sample_rate, skip_priming, vi, env);
+    prepare_audio_decoding(adhp, aohp, format_ctx.get(), channel_layout, sample_rate, skip_priming, skip_tail, vi, env);
     lsmash_discard_boxes(libavsmash_audio_get_root(adhp));
 }
 
@@ -468,7 +396,8 @@ AVSValue __cdecl CreateLSMASHAudioSource(AVSValue args, void* user_data, IScript
     int ff_loglevel = args[6].AsInt(0);
     const double drc = args[7].AsFloat(-1.0);
     const char* ff_options = args[8].AsString(nullptr);
+    bool skip_tail = args[9].AsBool(false);
     set_av_log_level(ff_loglevel);
     return new LSMASHAudioSource(
-        source, track_number, skip_priming, layout_string, sample_rate, preferred_decoder_names, drc, ff_options, env);
+        source, track_number, skip_priming, layout_string, sample_rate, preferred_decoder_names, drc, ff_options, skip_tail, env);
 }

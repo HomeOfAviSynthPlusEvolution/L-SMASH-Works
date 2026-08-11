@@ -91,7 +91,7 @@ static int make_gap_list(lwlibav_audio_handler_t* hp, VSMap* out, const VSAPI* v
     const audio_frame_info_t* info = adhp->frame_list;
     int gap_count = 0;
     for (uint32_t i = 1; i <= adhp->frame_count; i++) {
-        if (info[i].file_offset == -1)
+        if (lw_audio_is_gap_offset(info[i].file_offset))
             gap_count++;
     }
     if (!gap_count)
@@ -114,7 +114,7 @@ static int make_gap_list(lwlibav_audio_handler_t* hp, VSMap* out, const VSAPI* v
             current_sample_rate = info[i].sample_rate > 0 ? info[i].sample_rate : hp->adhp->ctx->sample_rate;
             current_frame_length = info[i].length;
         }
-        if (info[i].file_offset == -1) {
+        if (lw_audio_is_gap_offset(info[i].file_offset)) {
             int64_t gap_start = prior_sequence_sample_count
                 + av_rescale_rnd(sequence_sample_count, hp->aohp->output_sample_rate, current_sample_rate, AV_ROUND_UP);
             int64_t gap_end = prior_sequence_sample_count

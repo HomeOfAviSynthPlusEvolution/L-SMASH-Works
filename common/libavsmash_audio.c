@@ -23,6 +23,10 @@
 #include "libavsmash_audio.h"
 #include "cpp_compat.h"
 #include "resample.h"
+#include <ctype.h>
+#include <limits.h>
+
+#include <libavutil/mathematics.h>
 
 /*****************************************************************************
  * Allocators / Deallocators
@@ -263,6 +267,7 @@ int libavsmash_audio_initialize_decoder_configuration(libavsmash_audio_decode_ha
         strcpy(error_string, "Failed to find stream by libavformat.\n");
         goto fail;
     }
+    codecpar->initial_padding = 0;
     /* libavcodec */
     if (libavsmash_find_and_open_decoder(&adhp->config, codecpar, threads) < 0) {
         strcpy(error_string, "Failed to find and open the audio decoder.\n");
@@ -322,6 +327,14 @@ static inline uint64_t count_sequence_output_pcm_samples(uint64_t sequence_pcm_c
     return resampled_sample_count;
 }
 
+static inline uint64_t count_sequence_output_pcm_samples_rnd(
+    uint64_t sequence_pcm_count, int current_sample_rate, int output_sample_rate, enum AVRounding rnd)
+{
+    if (output_sample_rate == current_sample_rate)
+        return sequence_pcm_count;
+    return av_rescale_rnd(sequence_pcm_count, output_sample_rate, current_sample_rate, rnd);
+}
+
 static int get_frame_length(
     libavsmash_audio_decode_handler_t* adhp, uint32_t frame_number, uint64_t* frame_length, extended_summary_t** esp)
 {
@@ -346,10 +359,254 @@ static int get_frame_length(
     return 0;
 }
 
-/* Count the number of whole output PCM samples. */
-uint64_t libavsmash_audio_count_overall_pcm_samples(libavsmash_audio_decode_handler_t* adhp, int output_sample_rate, uint64_t start_time)
+static int parse_smpb_hex_u64(const char** pp, uint64_t* out)
 {
+    const char* p = *pp;
+    while (*p != '\0' && isspace((unsigned char)*p))
+        p++;
+    /* SMPB fields are unsigned hex. Reject explicit signs. */
+    if (*p == '+' || *p == '-')
+        return -1;
+    if (!isxdigit((unsigned char)*p))
+        return -1;
+    errno = 0;
+    char* end = NULL;
+    unsigned long long v = strtoull(p, &end, 16);
+    if (errno == ERANGE || end == p)
+        return -1;
+    *out = (uint64_t)v;
+    *pp = end;
+    return 0;
+}
+
+static int parse_itun_smpb_value(const char* value, uint32_t* priming_samples, uint32_t* padding_samples, uint64_t* duration_samples)
+{
+    if (!value || !priming_samples || !padding_samples || !duration_samples)
+        return -1;
+    const char* p = value;
+    for (int i = 0; i < 12; i++) {
+        uint64_t val = 0;
+        if (parse_smpb_hex_u64(&p, &val) < 0)
+            return -1;
+        // Only extract the fields we actually use. Ignore the size of the dummy fields.
+        if (i == 1) {
+            // Priming samples physically cannot exceed 32 bits (that would be >27 hours of audio)
+            if (val > UINT32_MAX)
+                return -1;
+            *priming_samples = (uint32_t)val;
+        } else if (i == 2) {
+            if (val > UINT32_MAX)
+                return -1;
+            *padding_samples = (uint32_t)val;
+        } else if (i == 3) {
+            *duration_samples = val;
+        }
+    }
+    return 0;
+}
+
+static char* duplicate_itunes_metadata_value_as_cstring(const lsmash_itunes_metadata_t* metadata)
+{
+    if (metadata->type == ITUNES_METADATA_TYPE_STRING) {
+        if (!metadata->value.string)
+            return NULL;
+        size_t length = strlen(metadata->value.string);
+        char* value = (char*)malloc(length + 1);
+        if (!value)
+            return NULL;
+        memcpy(value, metadata->value.string, length + 1);
+        return value;
+    }
+    if (metadata->type == ITUNES_METADATA_TYPE_BINARY) {
+        if (!metadata->value.binary.data || metadata->value.binary.size == 0)
+            return NULL;
+        char* value = (char*)malloc((size_t)metadata->value.binary.size + 1);
+        if (!value)
+            return NULL;
+        memcpy(value, metadata->value.binary.data, metadata->value.binary.size);
+        value[metadata->value.binary.size] = '\0';
+        return value;
+    }
+    return NULL;
+}
+
+static int is_itun_smpb_metadata(const lsmash_itunes_metadata_t* metadata)
+{
+    return metadata->item == ITUNES_METADATA_ITEM_CUSTOM
+        && (metadata->type == ITUNES_METADATA_TYPE_STRING || metadata->type == ITUNES_METADATA_TYPE_BINARY) && metadata->meaning
+        && metadata->name && strcmp(metadata->meaning, "com.apple.iTunes") == 0 && strcmp(metadata->name, "iTunSMPB") == 0;
+}
+
+int libavsmash_audio_get_itun_smpb(lsmash_root_t* root, uint32_t* priming_samples, uint32_t* padding_samples, uint64_t* duration_samples)
+{
+    if (!root || !priming_samples || !padding_samples || !duration_samples)
+        return -1;
+    uint32_t metadata_count = lsmash_count_itunes_metadata(root);
+    for (uint32_t i = 1; i <= metadata_count; i++) {
+        lsmash_itunes_metadata_t metadata;
+        if (lsmash_get_itunes_metadata(root, i, &metadata) < 0)
+            continue;
+        char* value = NULL;
+        if (is_itun_smpb_metadata(&metadata))
+            value = duplicate_itunes_metadata_value_as_cstring(&metadata);
+        lsmash_cleanup_itunes_metadata(&metadata);
+        if (!value)
+            continue;
+        int ret = parse_itun_smpb_value(value, priming_samples, padding_samples, duration_samples);
+        free(value);
+        if (ret == 0)
+            return 0;
+    }
+    return -1;
+}
+
+static int get_smpb_codec_sample_rate(libavsmash_audio_decode_handler_t* adhp, lw_audio_output_handler_t* aohp, int* codec_sample_rate)
+{
+    if (!adhp || !aohp || !codec_sample_rate)
+        return -1;
+    int output_sample_rate = aohp->output_sample_rate;
+    if (output_sample_rate <= 0)
+        return -1;
+    int rate = 0;
+    AVCodecContext* ctx = libavsmash_audio_get_codec_context(adhp);
+    if (ctx && ctx->sample_rate > 0)
+        rate = ctx->sample_rate;
+    if (rate <= 0)
+        rate = libavsmash_audio_get_best_used_sample_rate(adhp);
+    if (rate <= 0) {
+        uint32_t media_timescale = libavsmash_audio_get_media_timescale(adhp);
+        if (media_timescale > 0 && media_timescale <= (uint32_t)INT_MAX)
+            rate = (int)media_timescale;
+    }
+    if (rate <= 0)
+        return -1;
+    *codec_sample_rate = rate;
+    return 0;
+}
+
+static int convert_smpb_samples64_to_output_rnd(libavsmash_audio_decode_handler_t* adhp, lw_audio_output_handler_t* aohp, uint64_t samples,
+    uint64_t* output_samples, enum AVRounding rnd)
+{
+    if (!adhp || !aohp || !output_samples)
+        return -1;
+    if (samples == 0) {
+        *output_samples = 0;
+        return 0;
+    }
+    if (samples > (uint64_t)INT64_MAX)
+        return -1;
+    int codec_sample_rate = 0;
+    if (get_smpb_codec_sample_rate(adhp, aohp, &codec_sample_rate) < 0)
+        return -1;
+    if (codec_sample_rate <= 0 || aohp->output_sample_rate <= 0)
+        return -1;
+    int64_t converted = av_rescale_rnd((int64_t)samples, aohp->output_sample_rate, codec_sample_rate, rnd);
+    if (converted < 0)
+        return -1;
+    *output_samples = (uint64_t)converted;
+    return 0;
+}
+
+int libavsmash_audio_convert_smpb_samples_to_output(libavsmash_audio_decode_handler_t* adhp, lw_audio_output_handler_t* aohp,
+    uint64_t samples, uint64_t* output_samples, enum AVRounding rnd)
+{
+    return convert_smpb_samples64_to_output_rnd(adhp, aohp, samples, output_samples, rnd);
+}
+
+uint64_t libavsmash_audio_count_total_codec_samples(libavsmash_audio_decode_handler_t* adhp)
+{
+    if (!adhp || adhp->frame_count == 0 || adhp->media_timescale == 0)
+        return 0;
     codec_configuration_t* config = &adhp->config;
+    int fallback_sample_rate = config->ctx ? config->ctx->sample_rate : 0;
+    extended_summary_t* es = NULL;
+    int current_sample_rate = 0;
+    uint64_t current_frame_length = 0;
+    uint64_t total_codec_samples = 0;
+    for (uint32_t i = 1; i <= adhp->frame_count; i++) {
+        uint64_t frame_length;
+        if (get_frame_length(adhp, i, &frame_length, &es) < 0)
+            continue;
+        if (!es)
+            continue;
+        if ((current_sample_rate != es->sample_rate && es->sample_rate > 0) || current_frame_length != frame_length) {
+            current_sample_rate = es->sample_rate > 0 ? es->sample_rate : fallback_sample_rate;
+            current_frame_length = frame_length;
+        }
+        if (current_sample_rate > 0)
+            total_codec_samples += frame_length;
+    }
+    return total_codec_samples;
+}
+
+int libavsmash_audio_apply_tail_trim(libavsmash_audio_decode_handler_t* adhp, lw_audio_output_handler_t* aohp, int have_smpb,
+    uint32_t priming_samples, uint32_t padding_samples, uint64_t duration_samples, int skip_priming, uint64_t total_codec_samples,
+    uint64_t base_output_samples, uint64_t* final_output_samples)
+{
+    if (!adhp || !aohp || !final_output_samples)
+        return -1;
+    uint64_t result = base_output_samples;
+    if (have_smpb) {
+        uint64_t effective_priming = 0;
+        if (skip_priming && priming_samples <= total_codec_samples)
+            effective_priming = priming_samples;
+        int trimmed_by_duration = 0;
+        /*
+            Preferred method:
+            Use SMPB duration only when:
+                - SMPB is present,
+                - tail trimming is enabled,
+                - priming skipping is enabled,
+                - duration is sane.
+            Duration is considered sane if:
+                duration > 0
+                duration <= total_codec_samples - effective_priming
+        */
+        if (skip_priming && duration_samples > 0 && duration_samples <= total_codec_samples - effective_priming) {
+            uint64_t duration_out = 0;
+            /*
+                For VapourSynth strict EOF we use conservative rounding AV_ROUND_DOWN.
+                If VapourSynth EOF is changed to match the AviSynth, more relaxed rounding AV_ROUND_UP can be used.
+            */
+            if (libavsmash_audio_convert_smpb_samples_to_output(adhp, aohp, duration_samples, &duration_out, AV_ROUND_DOWN) == 0
+                && duration_out > 0) {
+                if (duration_out > base_output_samples)
+                    duration_out = base_output_samples;
+                result = duration_out;
+                trimmed_by_duration = 1;
+            }
+        }
+        /*
+            Fallback method:
+            If duration was not used, use padding if sane.
+            Padding is considered sane if:
+                padding <= total_codec_samples - effective_priming
+        */
+        if (!trimmed_by_duration && padding_samples <= total_codec_samples - effective_priming) {
+            uint64_t padding_out = 0;
+            if (libavsmash_audio_convert_smpb_samples_to_output(adhp, aohp, padding_samples, &padding_out, AV_ROUND_UP) == 0) {
+                if (padding_out > base_output_samples)
+                    padding_out = base_output_samples;
+                if (padding_out > 0 && padding_out < base_output_samples)
+                    // We assume the older result is safe, instead return -1;
+                    result = base_output_samples - padding_out;
+            }
+        }
+    }
+    *final_output_samples = result;
+    return 0;
+}
+
+uint64_t libavsmash_audio_count_overall_pcm_samples(
+    libavsmash_audio_decode_handler_t* adhp, int output_sample_rate, uint64_t start_output_samples)
+{
+    if (!adhp || output_sample_rate <= 0) {
+        if (adhp)
+            adhp->pcm_sample_count = 0;
+        return 0;
+    }
+    codec_configuration_t* config = &adhp->config;
+    int fallback_sample_rate = config->ctx ? config->ctx->sample_rate : 0;
     extended_summary_t* es = NULL;
     int current_sample_rate = 0;
     uint64_t current_frame_length = 0;
@@ -364,21 +621,32 @@ uint64_t libavsmash_audio_count_overall_pcm_samples(libavsmash_audio_decode_hand
             /* Encountered a new sequence. */
             if (current_sample_rate > 0) {
                 /* Add the number of output PCM audio samples in the previous sequence. */
-                overall_pcm_count += count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, output_sample_rate);
+                overall_pcm_count
+                    += count_sequence_output_pcm_samples_rnd(sequence_pcm_count, current_sample_rate, output_sample_rate, AV_ROUND_DOWN);
                 sequence_pcm_count = 0;
             }
-            current_sample_rate = es->sample_rate > 0 ? es->sample_rate : config->ctx->sample_rate;
+            current_sample_rate = es->sample_rate > 0 ? es->sample_rate : fallback_sample_rate;
             current_frame_length = frame_length;
         }
-        sequence_pcm_count += frame_length;
+        if (current_sample_rate > 0)
+            sequence_pcm_count += frame_length;
     }
     if (!es || (sequence_pcm_count == 0 && overall_pcm_count == 0)) {
         adhp->pcm_sample_count = 0;
         return 0;
     }
-    current_sample_rate = es->sample_rate > 0 ? es->sample_rate : config->ctx->sample_rate;
-    overall_pcm_count += count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, output_sample_rate);
-    overall_pcm_count -= av_rescale(start_time, output_sample_rate, adhp->media_timescale);
+    current_sample_rate = es->sample_rate > 0 ? es->sample_rate : fallback_sample_rate;
+    if (current_sample_rate > 0) {
+        overall_pcm_count
+            += count_sequence_output_pcm_samples_rnd(sequence_pcm_count, current_sample_rate, output_sample_rate, AV_ROUND_DOWN);
+    }
+    /*
+        start_output_samples is already in the output sample rate.
+
+        This avoids a media-time round trip and keeps the total length consistent
+        with aohp->skip_decoded_samples.
+    */
+    overall_pcm_count = overall_pcm_count > start_output_samples ? overall_pcm_count - start_output_samples : 0;
     adhp->pcm_sample_count = overall_pcm_count;
     return overall_pcm_count;
 }
@@ -544,7 +812,115 @@ uint64_t libavsmash_audio_get_pcm_samples(
             ++frame_number;
     } while (1);
 audio_out:
+    if (aohp->request_length > 0) {
+        enum audio_output_flag flush_flags = AUDIO_OUTPUT_NO_FLAGS;
+        output_length += output_pcm_samples_from_buffer(aohp, adhp->frame_buffer, (uint8_t**)&buf, &flush_flags);
+    }
     adhp->next_pcm_sample_number = start + output_length;
     adhp->last_frame_number = frame_number;
     return output_length;
+}
+
+static int64_t get_start_time(lsmash_root_t* root, uint32_t track_id)
+{
+    uint32_t edit_count = lsmash_count_explicit_timeline_map(root, track_id);
+    for (uint32_t edit_number = 1; edit_number <= edit_count; edit_number++) {
+        lsmash_edit_t edit;
+        if (lsmash_get_explicit_timeline_map(root, track_id, edit_number, &edit) || edit.duration == 0)
+            return 0;
+        if (edit.start_time >= 0)
+            return edit.start_time;
+    }
+    return 0;
+}
+
+int libavsmash_audio_setup_sample_count(libavsmash_audio_decode_handler_t* adhp, libavsmash_audio_output_handler_t* aohp, int skip_priming,
+    int skip_tail, uint64_t* out_final_num_samples, char* error_msg, size_t error_msg_size)
+{
+    if (!adhp || !aohp || !out_final_num_samples) {
+        if (error_msg)
+            snprintf(error_msg, error_msg_size, "invalid internal arguments.");
+        return -1;
+    }
+    if (aohp->output_sample_rate <= 0) {
+        if (error_msg)
+            snprintf(error_msg, error_msg_size, "invalid output sample rate.");
+        return -1;
+    }
+    lsmash_root_t* root = libavsmash_audio_get_root(adhp);
+    uint32_t track_id = libavsmash_audio_get_track_id(adhp);
+    uint32_t media_timescale = libavsmash_audio_get_media_timescale(adhp);
+    uint32_t priming_samples = 0;
+    uint32_t padding_samples = 0;
+    uint64_t duration_samples = 0;
+    int have_itun_smpb = (libavsmash_audio_get_itun_smpb(root, &priming_samples, &padding_samples, &duration_samples) == 0);
+    uint64_t total_codec_samples = 0;
+    if (have_itun_smpb && (skip_priming || skip_tail))
+        total_codec_samples = libavsmash_audio_count_total_codec_samples(adhp);
+    uint64_t start_output_samples = 0;
+    if (skip_priming) {
+        if (have_itun_smpb) {
+            if (priming_samples > total_codec_samples)
+                priming_samples = 0;
+            AVCodecContext* ctx = libavsmash_audio_get_codec_context(adhp);
+            if (ctx && ctx->delay > 0)
+                ctx->delay = 0;
+            uint64_t priming_skip_output = 0;
+            if (libavsmash_audio_convert_smpb_samples_to_output(adhp, aohp, priming_samples, &priming_skip_output, AV_ROUND_UP) < 0) {
+                if (error_msg)
+                    snprintf(error_msg, error_msg_size, "invalid SMPB priming information.");
+                return -1;
+            }
+            libavsmash_audio_set_implicit_preroll(adhp);
+            aohp->skip_decoded_samples = priming_skip_output;
+            start_output_samples = priming_skip_output;
+        } else {
+            if (media_timescale == 0) {
+                if (error_msg)
+                    snprintf(error_msg, error_msg_size, "invalid audio media timescale.");
+                return -1;
+            }
+            uint32_t ctd_shift = 0;
+            if (lsmash_get_composition_to_decode_shift_from_media_timeline(root, track_id, &ctd_shift)) {
+                if (error_msg)
+                    snprintf(error_msg, error_msg_size, "failed to get the timeline shift.");
+                return -1;
+            }
+            int64_t edit_start = get_start_time(root, track_id);
+            if (edit_start < 0)
+                edit_start = 0;
+            uint64_t media_start_time = (uint64_t)edit_start + (uint64_t)ctd_shift;
+            int64_t skip = 0;
+            if (media_start_time <= (uint64_t)INT64_MAX)
+                skip = av_rescale((int64_t)media_start_time, aohp->output_sample_rate, media_timescale);
+            if (skip < 0)
+                skip = 0;
+            aohp->skip_decoded_samples = (uint64_t)skip;
+            start_output_samples = (uint64_t)skip;
+        }
+    }
+    uint64_t base_num_samples = libavsmash_audio_count_overall_pcm_samples(adhp, aohp->output_sample_rate, start_output_samples);
+    uint64_t final_num_samples = base_num_samples;
+    if (skip_tail) {
+        if (libavsmash_audio_apply_tail_trim(adhp, aohp, have_itun_smpb, priming_samples, padding_samples, duration_samples, skip_priming,
+                total_codec_samples, base_num_samples, &final_num_samples)
+            < 0) {
+            if (error_msg)
+                snprintf(error_msg, error_msg_size, "failed to apply tail trimming.");
+            return -1;
+        }
+    }
+    int codec_rate = 0;
+    get_smpb_codec_sample_rate(adhp, aohp, &codec_rate);
+    if (codec_rate > 0 && aohp->output_sample_rate != codec_rate) {
+        if (final_num_samples > 32)
+            final_num_samples -= 32;
+    }
+    if (final_num_samples == 0) {
+        if (error_msg)
+            snprintf(error_msg, error_msg_size, "no valid audio frame.");
+        return -1;
+    }
+    *out_final_num_samples = final_num_samples;
+    return 0;
 }

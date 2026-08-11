@@ -158,7 +158,7 @@
 ###### LSMASHAudioSource
 
 * `LSMASHAudioSource(string source, int track = 0, bool skip_priming = true, string layout = "", int rate = 0,
-                    string decoder = "", int ff_loglevel = 0, float drc_scale = 1.0, string ff_options = "")`
+                    string decoder = "", int ff_loglevel = 0, float drc_scale = 1.0, string ff_options = "", bool skip_tail = false)`
 
         * This function uses libavcodec as audio decoder and L-SMASH as demuxer.
         [Arguments]
@@ -169,7 +169,7 @@
                 The value 0 means trying to get the first detected audio stream.
             + skip_priming (default : true)
                 Whether skip priming samples or not.
-                Priming samples is detected from iTunSMPB or the first non-empty edit.
+                Priming samples are detected from iTunSMPB or the first non-empty edit.
                 If any priming samples, do pre-roll whenever any seek of audio stream occurs.
             + layout (default : "")
                 Output audio channel layout.
@@ -257,8 +257,11 @@
                 0.0 < drc_scale <= 1.0 : DRC enabled. Applies a fraction of the stream DRC value. Audio reproduction is between full range and full compression.
                 > 1.0 : DRC enabled. Applies drc_scale asymmetrically. Loud sounds are fully compressed. Soft sounds are enhanced.
                 If `ff_options="drc_scale=x"` is used, `drc_scale` is ignored.
-            + ff_options (default: "")
+            + ff_options (default : "")
                 Same as 'ff_options' of LSMASHVideoSource().
+            * skip_tail (default : false)
+                Whether skip trailing samples or not.
+                Trailing samples are detected from iTunSMPB.
 
 ###### LWLibavVideoSource
 

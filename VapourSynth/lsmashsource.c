@@ -76,7 +76,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin* plugin, const VSPLUGINAPI
         "clip:vnode;", vs_libavsmashsource_create, NULL, plugin);
     vspapi->registerFunction("LibavSMASHAudioSource",
         "source:data;track:int:opt;skip_priming:int:opt;layout:data:opt;rate:int:opt;decoder:data:opt;ff_loglevel:int:opt;drc_scale:"
-        "float:opt;ff_options:data:opt;",
+        "float:opt;ff_options:data:opt;skip_tail:int:opt;",
         "audio:anode;", vs_libavsmashaudiosource_create, NULL, plugin);
     vspapi->registerFunction("LWLibavSource",
         "source:data;stream_index:int:opt;cache:int:opt;cachefile:data:opt;" COMMON_OPTS

@@ -554,7 +554,7 @@ static void decide_audio_seek_method(lwlibav_file_handler_t* lwhp, lwlibav_audio
         else {
             uint32_t error_count = 0;
             for (uint32_t i = 1; i <= sample_count; i++)
-                error_count += (info[i].file_offset == -1);
+                error_count += !lw_audio_has_valid_file_offset(info[i].file_offset);
             if (error_count == sample_count)
                 adhp->lw_seek_flags &= ~SEEK_POS_BASED;
         }
@@ -564,35 +564,36 @@ static void decide_audio_seek_method(lwlibav_file_handler_t* lwhp, lwlibav_audio
             info[i].pts = info[i].dts;
     /* Treat audio frames with unique value as a keyframe. */
     if (adhp->lw_seek_flags & SEEK_POS_BASED) {
-        info[1].keyframe = (info[1].file_offset != -1);
+        info[1].keyframe = lw_audio_has_valid_file_offset(info[1].file_offset);
         for (uint32_t i = 2; i <= sample_count; i++)
-            if (info[i].file_offset == -1)
+            if (!lw_audio_has_valid_file_offset(info[i].file_offset))
                 info[i].keyframe = 0;
             else if (info[i].file_offset == info[i - 1].file_offset)
                 info[i].keyframe = info[i - 1].keyframe = 0;
             else
                 info[i].keyframe = 1;
     } else if (adhp->lw_seek_flags & SEEK_PTS_BASED) {
-        info[1].keyframe = (info[1].pts != AV_NOPTS_VALUE);
+        info[1].keyframe = (info[1].pts != AV_NOPTS_VALUE && !lw_audio_is_gap_offset(info[1].file_offset));
         for (uint32_t i = 2; i <= sample_count; i++)
-            if (info[i].pts == AV_NOPTS_VALUE)
+            if (info[i].pts == AV_NOPTS_VALUE || lw_audio_is_gap_offset(info[i].file_offset))
                 info[i].keyframe = 0;
             else if (info[i].pts == info[i - 1].pts)
                 info[i].keyframe = info[i - 1].keyframe = 0;
             else
                 info[i].keyframe = 1;
     } else if (adhp->lw_seek_flags & SEEK_DTS_BASED) {
-        info[1].keyframe = (info[1].dts != AV_NOPTS_VALUE);
+        info[1].keyframe = (info[1].dts != AV_NOPTS_VALUE && !lw_audio_is_gap_offset(info[1].file_offset));
         for (uint32_t i = 2; i <= sample_count; i++)
-            if (info[i].dts == AV_NOPTS_VALUE)
+            if (info[i].dts == AV_NOPTS_VALUE || lw_audio_is_gap_offset(info[i].file_offset))
                 info[i].keyframe = 0;
             else if (info[i].dts == info[i - 1].dts)
                 info[i].keyframe = info[i - 1].keyframe = 0;
             else
                 info[i].keyframe = 1;
     } else
-        for (uint32_t i = 1; i <= sample_count; i++)
-            info[i].keyframe = 1;
+        for (uint32_t i = 1; i <= sample_count; i++) {
+            info[i].keyframe = !lw_audio_is_gap_offset(info[i].file_offset);
+        }
 }
 
 static int64_t calculate_av_gap(
@@ -2031,7 +2032,7 @@ static int create_index(lwlibav_file_handler_t* lwhp, lwlibav_video_decode_handl
                                             = (int)av_rescale_q(time_diff, adhp->time_base, (AVRational) { 1, aohp->output_sample_rate });
                                         info->pts = prev_end;
                                         info->dts = prev_info->dts + prev_duration;
-                                        info->file_offset = -1;
+                                        info->file_offset = LW_AUDIO_GAP_FILE_OFFSET;
                                         print_index(index,
                                             "Index=%d,POS=%" PRId64 ",PTS=%" PRId64 ",DTS=%" PRId64 ",EDI=%d\n"
                                             "Length=%d\n",
