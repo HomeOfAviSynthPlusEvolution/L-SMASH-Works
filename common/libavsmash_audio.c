@@ -326,6 +326,14 @@ static inline uint64_t count_sequence_output_pcm_samples(uint64_t sequence_pcm_c
     return resampled_sample_count;
 }
 
+static inline uint64_t count_sequence_output_pcm_samples_rnd(
+    uint64_t sequence_pcm_count, int current_sample_rate, int output_sample_rate, enum AVRounding rnd)
+{
+    if (output_sample_rate == current_sample_rate)
+        return sequence_pcm_count;
+    return av_rescale_rnd(sequence_pcm_count, output_sample_rate, current_sample_rate, rnd);
+}
+
 static int get_frame_length(
     libavsmash_audio_decode_handler_t* adhp, uint32_t frame_number, uint64_t* frame_length, extended_summary_t** esp)
 {
@@ -612,7 +620,8 @@ uint64_t libavsmash_audio_count_overall_pcm_samples(
             /* Encountered a new sequence. */
             if (current_sample_rate > 0) {
                 /* Add the number of output PCM audio samples in the previous sequence. */
-                overall_pcm_count += count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, output_sample_rate);
+                overall_pcm_count
+                    += count_sequence_output_pcm_samples_rnd(sequence_pcm_count, current_sample_rate, output_sample_rate, AV_ROUND_DOWN);
                 sequence_pcm_count = 0;
             }
             current_sample_rate = es->sample_rate > 0 ? es->sample_rate : fallback_sample_rate;
@@ -627,7 +636,8 @@ uint64_t libavsmash_audio_count_overall_pcm_samples(
     }
     current_sample_rate = es->sample_rate > 0 ? es->sample_rate : fallback_sample_rate;
     if (current_sample_rate > 0) {
-        overall_pcm_count += count_sequence_output_pcm_samples(sequence_pcm_count, current_sample_rate, output_sample_rate);
+        overall_pcm_count
+            += count_sequence_output_pcm_samples_rnd(sequence_pcm_count, current_sample_rate, output_sample_rate, AV_ROUND_DOWN);
     }
     /*
         start_output_samples is already in the output sample rate.
@@ -801,6 +811,10 @@ uint64_t libavsmash_audio_get_pcm_samples(
             ++frame_number;
     } while (1);
 audio_out:
+    if (aohp->request_length > 0) {
+        enum audio_output_flag flush_flags = AUDIO_OUTPUT_NO_FLAGS;
+        output_length += output_pcm_samples_from_buffer(aohp, adhp->frame_buffer, (uint8_t**)&buf, &flush_flags);
+    }
     adhp->next_pcm_sample_number = start + output_length;
     adhp->last_frame_number = frame_number;
     return output_length;
@@ -894,6 +908,12 @@ int libavsmash_audio_setup_sample_count(libavsmash_audio_decode_handler_t* adhp,
                 snprintf(error_msg, error_msg_size, "failed to apply tail trimming.");
             return -1;
         }
+    }
+    int codec_rate = 0;
+    get_smpb_codec_sample_rate(adhp, aohp, &codec_rate);
+    if (codec_rate > 0 && aohp->output_sample_rate != codec_rate) {
+        if (final_num_samples > 32)
+            final_num_samples -= 32;
     }
     if (final_num_samples == 0) {
         if (error_msg)
