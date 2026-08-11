@@ -23,6 +23,7 @@
 #include "libavsmash_audio.h"
 #include "cpp_compat.h"
 #include "resample.h"
+#include <ctype.h>
 #include <limits.h>
 
 #include <libavutil/mathematics.h>
