@@ -42,7 +42,7 @@ env:
 
     # nv-codec-headers (Linux/Windows only)
     if [[ "$EXTRA_FFMPEG_FLAGS" == *"--enable-nvdec"* ]]; then
-      git clone -b "$nv_version" --depth 1 https://git.videolan.org/git/ffmpeg/nv-codec-headers
+      git clone -b "$nv_version" --depth 1 https://github.com/FFmpeg/nv-codec-headers
       cd nv-codec-headers
       $SUDO make install PREFIX="$PREFIX"
       cd .. && rm -rf nv-codec-headers
