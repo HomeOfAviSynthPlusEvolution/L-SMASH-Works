@@ -38,6 +38,7 @@ In the second case the file will be scanned twice and the video info will be wri
 |:----------------------|:----------------------------------------------------------------|:--------------|
 | BUILD_AVS_PLUGIN      | Build plugin for AviSynth                                       |       ON      |
 | BUILD_VS_PLUGIN       | Build plugin for VapourSynth                                    |       ON      |
+| BUILD_AU2_PLUGIN      | Build plugin for AviUtl2                                        |       OFF     |
 | ENABLE_DAV1D          | Enable dav1d AV1 decoding                                       |       ON      |
 | dav1d_USE_STATIC_LIBS | Look for static dav1d libraries                                 |       ON      |
 | ENABLE_MFX            | Enable Intel HW decoding                                        |       ON      |
@@ -46,6 +47,5 @@ In the second case the file will be scanned twice and the video info will be wri
 | VPX_USE_STATIC_LIBS   | Look for static libvpx libraries                                |       ON      |
 | ENABLE_SSE2           | Force SSE2                                                      |       ON      |
 | BUILD_INDEXING_TOOL   | Build indexing tool                                             |       OFF     |
-| ENABLE_VULKAN         | Enable Vulkan decoding                                          |       ON      |
 | ZLIB_USE_STATIC_LIBS  | Look for static zlib libraries                                  |       ON      |
 | BUILD_SHARED_LIBS     | Build shared dependencies libraries (xxHash, obuparse, l-smash) |       OFF     |

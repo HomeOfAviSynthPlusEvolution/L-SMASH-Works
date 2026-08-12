@@ -46,9 +46,6 @@ message(STATUS "Enable SSE2 support: ${ENABLE_SSE2}.")
 option(BUILD_INDEXING_TOOL "Build index tool" OFF)
 message(STATUS "Build index tool: ${BUILD_INDEXING_TOOL}.")
 
-option(ENABLE_VULKAN "Enable Vulkan support" ON)
-message(STATUS "Enable Vulkan decoding: ${ENABLE_VULKAN}.")
-
 option(ZLIB_USE_STATIC_LIBS "Look for static zlib libraries" ON)
 message(STATUS "Look for static zlib libraries: ${ZLIB_USE_STATIC_LIBS}.")
 
@@ -94,10 +91,6 @@ endif()
 
 if (ENABLE_VPX)
     find_package(VPX REQUIRED)
-endif()
-
-if (ENABLE_VULKAN)
-    find_package(Vulkan REQUIRED)
 endif()
 
 if (WIN32)
@@ -281,10 +274,6 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
         target_link_libraries(LSMASHSource PRIVATE VPX::vpx)
     endif()
 
-    if (ENABLE_VULKAN)
-        target_link_libraries(LSMASHSource PRIVATE Vulkan::Vulkan)
-    endif()
-
     if (MINGW)
         target_link_libraries(LSMASHSource PRIVATE ws2_32)
     endif()
@@ -326,7 +315,7 @@ if (BUILD_AVS_PLUGIN OR BUILD_VS_PLUGIN OR BUILD_AU2_PLUGIN)
             set_target_properties(LSMASHSource PROPERTIES OUTPUT_NAME "lsmashsource.${ver}")
         endif()
     endif()
-    
+
     if (APPLE)
         set_target_properties(LSMASHSource PROPERTIES SUFFIX ".dylib")
     endif()
