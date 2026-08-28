@@ -200,3 +200,135 @@
                 This is done in the indexing step.
                 To avoid the indexing speed penalty set this to `0`.
                 Switching between `1` and `0` requires manual deletion of the index file.
+
+###### lsmas.LibavSMASHAudioSource
+
+* `lsmas.LibavSMASHAudioSource(string source, int track = 0, int skip_priming = 1, string layout = "", int rate = 0, string decoder = "", int ff_loglevel = 0, float drc_scale = -1.0, string ff_options = "")`
+
+        * This function uses libavcodec as audio decoder and L-SMASH as demuxer.
+        [Arguments]
+            + source
+                The path of the source file.
+            + track (default : 0)
+                The track number to open in the source file.
+                The value 0 means trying to get the first detected audio stream.
+            + skip_priming (default : 1)
+                Skip encoder delay (priming samples) to enable sample-accurate gapless playback.
+            + layout (default : "")
+                Force a specified output channel layout mask. If left empty, the native layout of the source stream is used.
+                You can specify channel layout by combination of the name of a channel layout with separator (+) as follows.
+                    - the name or mask of a single channel.
+                        FL   (0x1)           = Front Left
+                        FR   (0x2)           = Front Right
+                        FC   (0x4)           = Front Center
+                        LFE  (0x8)           = Low Frequency Effect
+                        BL   (0x10)          = Back Left
+                        BR   (0x20)          = Back Right
+                        FLC  (0x40)          = Front Left of Center
+                        FRC  (0x80)          = Front Right of Center
+                        BC   (0x100)         = Back Center
+                        SL   (0x200)         = Side Left
+                        SR   (0x400)         = Side Right
+                        TC   (0x800)         = Top Center
+                        TFL  (0x1000)        = Top Front Left
+                        TFC  (0x2000)        = Top Front Center
+                        TFR  (0x4000)        = Top Front Right
+                        TBL  (0x8000)        = Top Back Left
+                        TBC  (0x10000)       = Top Back Center
+                        TBR  (0x20000)       = Top Back Right
+                        DL   (0x20000000)    = Stereo Downmixed Left
+                        DR   (0x40000000)    = Stereo Downmixed Right
+                        WL   (0x80000000)    = Wide Left
+                        WR   (0x100000000)   = Wide Right
+                        SDL  (0x200000000)   = Surround Direct Left
+                        SDR  (0x400000000)   = Surround Direct Right
+                        LFE2 (0x800000000)   = Low Frequency Effect 2
+                        TSL  (0x1000000000)  = Top Side Left
+                        TSR  (0x2000000000)  = Top Side Right
+                        BFC  (0x4000000000)  = Bottom Front Center
+                        BFL  (0x8000000000)  = Bottom Front Left
+                        BFR  (0x10000000000) = Bottom Front Right
+                            $ Example: standard ffmpeg based 5.1ch surround layout : FL+FR+FC+LFE+BL+BR = 0x3f
+                    - the name of an usual channel layout.
+                                            ffmpeg
+                        mono           = FC
+                        stereo         = FL+FR
+                        2.1            = FL+FR+LFE
+                        3.0            = FL+FR+FC
+                        3.0(back)      = FL+FR+BC
+                        3.1            = FL+FR+FC+LFE
+                        4.0            = FL+FR+FC+BC
+                        quad           = FL+FR+BL+BR
+                        quad(side)     = FL+FR+SL+SR
+                        4.1            = FL+FR+FC+LFE+BC
+                        5.0            = FL+FR+FC+BL+BR
+                        5.0(side)      = FL+FR+FC+SL+SR
+                        5.1            = FL+FR+FC+LFE+BL+BR
+                        5.1(side)      = FL+FR+FC+LFE+SL+SR
+                        6.0            = FL+FR+FC+BC+SL+SR
+                        6.0(front)     = FL+FR+FLC+FRC+SL+SR
+                        hexagonal      = FL+FR+FC+BL+BR+BC
+                        6.1            = FL+FR+FC+LFE+BC+SL+SR
+                        6.1(back)      = FL+FR+FC+LFE+BL+BR+BC
+                        6.1(front)     = FL+FR+LFE+FLC+FRC+SL+SR
+                        7.0            = FL+FR+FC+BL+BR+SL+SR
+                        7.0(front)     = FL+FR+FC+FLC+FRC+SL+SR
+                        7.1            = FL+FR+FC+LFE+BL+BR+SL+SR
+                        7.1(wide)      = FL+FR+FC+LFE+BL+BR+FLC+FRC
+                        7.1(wide-side) = FL+FR+FC+LFE+FLC+FRC+SL+SR
+                        7.1(top)       = FL+FR+FC+LFE+BL+BR+TFL+TFR
+                        octagonal      = FL+FR+FC+BL+BR+BC+SL+SR
+                        cube           = FL+FR+BL+BR+TFL+TFR+TBL+TBR
+                        hexadecagonal  = FL+FR+FC+BL+BR+BC+SL+SR+TFL+TFC+TFR+TBL+TBC+TBR+WL+WR
+                        downmix        = DL+DR
+                        22.2           = FL+FR+FC+LFE+BL+BR+FLC+FRC+BC+SL+SR+TC+TFL+TFC+TFR+TBL+TBC+TBR+LFE2+TSL+TSR+BFC+BFL+BFR
+                Note: the above listed notations are the present things.
+                In the future, they might be changed.
+            + rate (default : 0)
+                Force a specified output sample rate. The value 0 means the output sample rate matches the source natively.
+            + decoder (default : "")
+                Same as 'decoder' of LibavSMASHSource().
+            + ff_loglevel (default : 0)
+                Same as 'ff_loglevel' of LibavSMASHSource().
+            + drc_scale (default : -1.0)
+                Dynamic Range Compression (DRC) scale factor, primarily affecting AC3 and E-AC3 streams.
+                The value -1.0 defers to the internal default behavior of the underlying libavcodec decoder.
+            + ff_options (default : "")
+                Same as 'ff_options' of LibavSMASHSource().
+
+###### lsmas.LWLibavAudioSource
+
+* `lsmas.LWLibavAudioSource(string source, int stream_index = -1, int cache = 1, string cachefile = source + ".lwi", int av_sync = 0, string layout = "", int rate = 0, string decoder = "", int ff_loglevel = 0, string cachedir = "", int indexingpr = 1, float drc_scale = -1.0, string ff_options = "", int fill_agaps = 0)`
+
+        * This function uses libavcodec as audio decoder and libavformat as demuxer.
+        [Arguments]
+            + source
+                The path of the source file.
+            + stream_index (default : -1)
+                The stream index to open in the source file.
+                The value -1 means trying to get the best available audio stream.
+            + cache (default : 1)
+                Same as 'cache' of LWLibavSource().
+            + cachefile (default : source + ".lwi")
+                Same as 'cachefile' of LWLibavSource().
+            + av_sync (default : 0)
+                Apply container-level audio delay. If set to 1, the filter reads the start time offset of the audio track relative to the video track and pads the beginning of the audio timeline to maintain strict A/V synchronization.
+            + layout (default : "")
+                Same as 'layout' of LibavSMASHAudioSource().
+            + rate (default : 0)
+                Same as 'rate' of LibavSMASHAudioSource().
+            + decoder (default : "")
+                Same as 'decoder' of LibavSMASHSource().
+            + ff_loglevel (default : 0)
+                Same as 'ff_loglevel' of LibavSMASHSource().
+            + cachedir (default : "")
+                Same as 'cachedir' of LWLibavSource().
+            + indexingpr (default : 1)
+                Print the indexing progress indicator to the console if set to 1.
+            + drc_scale (default : -1.0)
+                Same as 'drc_scale' of LibavSMASHAudioSource().
+            + ff_options (default : "")
+                Same as 'ff_options' of LibavSMASHSource().
+            + fill_agaps (default : 0)
+                Fill audio gaps with digital silence.
+                If the source file contains dropped or missing audio packets, standard decoding would collapse the timeline, resulting in audio that is shorter than the video track. Setting this to 1 forces the indexer to calculate the PTS boundaries of the missing packets and injects exact durations of silence, preserving timeline continuity and preventing A/V desync.
