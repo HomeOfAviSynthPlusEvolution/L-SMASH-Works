@@ -22,8 +22,8 @@ env:
     fi
 
     # dav1d
-    wget "https://code.videolan.org/videolan/dav1d/-/archive/$dav1d_version/dav1d-$dav1d_version.tar.bz2" -O - | tar xfvj -
-    cd dav1d-"$dav1d_version"
+    git clone -b "$dav1d_version" --depth 1 https://github.com/videolan/dav1d
+    cd dav1d
     meson setup build -Dprefix="$PREFIX" -Denable_tools=false -Denable_examples=false -Denable_tests=false --default-library=static --buildtype=release --strip
     meson compile -C build
     $SUDO meson install -C build
